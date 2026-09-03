@@ -1,0 +1,148 @@
+BUA / 9340 / 16059335 normal-operation baseline freeze - Step 104
+
+Authority and identity boundary
+-------------------------------
+Authoritative executable source is the user-supplied bua-hac.txt:
+429,349 bytes / 14,741 lines.
+SHA-256:
+36f20ba8e64cce07d41c7c5eaf3d74f4507c852adf5e1cd239cd6a14fbaf23dd
+
+BUA remains source labeling.  It is not presented as independently proven
+calibration identity.  Executable instructions and calibrated address use
+continue to outrank comments and semantic labels.
+
+Frozen artifact
+---------------
+main.c: 16,369 lines.
+SHA-256:
+d3d30e750fc0abac76775f76fbb138a3f6f5df93bddd810fc7696e25bddae779
+
+Build:
+gcc -std=c89 -Wall -Wextra -pedantic main.c
+No compiler warnings.
+
+Canonical normal-operation signature:
+4BA6B7C6
+
+Two back-to-back complete runs produced identical console output:
+SHA-256 6f95bfb5f580ea06b31ae1e0b1b630cb1948761cd93bc1719b8aecc877850620
+
+Signature contract
+------------------
+The signature uses explicitly reduced 32-bit FNV-1a arithmetic.  It does not
+hash C structures or native integers.  Each 6.25-ms post-IRQ snapshot includes
+profile segment/tick, source RAM $0000-$01FF, raw MPU $3FC0-$3FFF, raw I/O
+$4000-$400F and $5000.  Final selected scheduler counters are serialized as
+u32 values most-significant byte first.
+
+This makes the contract independent of host padding, host endianness, 32/64-bit
+unsigned-long width, console formatting, and floating-point trace text.  See
+STEP104_SIGNATURE.txt for the exact ordered field list.
+
+Frozen stimulus and terminal state
+----------------------------------
+The deterministic warm-restart stimulus contains 4,960 IRQs (31.0 seconds):
+
+- reference-driven crank/catch and normal-fuel handoff;
+- settled warm idle;
+- deliberate throttle tip-in and acceleration to 60 MPH;
+- steady 60-MPH / approximately 2200-RPM cruise;
+- alternating PC O2 voltage crossings and source-qualified closed-loop entry;
+- throttle lift, DFCO, deceleration, fuel recovery, and extended returned idle.
+
+The profile produces 2,480 odd and 2,480 even selections, 4,960 IAC services,
+and 310 calls to each major segment.  Its terminal source state includes BLM
+cell 1, BLM 122, AFR code 445, closed-loop and BLM-store permission set.
+
+The profile inputs are deterministic PC stimuli.  They are not asserted as a
+vehicle-dynamics model, exact exhaust/O2 waveform, or exact external sensor
+transfer function.
+
+Normal executable behavior included in the freeze
+-------------------------------------------------
+The frozen normal path includes:
+
+- 6.25-ms common MAF, TPS, VSS/status, injector bookkeeping, and IAC service;
+- source-shaped odd/even minor selection and all sixteen major segments;
+- even slow-O2, reference/RPM, dwell, spark lookup/correction/output state;
+- normal odd MAF/load/transient, fast O2/O2-ready, AFR, BLM, closed-loop,
+  synchronous AE, LF92A output, LE436 asynchronous AE, and 50-ms tail;
+- calibrated cranking fuel and immediate LC35A=0 running handoff;
+- physical batch-service bookkeeping at the established V8 cadence;
+- 50-ms IAC PID versus 6.25-ms IAC motor service;
+- DFCO and its stall-saver/follower consequences;
+- exact 16-cell BLM selection, hysteresis, LF434 recovery, storage permission,
+  cell-change delay, and selected-cell learning;
+- normal major producers for outputs, VSS, diagnostics-input sampling, A/C,
+  fan, coolant, BLM variables, AIR, MAT/knock recovery, EGR, purge, battery,
+  shifter/TCC state, and fuel/air continuation;
+- raw HAL staging for MPU counters/control and software output commands.
+
+Regression freeze
+-----------------
+Step-104 baseline-freeze regression: PASS 10/10.
+Integrated driving regression: PASS 26/26.
+Step-103 BLM selector/wiring regression: PASS 19/19.
+Step-102 asynchronous-AE scheduler regression: PASS 12/12.
+All earlier regression summaries remain passing.
+
+The genuine-failure search is empty.  The only text containing FAIL is the
+historical Step-44 summary “FAIL 0”.
+
+Completeness classifications outside the freeze
+------------------------------------------------
+These items are deliberately not promoted into the frozen normal baseline:
+
+E - exceptional executable paths
+
+- ignition-off/SWI shutdown and its interrupt-side recovery;
+- the separate LD365 low-RPM spark-path occurrence of LF92A then LE436;
+- factory-test, Mode-4, ALDL forcing, and diagnostic fault branches not used by
+  the ordinary warm-running profile;
+- key-off MAF burn-off electrical behavior beyond preserved raw state.
+
+D - damaged or undefined supplied-source targets
+
+- L003B b3 coolant path to undefined LF42A;
+- the coolant-failure continuation labelled COOLS8;
+- damaged/comment-conflicted labels where executable bytes/address use were
+  sufficient for the normal path but the missing exceptional target was not.
+
+H - hardware/ROM boundaries
+
+- optional heads-up ROM calls in the $5800 region;
+- MPU-internal creation of status b6 and absolute synchronous batch phase;
+- MPU-internal spark/injector event generation beyond exposed registers;
+- external brake-series-power behavior, output-driver polarity, dwell/EST and
+  injector electrical waveforms;
+- exact vehicle VSS/tach constants and cluster analog transfer functions.
+
+U - utility verification still desirable
+
+- LF250 is consistently translated and heavily behaviorally exercised, but
+  its shared utility implementation still carries the earlier instruction-level
+  bit-exact verification note.  A future utility audit may replace the helper
+  only if it preserves or intentionally versions this frozen signature.
+- semantic naming for a few instruction-exact intermediate quantities remains
+  provisional; their arithmetic and RAM side effects, not the names, are frozen.
+
+S - simulator-only plant models
+
+- engine catch/reference waveform, VSS source, O2 stimulus, IAC mechanical
+  plant, TCC RPM response, dash receiver, and commanded drive trajectory.
+  These provide deterministic inputs and observability; they are not PROM facts.
+
+Freeze rule
+-----------
+4BA6B7C6 is the Step-104 normal-operation compatibility contract.  Future HAL
+ports, MC9S12DG128 integration, cleanup, or exceptional-path work should retain
+this value for the same PC profile unless an evidence-backed behavior correction
+intentionally versions the baseline.  Any change must document the old and new
+signatures, the exact source evidence, and the affected RAM/MPU behavior.
+
+Conclusion
+----------
+No identified blocker remains on the first normal-operation driving path.
+This checkpoint is suitable as the behavioral reference for beginning the thin
+MC9S12DG128 HAL port while exceptional, damaged-source, utility-verification,
+and external-hardware items remain separately auditable.

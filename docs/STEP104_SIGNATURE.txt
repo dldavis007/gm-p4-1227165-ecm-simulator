@@ -1,0 +1,56 @@
+STEP104-NORMAL-V1
+
+signature=4BA6B7C6
+algorithm=FNV-1a-32
+offset_basis=2166136261
+prime=16777619
+arithmetic=modulo-2^32
+byte_order_for_u16_u32=most-significant-byte-first
+
+source_bua_hac_sha256=36f20ba8e64cce07d41c7c5eaf3d74f4507c852adf5e1cd239cd6a14fbaf23dd
+main_c_sha256=d3d30e750fc0abac76775f76fbb138a3f6f5df93bddd810fc7696e25bddae779
+repeat_output_sha256=6f95bfb5f580ea06b31ae1e0b1b630cb1948761cd93bc1719b8aecc877850620
+
+profile_ticks=4960
+irq_period_ms=6.25
+profile_duration_seconds=31.0
+odd_air_fuel_selections=2480
+even_spark_o2_vss_selections=2480
+iac_services=4960
+calls_per_major_segment=310
+
+per_tick_prefix:
+  segment_index:u16
+  segment_tick:u16
+
+per_tick_state:
+  source_ram:$0000-$01FF inclusive, ascending byte order
+  raw_mpu:$3FC0-$3FFF inclusive, ascending byte order
+  raw_io:$4000-$400F inclusive, ascending byte order
+  raw_io:$5000
+
+final_statistics_u32_msb_first:
+  irq_ticks
+  air_fuel_loops
+  spark_vss_loops
+  iac_minor_services
+  odd_crank_fuel_calls
+  odd_normal_fuel_calls
+  scheduler_async_calls
+  scheduler_async_hw_pulses
+  scheduler_blm_select_calls
+  scheduler_blm_cell_changes
+  scheduler_blm_updates
+  physical_injector_services
+  common_injector_bookkeeping
+  ref_pulses
+  rpm_calculations
+  major_segment_calls[0..15]
+
+excluded_from_signature:
+  console text and formatting
+  host structure padding and native byte order
+  floating-point display conversions
+  PC-only dash receiver state
+  untranslated/unused RAM above $01FF
+  external electrical and vehicle plant state

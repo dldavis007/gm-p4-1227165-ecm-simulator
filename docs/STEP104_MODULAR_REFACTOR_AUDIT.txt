@@ -1,0 +1,59 @@
+BUA / GM 1227165 STEP-104 MODULAR REFACTOR AUDIT
+================================================
+
+Scope
+-----
+This change reorganizes the frozen Step-104 PC harness.  It does not claim a
+new behavioral step and does not alter calibration semantics, translated ECM
+behavior, simulated hardware behavior, regression stimuli, or runtime output.
+
+Architecture
+------------
+main.c retains int main(void) and includes implementation fragments in their
+original Step-104 order.  The result remains one C translation unit.
+
+src/        translated ECM behavior and scheduler-facing support
+simulation/ PC-only integrated driving model
+tests/      regression-only models and regression entry points
+docs/       frozen baseline and verification evidence
+build/      generated artifacts
+
+Why one translation unit is retained
+------------------------------------
+The frozen source intentionally uses many static functions and file-local
+objects.  Preserving one translation unit avoids broadening linkage, adding
+duplicate state, or introducing declarations that could silently change C89
+integer conversions or call behavior.  The .inc.h suffix prevents build tools
+from compiling the fragments as independent .c files.
+
+Verification
+------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step104_modular
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Canonical output comparison:
+  byte-for-byte identical to docs/bua_step104_output.txt
+
+Canonical output SHA-256:
+  6f95bfb5f580ea06b31ae1e0b1b630cb1948761cd93bc1719b8aecc877850620
+
+Behavioral signature:
+  4BA6B7C6
+
+Genuine failure search:
+  No failed regression was found.  The only text containing FAIL is the
+  expected Step-44 summary "PASS 14/14, FAIL 0".
+
+Completeness boundary
+---------------------
+The behavioral completeness boundary and unresolved hardware classifications
+remain exactly those documented in STEP104_BASELINE_FREEZE.txt.  This refactor
+does not promote any unresolved hardware or diagnostic behavior to established
+behavior.
+

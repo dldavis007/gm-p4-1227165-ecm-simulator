@@ -1,0 +1,112 @@
+BUA / GM 1227165 STEP-105 TRANSMISSION-AWARE DRIVE AUDIT
+=======================================================
+
+Outcome
+-------
+Step 105 adds a separate deterministic transmission-aware PC simulation after
+the unchanged frozen Step-104 driving scenario.  A fresh ECM/dash reset
+separates the two scenarios.
+
+The Step-104 normal-operation behavioral signature remains:
+  4BA6B7C6
+
+The Step-105 transmission-aware trace signature is:
+  9732D09B
+
+Model boundary
+--------------
+The transmission and vehicle trajectory are PC plant behavior, not translated
+ECM code.  Vehicle speed, throttle A/D, and MAF A/D remain deterministic test
+stimuli.  While the selector is in Drive, RPM is not independently prescribed.
+It is derived from:
+
+  vehicle speed
+  selected transmission ratio
+  combined axle/tire conversion factor
+  unlocked torque-converter slip
+  physical TCC state
+
+The result drives the phase-continuous distributor-reference source.  The ECM
+therefore obtains RPM through its normal reference-period calculation.
+
+Explicit simulator parameters
+-----------------------------
+Four forward internal ratios:
+  1st 3.06, 2nd 1.62, 3rd 1.00, 4th 0.70
+
+Upshift thresholds:
+  1-2 at 16 MPH, 2-3 at 30 MPH, 3-4 at 45 MPH
+
+Downshift thresholds:
+  4-3 below 38 MPH, 3-2 below 25 MPH, 2-1 below 12 MPH
+
+The combined axle/tire factor is selected so locked fourth gear produces
+N/V=32.  This is centered in the executable LC288..LC289 recognition window
+of 30..35.  Converter-slip values and the shift speeds are test parameters.
+They are not presented as verified production calibration for a particular
+1986 Corvette axle, tire, governor, or throttle-valve adjustment.
+
+Source-shaped N/V path
+----------------------
+The supplied assembly calculates L008F by loading VSS Q8.8 from L0065,
+constructing approximately RPM from L0057*25, and calling LF215 FDIV.  The high
+byte returned in A is effectively the integer RPM/MPH ratio.  Step 105
+reproduces that scaling from ECM-measured RPM and VSS; it does not pass an
+ordinary unscaled gear number into the classifier.
+
+TCC boundary
+------------
+The already-translated N/V fourth-gear confirmation and TCC decision helpers
+execute at the 100-ms major-loop cadence.  Physical clutch energization remains
+separate: the ECM command and external brake-switch power must both be present.
+The profile deliberately opens brake power during cruise and then restores it.
+
+Regression coverage
+-------------------
+Step-105 regression: PASS 12/12
+
+  Drive RPM has no independent profile command
+  all four forward gears are visited
+  exactly three upshifts occur
+  exactly three downshifts occur
+  measured N/V confirms fourth gear
+  TCC command is active with confirmed fourth gear
+  physical TCC engagement occurs
+  brake power releases the physical clutch while command remains
+  brake release allows re-engagement
+  lift/deceleration reaches DFCO
+  profile contains exactly 4,640 ordinary IRQ ticks
+  complete trace matches signature 9732D09B
+
+Legacy regression status
+------------------------
+Integrated Step-99 drive: PASS 26/26
+Step-104 baseline freeze: PASS 10/10
+Step-104 signature: 4BA6B7C6
+All earlier regressions remain passing.
+
+Strict build
+------------
+  gcc -std=c89 -Wall -Wextra -pedantic main.c
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression.  The only FAIL text is the expected Step-44 summary
+  "PASS 14/14, FAIL 0".
+
+Canonical Step-105 output SHA-256:
+  b0ccf5c125feb398174ff81fa5cf1acfcd431c71213dacf9b056e9dba53da4c5
+
+Remaining limitation
+--------------------
+This is a drivetrain-kinematics integration model, not a predictive vehicle
+dynamics model.  It does not calculate acceleration from engine torque,
+vehicle mass, aerodynamic drag, rolling resistance, or hydraulic line
+pressure.  Those omissions are deliberate and are not silently filled with
+guessed Corvette values.
+
