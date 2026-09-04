@@ -165,15 +165,117 @@ static void segE_tcc_adc(void)
 static void seg1_output_bits(void)
 {
     BuaBatt86 r;
+    bua_u16 air_count;
+    bua_u16 enrich_count;
+    bua_u16 tcc_count;
+    bua_u16 purge_count;
+    bua_u16 egr_count;
+    bua_u16 all_count;
+    bua_u8 a;
+    bua_u8 mode4;
+    bua_u8 mode4_control;
+    bua_u8 mode4_value;
+    bua_u8 fan_bit;
+
     r=bua_battery86_seg1_gate(RAM8(0x007Eu),RAM8(0x0035u),
                                RAM8(0x003Eu),RAM8(0x004Fu));
     RAM8(0x0035u)=r.minor35;
     RAM8(0x003Eu)=r.major3e;
     RAM8(0x004Fu)=r.err4f;
-    step91_outputs=bua_output_stage91(RAM8(0x003Eu),RAM8(0x0037u),
-                                      RAM8(0x0034u),RAM8(0x0113u),
-                                      RAM8(0x0112u),RAM8(0x00F4u),
-                                      r.force_discretes_off);
+    if(sim_legacy_segment1_output_freeze!=0u) {
+        step91_outputs=bua_output_stage91(RAM8(0x003Eu),RAM8(0x0037u),
+                                          RAM8(0x0034u),RAM8(0x0113u),
+                                          RAM8(0x0112u),RAM8(0x00F4u),
+                                          r.force_discretes_off);
+        return;
+    }
+
+    /* $EDBD..$EDF9: engine-off and high-voltage all-output path. */
+    if(r.force_discretes_off!=0u || (RAM8(0x0034u)&0x80u)==0u) {
+        if(r.force_discretes_off!=0u)
+            all_count=0xD000u;
+        else if((RAM8(0x0041u)&0x80u)!=0u)
+            all_count=0xDFFFu;
+        else
+            all_count=0xD000u;
+        mpu16be_set(0x3FD2u,all_count);
+        mpu16be_set(0x3FD6u,all_count);
+        mpu16be_set(0x3FD8u,all_count);
+        mpu16be_set(0x3FCCu,all_count);
+        mpu16be_set(0x3FD4u,all_count);
+        if(all_count==0xD000u)
+            mem.io4000[4]=(bua_u8)(mem.io4000[4]&0xFDu);
+        else
+            mem.io4000[4]=(bua_u8)(mem.io4000[4]|0x02u);
+        step91_outputs.air_arc_count=all_count;
+        step91_outputs.enrich_count=all_count;
+        step91_outputs.tcc_count=all_count;
+        step91_outputs.purge_count=all_count;
+        step91_outputs.egr_count=all_count;
+        step91_outputs.fan_parallel_b1=(bua_u8)((mem.io4000[4]&2u)!=0u);
+        step91_outputs.forced_off=r.force_discretes_off;
+        return;
+    }
+
+    /* $EDFD..$EE4F: AIR and acceleration-enrichment raw counters. */
+    mode4=(bua_u8)(RAM8(0x0035u)&0x08u);
+    mode4_control=RAM8(0x0156u);
+    mode4_value=RAM8(0x0157u);
+    if(mode4!=0u && (mode4_control&0x20u)!=0u)
+        air_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
+    else if((RAM8(0x003Eu)&0x02u)!=0u)
+        air_count=0xDFFFu;
+    else
+        air_count=0xD000u;
+    mpu16be_set(0x3FCCu,air_count);
+
+    if(mode4!=0u && (mode4_control&0x40u)!=0u)
+        enrich_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
+    else if((RAM8(0x003Eu)&0x04u)!=0u) /* LC015=$04 */
+        enrich_count=0xDFFFu;
+    else
+        enrich_count=0xD000u;
+    mpu16be_set(0x3FD4u,enrich_count);
+
+    /* $EE52..$EE9B: LC017=$00 selects the TCC request, not A/C output. */
+    if(mode4!=0u && (mode4_control&0x04u)!=0u)
+        tcc_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
+    else if((RAM8(0x0037u)&0x20u)!=0u)
+        tcc_count=0xDFFFu;
+    else
+        tcc_count=0xD000u;
+    mpu16be_set(0x3FD6u,tcc_count);
+
+    /* $EE9E..$EEB8: canister-purge counter; normal value is complemented. */
+    if(mode4!=0u && (mode4_control&0x08u)!=0u)
+        purge_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
+    else
+        purge_count=bua_pwm_count91(RAM8(0x0113u));
+    mpu16be_set(0x3FD8u,purge_count);
+
+    /* $EEBB..$EEE3: fan bit is staged at raw parallel-I/O bit 1. */
+    a=(bua_u8)(mem.io4000[4]&0xFDu);
+    if(mode4!=0u && (RAM8(0x0152u)&0x02u)!=0u)
+        a=(bua_u8)(a|(RAM8(0x0153u)&0x02u));
+    else if(RAM8(0x00F4u)!=0u && (RAM8(0x0034u)&0x08u)!=0u)
+        a=(bua_u8)(a|0x02u);
+    mem.io4000[4]=a;
+    fan_bit=(bua_u8)((a&0x02u)!=0u);
+
+    /* $EEE6..$EF03: EGR normal duty is complemented; Mode 4 is literal. */
+    if(mode4!=0u && (mode4_control&0x01u)!=0u)
+        egr_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
+    else
+        egr_count=bua_pwm_count91(RAM8(0x0112u));
+    mpu16be_set(0x3FD2u,egr_count);
+
+    step91_outputs.air_arc_count=air_count;
+    step91_outputs.enrich_count=enrich_count;
+    step91_outputs.tcc_count=tcc_count;
+    step91_outputs.purge_count=purge_count;
+    step91_outputs.egr_count=egr_count;
+    step91_outputs.fan_parallel_b1=fan_bit;
+    step91_outputs.forced_off=0u;
 }
 
 static void seg5_ac_closed_loop_fan(void)
@@ -206,4 +308,3 @@ static void seg5_ac_closed_loop_fan(void)
         bua_ac_front_tail_ram91();
     }
 }
-

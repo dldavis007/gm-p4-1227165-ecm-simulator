@@ -101,12 +101,18 @@ E - exceptional executable paths
   the ordinary warm-running profile;
 - key-off MAF burn-off electrical behavior beyond preserved raw state.
 
-D - damaged or undefined supplied-source targets
+R - source targets resolved after the Step-104 freeze
 
-- L003B b3 coolant path to undefined LF42A;
-- the coolant-failure continuation labelled COOLS8;
-- damaged/comment-conflicted labels where executable bytes/address use were
-  sufficient for the normal path but the missing exceptional target was not.
+The later supplied zero-error assembler listing supersedes two Step-104 audit
+assumptions without changing the frozen normal behavior:
+
+- LF42A is defined at $F42A and contains RTS;
+- the assembled instruction at $F418 is BRA LF42A.  The COOLS8 spelling in the
+  supplied text is a source-revision/transcription difference, not an unknown
+  executable continuation.
+
+Step 106 adds direct regression proof for both exits.  Other damaged or
+comment-conflicted labels remain governed by executable bytes/address use.
 
 H - hardware/ROM boundaries
 

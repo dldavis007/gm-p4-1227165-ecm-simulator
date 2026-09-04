@@ -81,6 +81,12 @@ static void run_dynamic_drive_cycle(void)
     const DriveProfileSegment *segment;
 #define STEP99_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
 
+    /* Replay the frozen Step-104 signature at its historical Segment-D
+       boundary; Step-109 has a separate full-diagnostics signature. */
+    sim_legacy_segment_d_freeze=1u;
+    sim_legacy_segment1_output_freeze=1u;
+    sim_legacy_ignition_shutdown_freeze=1u;
+
     printf("\nStep-99 integrated Corvette ECM driving simulation:\n");
     printf("  PC commands: TPS/MAF A-D stimuli plus phase-continuous reference and VSS sources.\n");
     printf("  ECM results: normalized TPS, RPM, VSS, load, fuel, DFCO, injector and IAC state.\n");

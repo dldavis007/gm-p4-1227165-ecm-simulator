@@ -1,0 +1,151 @@
+BUA / GM 1227165 STEP-106 LISTING-BACKED COVERAGE AUDIT
+======================================================
+
+Outcome
+-------
+Step 106 incorporates evidence from the supplied successful assembler listing
+without changing the frozen normal-operation or transmission-aware behavior.
+
+Listing identity
+----------------
+File: bua-hac.lst
+Assembler header: AS11M 01.05, Wed Jul 19, 2023
+Lines: 14,730
+Bytes: 938,156
+SHA-256:
+  5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+
+Assembler result:
+  Number of errors 0
+  Number of warnings 0
+
+Evidence boundary
+-----------------
+The listing is authoritative for emitted addresses, opcodes, resolved branch
+targets, and the source text actually presented to that assembly.  It does not
+make source comments infallible and does not independently prove that BUA is
+the calibration identity.  Semantics continue to follow executable behavior
+before comments.
+
+Resolved coolant control flow
+-----------------------------
+The listing establishes:
+
+  $F3EE  BRSET $3B,$08,LF42A
+  $F418  BRA LF42A
+  $F42A  RTS
+
+Therefore LF42A is not undefined.  The supplied bua-hac.txt spelling
+`BRA COOLS8` differs from the zero-error listing at the same instruction.
+For behavioral translation, the emitted listing proves that the ERR14/15
+default-coolant path returns at $F42A.  It has no downstream filter side
+effects.  The existing C arithmetic already had that behavior; Step 106
+removes the stale uncertainty and adds a 12-check regression.
+
+Major-loop table coverage
+-------------------------
+Status terms:
+
+  FULL-NORMAL  translated and scheduler-wired for established normal use
+  EXACT-NOP    listing entry targets the immediate RTS at $CD04
+  PARTIAL      useful translated behavior exists, but listing paths remain
+  BOUNDARY     behavior lies in optional ROM or physical hardware
+  UNPORTED     confirmed executable logic is represented only by a placeholder
+
+Entry   Target  Listing purpose                         Step-106 status
+-----   ------  --------------------------------------  ----------------
+  0     $CD04   immediate return                        EXACT-NOP
+  1     $EDA3   output-bit signals                      PARTIAL/HAL
+  2     $E07F   VSS calculation                         FULL-NORMAL
+  3     $EA28   miscellaneous 100-ms work               PARTIAL
+  4     $F8F9   optional heads-up ROM dispatch          BOUNDARY
+  5     $ECEA   A/C, closed loop, coolant fan           FULL-NORMAL
+  6     $F3B6   heads-up hook and coolant A/D           FULL-NORMAL
+  7     $EA95   coolant-derived variables/burn-off      PARTIAL/HAL
+  8     $CD04   immediate return                        EXACT-NOP
+  9     $E34E   injection-air management                FULL-NORMAL
+  A     $EB3A   manifold-air-temperature variables      FULL-NORMAL
+  B     $DEE5   exhaust-gas-recirculation control       FULL-NORMAL
+  C     $E75D   canister purge                          FULL-NORMAL
+  D     $EF04   diagnostics                             UNPORTED
+  E     $DE6D   TCC/selector A/D handling               FULL-NORMAL
+  F     $EC23   fuel/air major continuation             FULL-NORMAL
+
+`FULL-NORMAL` is deliberately narrower than instruction-for-instruction full
+PROM coverage.  Factory-test forcing, Mode-4 forcing, exceptional faults, and
+physical output polarity can still make a routine PARTIAL outside ordinary
+operation.
+
+Whole-image coverage classification
+-----------------------------------
+Region or subsystem                         Classification
+------------------------------------------  -----------------------------
+Normal IRQ/minor scheduler                  FULL-NORMAL
+Normal MAF/fuel/O2/injector chain           FULL-NORMAL
+Normal reference/RPM/dwell/spark chain      FULL-NORMAL
+IAC command, PID and motor service          FULL-NORMAL
+Normal major-loop producers                 FULL-NORMAL except table notes
+160-baud cluster-facing output model        PARTIAL/simulation boundary
+8192-baud receive/error/protocol machinery  PARTIAL; listing has more logic
+Segment-D diagnostics at $EF04              UNPORTED
+Mode-4 and factory-test forcing             PARTIAL/UNPORTED by branch
+Ignition-off and SWI shutdown paths         PARTIAL/UNPORTED
+Optional $5800 heads-up routines            BOUNDARY; absent from PROM image
+MPU event generation/electrical waveforms   HAL boundary
+Reset/vector and illegal-fault behavior     HAL/target-startup boundary
+PC engine/transmission/vehicle plant        SIMULATION-ONLY
+
+Confirmed omissions
+-------------------
+The largest directly scheduler-reachable omission is Segment D.  The listing
+contains real diagnostic executable behavior beginning at $EF04, while the C
+scheduler currently calls an explicitly documented empty placeholder.  It is
+not a genuine no-op like Segments 0 and 8.
+
+The listing also confirms additional 8192-baud receive/error processing and
+SWI/reset/factory-test paths not required by the frozen warm-driving profile.
+They remain separate work rather than being silently inferred from comments.
+
+Regression contract
+-------------------
+Step-106 listing-coolant regression: PASS 12/12
+Step-104 normal-operation signature: 4BA6B7C6 (must remain unchanged)
+Step-105 transmission signature: 9732D09B (must remain unchanged)
+
+The Step-106 test proves:
+
+- L003B bit 3 preserves the prior filtered coolant and exits through LF42A;
+- lookup/range-state work preceding $F3EE still occurs;
+- ERR14 stores calibrated default coolant and returns without filter init;
+- ERR15 reaches the same return and preserves startup coolant;
+- established diagnostic latch bits retain their previous translated behavior.
+
+Verified build
+--------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step106
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression.  The only FAIL text is the expected Step-44 summary
+  `PASS 14/14, FAIL 0`.
+
+Complete Step-106 output SHA-256:
+  7a158a9c99fa63b906e083fe0bcab91f0a1742ea6340a36802e5460442cd79e6
+
+Step-106 main.c SHA-256:
+  caea2fc6a0f41f11d3c6bd452b680ea6fe3a8655bc2fb817c66be5ee5d47cc40
+
+Total C/include source lines:
+  16,801
+
+Next implementation phase
+-------------------------
+Translate Segment D from $EF04 in source order, separating pure RAM/timer fault
+logic from diagnostic-lamp and ALDL hardware boundaries.  Each sub-block should
+receive a focused regression before the empty Segment-D placeholder is removed.

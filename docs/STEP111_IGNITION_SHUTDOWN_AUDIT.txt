@@ -1,0 +1,69 @@
+BUA / 1227165 Step-111 ignition-shutdown lifecycle audit
+========================================================
+
+Scope
+-----
+This checkpoint translates executable behavior from the supplied assembled
+listing bua-hac.lst. BUA is retained only as source labeling. The relevant
+blocks are $D370..$D3DB, $D6D1..$D769, and LF447. Behavior was assigned before
+semantics; no unresolved physical power-hold behavior was invented.
+
+Odd minor-loop ordering
+-----------------------
+The odd 12.5-ms Air/Fuel branch now enters $D6D1 before the previously wired
+load/fuel chain. Ignition on resets L008B:L008C to zero and continues through
+$D727. Ignition off advances the timer. At count 8 it clears the source mode
+state, the run-time word, engine-running state, and associated latches. If the
+engine had been running, LF447 bounds the two SAM high bytes to 118..150 and
+commits them to the 16 BLM cells, with the second SAM value selecting cell 0.
+
+At LC012=$0385 the source enters the SWI loop at $D6EA before $D727 and before
+the fuel chain. The PC port exposes exactly that point as one latched HAL event.
+It does not claim to model ECM keep-alive circuitry. Once latched, later calls
+to the PC IRQ entry return without executing ECU work.
+
+The literal $D727..$D769 tail is retained: low raw TPS while running sets the
+enabled error state, a non-running engine initializes L0086:L0087, and the
+image's $FF/$00 extreme positive TPS-delta test sets L0034 bit 5.
+
+Even minor-loop IAC ordering
+----------------------------
+The $D370 reset/park producer runs on the even 12.5-ms path after the existing
+reference/RPM/dwell/spark producer. The existing IAC motor service remains the
+6.25-ms consumer. Reset first forces the modeled position to 255 and commands
+closing. At zero it changes to the open phase and commands toward LC62F=144.
+Completion sets L0002 bit 4. If ignition has returned, LD335 restores its
+startup command state. The source's above-park edge case commands +127 steps;
+it is not silently treated as completion.
+
+Historical replay isolation
+---------------------------
+Frozen Step-104, Step-105, Step-109, and Step-110 signature scenarios enable a
+PC-only replay switch that suppresses the newly connected lifecycle producer.
+Normal reset leaves the live Step-111 path enabled. The switch is neither ECU
+RAM nor target behavior.
+
+Verification
+------------
+Step-111 regression covers ignition-on timer reset, the pre-eight-count delay,
+mode cleanup, exact LF447 bounds and cell writes, $D727 side effects, the SWI
+HAL boundary, IRQ stop behavior, close/open IAC phases, above-park saturation,
+LD335 restart, and odd/even scheduler placement.
+
+Step-111 ignition shutdown regression: PASS 40/40
+Step-111 ignition lifecycle signature: 16D17C9C
+Step-110 integrated output-stage signature: FAADF8A6 (unchanged)
+Step-109 integrated Segment-D signature: F357A5F2 (unchanged)
+Step-105 transmission trace signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+Strict regression output SHA-256:
+cdf0ca106cfbea989c2ae65c0a5b4b4939110237e6f5784f834c6eca0396872b
+main.c SHA-256:
+1eced6223f6554364620e79e5a7789fdad7d787c8211b1e18be38453aae600f7
+Total C/include source lines: 18,504
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step111
+
+The warnings file must contain exactly: No compiler warnings.

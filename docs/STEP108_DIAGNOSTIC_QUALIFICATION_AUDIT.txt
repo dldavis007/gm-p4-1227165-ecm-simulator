@@ -1,0 +1,91 @@
+BUA / GM 1227165 STEP-108 DIAGNOSTIC-QUALIFICATION AUDIT
+=======================================================
+
+Outcome
+-------
+Step 108 translates the complete listing routine LE4F7..LE75C.  It fits
+between the Step-107 Segment-D front end and logger, exactly where the source
+executes `JSR LE4F7` at $EFFB.
+
+Translated fault families
+-------------------------
+Listing range   Candidate fault                     Principal state
+-------------   ----------------------------------  -------------------------
+$E4F7..$E551    ERR13 oxygen-sensor window          L00AA, L004C, L0041
+$E551..$E57D    ERR21 high throttle-position input  L00A7, L004C, L003F
+$E57F..$E5C7    ERR24 vehicle-speed input            L00AB, L004D, L0044
+$E5C7..$E61F    ERR32 EGR diagnostic                 L00AE/AF, L004D, L0041
+$E61F..$E65F    ERR33 high mass-airflow              L00B0, L004D, L003F
+$E65F..$E6A1    ERR34 low mass-airflow               L00B5, L004D, L003F
+$E6A1..$E6AC    ERR41 cylinder-select pulse          L0040, L004E
+$E6AC..$E6DF    ERR42 spark monitoring               L00B4, L003F, L0001
+$E6DF..$E6EC    ERR43 knock failure                  L003B/L0002, L004E
+$E6EC..$E75C    ERR44/45 lean/rich oxygen sensor     L00A8/A9, L004E, L0041
+
+Translation rules
+-----------------
+Executable comparisons and branches outrank comments.  Notable literal
+details retained by the C implementation include:
+
+- all threshold comparisons preserve strict versus inclusive behavior;
+- eight-bit diagnostic counters wrap as source bytes;
+- the ERR32 timer is a big-endian 16-bit value at L00AE/L00AF;
+- high-load and several other ERR32 disqualifiers decay that timer by two,
+  saturating at zero, while a low-coolant path clears it immediately;
+- the ERR32 startup-switch case can set the candidate bit from L0041 bit 5
+  while leaving the existing timer unchanged;
+- the $E6B8 `ASLA`/`BPL` decision is modeled from the resulting condition
+  flags, which tests original L0034 bit 6 regardless of the nearby comment;
+- L0040 bit 0 is consumed and cleared by the ERR41 block;
+- ERR44/45 clear the forced-integrator bit before returning.
+
+Regression
+----------
+Step-108 diagnostic-qualification regression: PASS 22/22
+
+The regression exercises detection, clearing, increment, decrement, timer
+preservation, two-pass spark monitoring, cadence-qualified oxygen counters,
+and the exact new-error/mode bits for all translated fault families.
+
+Compatibility and integration boundary
+--------------------------------------
+Step-104 normal-operation signature remains: 4BA6B7C6
+Step-105 transmission signature remains: 9732D09B
+Step-106 listing-coolant regression remains: PASS 12/12
+Step-107 diagnostic-stage1 regression remains: PASS 17/17
+
+Verified build
+--------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step108
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression.  The only FAIL text is the expected Step-44 summary
+  `PASS 14/14, FAIL 0`.
+
+Complete Step-108 output SHA-256:
+  9c50fbc4674e2cffce72abbf9bf1bfa057132f009d5e3eaa994f78492347b9b6
+
+Step-108 main.c SHA-256:
+  a67380c92caffa3eb994790b15938cce5f9b091b54dad48f5cf75a978302c267
+
+Total C/include source lines:
+  17,497
+
+The scheduler placeholder remains by design.  LF10E..LF1BB flash-code
+sequencing is the last untranslated internal Segment-D route.  Connecting the
+other three stages while silently bypassing LF10E would change field-service
+behavior and would not be a faithful executable-order integration.
+
+Next
+----
+Translate LF10E..LF1BB, including its byte/digit search state and lamp timing.
+Then compose front -> LE4F7 -> logger/flash and scheduler-wire Segment D with a
+new integrated signature while retaining explicit replay of frozen Step-104
+and Step-105 baselines.

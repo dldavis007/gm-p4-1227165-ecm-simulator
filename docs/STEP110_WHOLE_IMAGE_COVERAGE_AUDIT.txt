@@ -1,0 +1,162 @@
+BUA / GM 1227165 STEP-110 WHOLE-IMAGE COVERAGE AUDIT
+====================================================
+
+Purpose and evidence order
+--------------------------
+This audit compares the zero-error bua-hac.lst executable image with the
+current C89 behavioral core. Emitted instructions, resolved targets, and RAM/
+MPU address use outrank comments. `BUA` remains a source label and is not an
+independently established calibration identity.
+
+Coverage terms
+--------------
+  FULL-CORE   Internally executable behavior is scheduler-wired for this image.
+  RAW-HAL     Exact source register values are produced; electrical behavior is HAL.
+  PARTIAL     Useful source behavior exists, but at least one reachable route is absent.
+  TEST-ONLY   Translated helper/regression exists but is not in the live call graph.
+  BOUNDARY    Required code or physical behavior is outside the supplied PROM.
+  UNPORTED    Listing-backed executable behavior has no equivalent in the live core.
+
+Major-segment table after Step 110
+----------------------------------
+Entry  Listing target  Current classification
+-----  --------------  -------------------------------------------------------
+  0       $CD04        FULL-CORE: exact immediate return
+  1       $EDA3        FULL-CORE/RAW-HAL: exact $EDA3..$EF03 output staging
+  2       $E07F        FULL-CORE: vehicle-speed calculation
+  3       $EA28        FULL-CORE/RAW-HAL: diagnostic input, O2 filter, $4003
+  4       $F8F9        BOUNDARY: optional $5800 heads-up-unit ROM dispatch
+  5       $ECEA        FULL-CORE: A/C, closed-loop, fan, IAC continuation
+  6       $F3B6        FULL-CORE plus optional heads-up hook boundary
+  7       $EA95        FULL-CORE/RAW-HAL: coolant variables and MAF burn-off
+  8       $CD04        FULL-CORE: exact immediate return
+  9       $E34E        FULL-CORE: injection-air management
+  A       $EB3A        FULL-CORE: manifold-air-temperature and knock recovery
+  B       $DEE5        FULL-CORE: exhaust-gas-recirculation command
+  C       $E75D        FULL-CORE: canister-purge command
+  D       $EF04        FULL-CORE/RAW-HAL: qualification, logging, lamp flash
+  E       $DE6D        FULL-CORE: battery, selector, transmission state
+  F       $EC23        FULL-CORE: fuel/air major continuation
+
+Step-110 Segment-1 closure
+---------------------------
+Before Step 110, Segment 1 computed a software-side summary but did not write
+the source MPU and parallel-I/O addresses. Step 110 now preserves:
+
+- the two-pass >=171 battery latch and forced-all-off continuation;
+- engine-off ordinary $D000 and field-diagnostic $DFFF staging;
+- normal AIR, acceleration-enrichment, TCC, purge, fan, and EGR selection;
+- Mode-4 raw PWM overrides from L0152/L0153/L0156/L0157;
+- LC014=$B4, LC015=$04, and LC017=$00 branch consequences;
+- direct writes to $3FCC, $3FD2, $3FD4, $3FD6, $3FD8, and $4004;
+- complement-before-scaling for normal purge/EGR, but not Mode-4 forcing;
+- 16-bit wrap in the source's $34xx shift-by-two PWM construction.
+
+The LF3B5 delays between engine-off MPU writes do not alter source RAM. They
+remain target-HAL timing rather than an invented PC delay. Physical polarity,
+driver circuitry, and actuator response also remain HAL responsibilities.
+
+Remaining executable gaps, ranked
+---------------------------------
+Rank  Area / listing evidence             Status and reason
+----  ----------------------------------  ------------------------------------
+  1   Key-off/shutdown, principally       TEST-ONLY/PARTIAL. LD387..LD3D2 IAC
+      $D387..$D3D2 and $D6D1..$D727       homing and LD6D1 timer logic have
+                                          helpers, but the live odd scheduler
+                                          still states ignition-off is outside.
+                                          This affects a real drive lifecycle.
+
+  2   Reset/startup $C800..$C9F3          PARTIAL. ecm_reset provides a safe PC
+                                          state and many startup algorithms are
+                                          translated, but checksum decisions,
+                                          retained-RAM validation, boot ordering,
+                                          optional-ROM probe, and wait branches
+                                          are not one source-ordered live routine.
+
+  3   8192-baud SCI management            PARTIAL. Normal 160-baud output is
+      IRQ front near $C9F4 and             modeled, while SCI initialization,
+      $FA58 onward                         receive framing/checksum, device-table
+                                          selection, response construction, and
+                                          timeout/lock state are incomplete.
+                                          SCI registers require a thin HAL.
+
+  4   Mode-4 command protocol             PARTIAL. Many commanded fuel, spark,
+      selection near $CB67..$CBB4         IAC, fan, and Step-110 output branches
+                                          exist, but the 8192-baud message path
+                                          that validates and populates them is
+                                          not fully live.
+
+  5   Factory-test boot and loop          PARTIAL/TEST-ONLY. Several arithmetic
+      entry at $C8B2 and high-ROM         blocks are regression-covered, but the
+      routines through approximately     factory entry, serial exchange, output
+      $FDxx..$FEA3                        exercise, and continuous loop are not
+                                          composed. Not normal vehicle operation.
+
+  6   SWI/illegal/reset vectors           BOUNDARY/PARTIAL. The listing vectors
+      $FFF0..$FFFE                        resolve targets, but PC behavior must not
+                                          pretend to be 6801 interrupt recovery,
+                                          COP reset, clock failure, or power hold.
+
+  7   Optional heads-up ROM $5800         BOUNDARY. Those bytes are absent from
+                                          the supplied PROM and cannot be ported
+                                          from this listing.
+
+  8   MPU internals and electrical plant  BOUNDARY. Counter event generation,
+                                          pin polarity, coil/driver timing, A/D
+                                          transfer functions, and vehicle wiring
+                                          belong behind the target and PC HALs.
+
+Normal-driving conclusion
+-------------------------
+All 16 major-table entries now have their internally defined normal software
+behavior represented, with entries 0 and 8 proven no-ops and entry 4 explicitly
+external. The ordinary odd/even fuel, spark, injector, IAC, and major scheduler
+paths are connected. This is strong behavioral coverage, but it is not yet a
+claim of whole-ROM equivalence because startup, key-off, SCI service, test
+modes, vectors, and external hardware still differ as ranked above.
+
+Regression contract
+-------------------
+Step-110 Segment-1 output regression: PASS 22/22
+Step-110 integrated output-stage signature: FAADF8A6
+Step-109 Segment-D regression/signature: PASS 40/40 / F357A5F2
+Step-104 normal-operation signature: 4BA6B7C6
+Step-105 transmission signature: 9732D09B
+
+Frozen replay boundary
+----------------------
+Normal reset enables Step-110 raw output staging. The PC-only legacy switch is
+set only inside the Step-104 and Step-105 historical replays and the earlier
+Step-109 signature capture. It preserves comparability; it is not source RAM,
+calibration state, or target behavior.
+
+Verified build
+--------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step110
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression. The only FAIL text is the expected Step-44 summary
+  `PASS 14/14, FAIL 0`.
+
+Complete Step-110 output SHA-256:
+  9b5f96b0876445442d706c0c6f5d280fbbd71a8c5a0cff49233b6b372a38f58f
+
+Step-110 main.c SHA-256:
+  4a0fc764ccf6b2227012240a1314108380d8ae90b20ade5dc8cff6a98b1c812c
+
+Total C/include source lines:
+  18,095
+
+Next implementation
+-------------------
+Step 111 should move the already-audited ignition-off/IAC helpers out of their
+test-only role, reconcile them again against $D387..$D3D2 and $D6D1..$D727,
+and connect the key-off path to the odd scheduler. The SWI powerdown endpoint
+must remain an explicit HAL/event boundary rather than being executed on PC.

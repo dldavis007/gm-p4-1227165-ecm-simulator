@@ -1,13 +1,14 @@
 /* ------------------------------------------------------------------------- */
-/* Step 85: LF3B6 coolant producer, dual-range lookup and ERR14/15 fallback.  */
+/* Step 85/106: LF3B6 coolant producer, dual-range lookup and ERR14/15.       */
 /*                                                                           */
 /* The original hardware changes the thermistor series resistance.  The      */
 /* executable uses L0030 b0 as the range state, with a 106/120 converted-     */
 /* coolant hysteresis.  The 3840-ohm path adds 10 to the raw A/D argument     */
 /* (saturating at 255); the 348-ohm path does not.  This helper intentionally */
-/* models the ordinary path where L003B b3 is clear.  The source branches to  */
-/* an otherwise undefined LF42A when that bit is set, so that exceptional     */
-/* path remains an audit item rather than being guessed here.                 */
+/* follows the zero-error assembled listing.  That listing resolves LF42A at  */
+/* $F42A as RTS.  It also shows the ERR14/15 default-coolant branch at $F418   */
+/* targeting LF42A.  The supplied text spelling COOLS8 is therefore treated   */
+/* as a source-revision/transcription difference, not as executable behavior. */
 /* ------------------------------------------------------------------------- */
 #define STEP85_ERR14_HIGH        227u  /* LC1E1 */
 #define STEP85_COOL_DEFAULT      135u  /* LC1E2 */
@@ -79,8 +80,8 @@ static BuaCool85 bua_cool85_step(bua_u8 raw_adc,bua_u16 run_time,
     /* L003C b7 is cleared by the source here; represented by the caller's
        cop2_not_toggled input being one-shot rather than retained in r. */
 
-    /* L003B b3 jumps to an undefined LF42A in the supplied source.  Do not
-       invent that diagnostic/special path.  Ordinary operation has b3 clear. */
+    /* $F3ED..$F3EE: restore the original A/D byte, then L003B b3 branches
+       to LF42A.  The assembled listing defines LF42A at $F42A as RTS. */
     if((mode3b&0x08u)!=0u) return r;
 
     /* ERR14 is based on converted coolant; ERR15 is based on the original
@@ -98,8 +99,8 @@ static BuaCool85 bua_cool85_step(bua_u8 raw_adc,bua_u16 run_time,
             else r.err4c=(bua_u8)(r.err4c|0x10u);
         }
         r.coolant_5b=(bua_u16)((bua_u16)STEP85_COOL_DEFAULT<<8);
-        /* The supplied source then branches to undefined label COOLS8.  The
-           default L005B store is certain; downstream side effects are not. */
+        /* $F412..$F418: store the calibrated default in L005B, then branch
+           to LF42A/RTS.  No later coolant-filter side effects occur. */
         return r;
     }
 
@@ -112,4 +113,3 @@ static BuaCool85 bua_cool85_step(bua_u8 raw_adc,bua_u16 run_time,
     r.mode3b=(bua_u8)(r.mode3b|0x10u);
     return r;
 }
-

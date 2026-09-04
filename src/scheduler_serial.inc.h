@@ -5,10 +5,14 @@ static void bua_odd_fuel_chain_12p5ms(void);
 static void bua_step94_fuel_state_reset(void);
 static void bua_odd_transient_front_12p5ms(void);
 static void bua_odd_50ms_tail_lddc2(void);
+static bua_u8 bua_ignition_shutdown_odd_step111(void);
+static void bua_iac_shutdown_homing_even_step111(void);
 static void air_fuel_12p5ms(void)
 {
     ++stats.air_fuel_loops;
-    bua_odd_fuel_chain_12p5ms();
+    if(sim_legacy_ignition_shutdown_freeze!=0u ||
+       bua_ignition_shutdown_odd_step111()==0u)
+        bua_odd_fuel_chain_12p5ms();
 }
 /* LCD05: merge the current L0035 reference/diagnostic bit into L0040 before
  * any even-path O2 or spark work.  The source sequence is LDAA L0035;
@@ -120,6 +124,8 @@ static void spark_vss_12p5ms(void)
     bua_lcd05_diagnostic_merge();
     bua_slow_o2_filter_12p5ms();
     bua_reference_state_12p5ms();
+    if(sim_legacy_ignition_shutdown_freeze==0u)
+        bua_iac_shutdown_homing_even_step111();
 }
 /* ---------------------------------------------------------------------- */
 /* PC VSS signal generator                                                */
@@ -636,7 +642,8 @@ static void seg9_inj_air_management(void);
 static void segA_mat_variables(void);
 static void segB_egr(void);
 static void segC_canister_purge(void);
-static void segD_diagnostics(void)         { }
+/* Defined after the diagnostic source units have been included by main.c. */
+static void segD_diagnostics(void);
 static void segE_tcc_adc(void);
 static void segF_fuel_air_major(void);
 static void major_segment(bua_u8 seg)
@@ -657,7 +664,10 @@ static void major_segment(bua_u8 seg)
         case 0xAu: segA_mat_variables();      break;
         case 0xBu: segB_egr();                break;
         case 0xCu: segC_canister_purge();     break;
-        case 0xDu: segD_diagnostics();        break;
+        case 0xDu:
+            if(sim_legacy_segment_d_freeze==0u)
+                segD_diagnostics();
+            break;
         case 0xEu: segE_tcc_adc();            break;
         default:   segF_fuel_air_major();      break;
     }
@@ -666,6 +676,10 @@ static void ecm_reset(void)
 {
     memset(&mem, 0, sizeof(mem));
     memset(&stats, 0, sizeof(stats));
+    sim_legacy_segment_d_freeze = 0u;
+    sim_legacy_segment1_output_freeze = 0u;
+    sim_legacy_ignition_shutdown_freeze = 0u;
+    sim_soft_powerdown_latched = 0u;
     sim_timer8 = 0u;
     sim_iac_motor_on = 1u;
     sim_maf_adc = 128u;
@@ -704,6 +718,8 @@ static void ecm_reset(void)
 static void irq_6p25ms(void)
 {
     bua_u8 count;
+    if(sim_soft_powerdown_latched!=0u)
+        return;
     ++stats.irq_ticks;
     sim_advance_dash_signals_6p25ms();
     sim_advance_ecm_reference_6p25ms();
@@ -728,6 +744,8 @@ static void irq_6p25ms(void)
         air_fuel_12p5ms();
     else
         spark_vss_12p5ms();
+    if(sim_soft_powerdown_latched!=0u)
+        return;
     major_segment((bua_u8)(count & 0x0Fu));
 }
 /* ---------------------------------------------------------------------- */

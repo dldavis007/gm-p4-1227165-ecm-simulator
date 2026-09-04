@@ -1,6 +1,10 @@
 /*
- * BUA / ECM 1227165 - PC harness, step 104
+ * BUA / ECM 1227165 - PC harness, current integration step 110
  * C89-compatible.
+ *
+ * Step 110 completes listing-exact Major Segment-1 raw output staging at
+ * $EDA3..$EF03 and adds a whole-image executable-gap audit. Frozen Step-104,
+ * Step-105, and Step-109 signatures use explicit PC-only replay switches.
  *
  * Modular OnlineGDB-compatible build: main.c includes the logically grouped
  * source, simulation, and regression fragments that form this one translation
@@ -29,7 +33,7 @@
  * continuation LE005..LE07B and the
  * normal 9340 Segment-1 software output staging is represented explicitly
  * at the HAL boundary (AIR/AE/TCC/CCP/fan/EGR) without inventing electrical
- * polarity. Diagnostic/Mode-4 hardware forcing remains classified D/H.
+ * polarity. Step 110 later completes its diagnostic and Mode-4 raw writes.
  * Step 90 major-loop producer wiring and all prior regressions remain intact.
  * The freeze audit is supplied separately as STEP104_BASELINE_FREEZE.txt.
  */
@@ -462,6 +466,10 @@ typedef struct {
     bua_u32 iac_minor_services;
     bua_u32 iac_steps_consumed;
     bua_u32 major_segment_calls[16];
+    bua_u32 diagnostic_segment_calls;
+    bua_u32 ignition_shutdown_calls;
+    bua_u32 iac_shutdown_homing_calls;
+    bua_u32 soft_powerdown_events;
     bua_u32 one_second_events;
     bua_u32 vss_capture_changes;
     bua_u32 hu_5806_calls;
@@ -519,6 +527,14 @@ typedef struct {
 } BuaStats;
 static BuaMemory mem;
 static BuaStats stats;
+/* PC regression switch: replay old frozen baselines without newly wired D. */
+static bua_u8 sim_legacy_segment_d_freeze = 0u;
+/* PC regression switch for pre-Step-110 software-only Segment-1 staging. */
+static bua_u8 sim_legacy_segment1_output_freeze = 0u;
+/* PC regression switch for signatures frozen before key-off integration. */
+static bua_u8 sim_legacy_ignition_shutdown_freeze = 0u;
+/* HAL-visible endpoint corresponding to the source's software-interrupt loop. */
+static bua_u8 sim_soft_powerdown_latched = 0u;
 static bua_u8 sim_iac_motor_on = 1u;
 static bua_u8 sim_timer8;
 static bua_u8 sim_maf_adc = 128u;

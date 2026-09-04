@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-105 modular PC harness entry point.
+ * BUA / ECM 1227165 - Step-111 ignition-shutdown lifecycle PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -14,6 +14,13 @@
 /* Base platform, RAM/MPU model, translated algorithms, and scheduler. */
 #include "src/ecm_core.inc.h"
 #include "src/scheduler_serial.inc.h"
+#include "src/ignition_shutdown.inc.h"
+#include "src/diagnostics.inc.h"
+#include "tests/diagnostics_regression.inc.h"
+#include "src/diagnostic_qualification.inc.h"
+#include "tests/diagnostic_qualification_regression.inc.h"
+#include "src/diagnostic_flash.inc.h"
+#include "src/diagnostic_integration.inc.h"
 
 /* Earlier fuel/spark regressions and the integrated drive simulator. */
 #include "tests/fuel_spark_regression.inc.h"
@@ -44,6 +51,7 @@
 #include "tests/mat_regression.inc.h"
 #include "src/coolant_control.inc.h"
 #include "tests/coolant_regression.inc.h"
+#include "tests/listing_coolant_regression.inc.h"
 #include "src/segment_f.inc.h"
 #include "tests/segment_f_regression.inc.h"
 #include "tests/battery_regression.inc.h"
@@ -51,10 +59,13 @@
 /* Final major-loop wiring, scheduler wiring, and integration tests. */
 #include "src/major_loop.inc.h"
 #include "tests/major_loop_regression.inc.h"
+#include "tests/output_stage_regression.inc.h"
+#include "tests/ignition_shutdown_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
 #include "simulation/transmission_drive.inc.h"
+#include "tests/diagnostic_integration_regression.inc.h"
 
 int main(void)
 {
@@ -66,7 +77,7 @@ int main(void)
     sim_set_ecm_reference_rpm(2400u);
     dash_set_test_inputs();
     dash_update_direct_inputs();
-    printf("BUA / 1227165 + 1986 Corvette cluster PC step-105 test\n");
+    printf("BUA / 1227165 + 1986 Corvette cluster PC step-111 test\n");
     printf("Initial minor count = %u (0x%02X)\n",
            (unsigned int)MINOR_COUNT,
            (unsigned int)MINOR_COUNT);
@@ -270,6 +281,12 @@ int main(void)
     run_step83_purge_test();
     run_step84_mat_test();
     run_step85_coolant_test();
+    run_step106_listing_coolant_test();
+    run_step107_diagnostics_stage1_test();
+    run_step108_diagnostic_qualification_test();
+    run_step109_diagnostic_integration_test();
+    run_step110_output_stage_test();
+    run_step111_ignition_shutdown_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

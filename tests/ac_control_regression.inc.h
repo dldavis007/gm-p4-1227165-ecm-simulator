@@ -38,6 +38,7 @@ static void run_step91_loose_ends_test(void)
     /* Segment-1 software stage consumes live RAM requests. */
     RAM8(0x007Eu)=120u; RAM8(0x003Eu)=0x06u; RAM8(0x0037u)=0x20u;
     RAM8(0x0034u)=0x08u; RAM8(0x0113u)=0u; RAM8(0x0112u)=255u; RAM8(0x00F4u)=255u;
+    sim_legacy_segment1_output_freeze=1u;
     major_segment(0x01u);
     S91(step91_outputs.air_arc_count==0xDFFFu && step91_outputs.enrich_count==0xDFFFu);
     S91(step91_outputs.tcc_count==0xDFFFu && step91_outputs.fan_parallel_b1==1u);
@@ -46,4 +47,3 @@ static void run_step91_loose_ends_test(void)
     mem=saved_mem; stats=saved_stats;
 #undef S91
 }
-

@@ -1,0 +1,105 @@
+BUA / GM 1227165 STEP-107 DIAGNOSTICS STAGE-1 AUDIT
+==================================================
+
+Outcome
+-------
+Step 107 translates two evidence-complete portions of Major Segment D:
+
+  $EF04..$EFFA  scheduler front, mode routing, timer reset, error-memory clear
+  $EFFE..$F10D  error snapshot, debounce, promotion, lamp choice, common exit
+
+The implementation is in `src/diagnostics.inc.h`; focused regression is in
+`tests/diagnostics_regression.inc.h`.
+
+Authority
+---------
+The zero-error bua-hac.lst emitted addresses/opcodes and resolved branches are
+the control-flow authority.  Comments provide secondary semantic names only.
+BUA remains source labeling rather than independently verified identity.
+
+Translated front-end behavior
+-----------------------------
+The $EF04 block now has executable C coverage for:
+
+- L0000 high-nibble cadence flags in L003F;
+- L001B bit-0 transfer into the second cadence flag;
+- diagnostic-switch routing from L0035 bit 4;
+- normal clearing of L0041 bit 7, L003C field bits, and L0042;
+- the L004E/L0053 bit-0 persistent-error special case;
+- stopped-engine clearing of diagnostic timers L00A7..L00AF and L00B5;
+- conditional clearing of L00B0;
+- running-engine diagnostic enable and the 50-count no-error memory clear;
+- exact LF3A7-style checksum over persistent error bytes L0005..L0009.
+
+Translated logger behavior
+--------------------------
+The $EFFE block now has executable C coverage for:
+
+- field-service and flash-mode routing decisions;
+- masked snapshots from new-error bytes L004C..L0050 into L0051..L0055;
+- successive-sample intersection of candidate error bits;
+- 10/50/100/120-count calibrated logging thresholds;
+- promotion into persistent bytes L0005..L0009;
+- reset of the no-error counter and checksum update;
+- L0034 bit-1 state handling;
+- normal and Mode-4 lamp selection;
+- LF498/LF4A6 raw L3FFC MPU transformations;
+- common clearing of L003F cadence flags and new-error bytes.
+
+Deliberate integration boundary
+-------------------------------
+The listing executes LE4F7 diagnostic qualification immediately before the
+logger.  That routine qualifies ERR13, ERR21, ERR24, ERR32, ERR33/34 and later
+faults.  The listing can also branch from the logger to LF10E, a distinct
+flash-code state machine.  Neither is silently skipped in scheduler execution.
+
+For that reason `segD_diagnostics()` remains an explicitly documented empty
+scheduler placeholder in Step 107.  The new units are scheduler-ready, but
+they are exercised only by focused regression until LE4F7 and LF10E are
+translated and can be connected in literal order.
+
+Regression
+----------
+Step-107 diagnostic-stage1 regression: PASS 17/17
+
+It proves normal stopped/running routes, cadence flags, timer clearing,
+persistent-error checksum behavior, exact error masks, snapshot/debounce,
+promotion, raw lamp MPU writes, common cleanup, and preservation of state at
+the unported flash boundary.
+
+Compatibility
+-------------
+Step-104 normal-operation signature remains: 4BA6B7C6
+Step-105 transmission signature remains: 9732D09B
+Step-106 listing-coolant regression remains: PASS 12/12
+
+Verified build
+--------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step107
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression.  The only FAIL text is the expected Step-44 summary
+  `PASS 14/14, FAIL 0`.
+
+Complete Step-107 output SHA-256:
+  a9d25587e146273861eaffa299aa48bb5733b77562fb1d8f6614c0a82359083c
+
+Step-107 main.c SHA-256:
+  03117541addd68a3f6b292c7351bbaadf761504a54eece9c223d8b214b41995d
+
+Total C/include source lines:
+  17,118
+
+Next
+----
+Step 108 translates LE4F7 diagnostic qualification in source order with exact
+shared mode-word/timer side effects.  LF10E flash sequencing remains next; the
+Segment-D scheduler placeholder should be replaced only after the complete
+route can execute without gaps.

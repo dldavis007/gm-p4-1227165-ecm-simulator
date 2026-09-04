@@ -211,6 +211,11 @@ static void run_step105_transmission_drive(void)
 #define STEP105_CHECK(C,T) do { ++total; if(C) ++passed; \
     printf("  %-84s %s\n",T,(C)?"PASS":"FAIL"); } while(0)
 
+    /* Preserve the frozen Step-105 trace independently of Step-109 wiring. */
+    sim_legacy_segment_d_freeze=1u;
+    sim_legacy_segment1_output_freeze=1u;
+    sim_legacy_ignition_shutdown_freeze=1u;
+
     printf("\nStep-105 transmission-aware driving simulation:\n");
     printf("  PC plant: speed command -> selected 700R4 ratio -> slip/TCC -> engine RPM.\n");
     printf("  ECM path: VSS/reference pulses -> measured RPM/VSS -> N/V gear and TCC logic.\n");

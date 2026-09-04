@@ -1,0 +1,113 @@
+BUA / GM 1227165 STEP-109 SEGMENT-D INTEGRATION AUDIT
+====================================================
+
+Outcome
+-------
+Step 109 completes and scheduler-wires Major Segment D in executable listing
+order. The prior placeholder is gone from normal simulator execution.
+
+Source-ordered call graph
+-------------------------
+  major segment D ($EF04)
+    -> diagnostic/front and field-service selection ($EF04..$EFFA)
+    -> LE4F7 fault qualification when the source reaches $EFFB
+    -> debounce/persistent-error logger ($EFFE..$F10D)
+    -> field-service flash sequencer when selected ($F10E..$F1BB)
+    -> common cleanup ($F0FF..$F10D)
+
+Newly translated behavior
+-------------------------
+- $EF40..$EF90 engine-running field-service display/lamp selection;
+- L003C field-service phase bits and L003F cadence decisions;
+- literal selection between L0044 bit 6 and MPU $3FFC bit 3;
+- L0042/L00B9/L00BA/L00BB/L00BC/L00BD flash state;
+- mandatory diagnostic code 12 at the start of a flash sequence;
+- three display repetitions of each code;
+- masked scan of persistent-error bytes L0005..L0009;
+- 8-bit decrement/wrap and the source's 4/8/28-call timing constants;
+- source common-exit clearing of cadence and new-error bytes.
+
+Important executable details
+----------------------------
+Code 12 is emitted unconditionally when a new flash sequence begins. It is not
+conditioned on a stored ERR12 bit. After its third repetition, the sequencer
+advances through the stored-error masks.
+
+The 6801 ROLA operations retain carry produced by preceding CMP instructions.
+For non-group scan indices below 34, that carry is shifted into bit 0 of L00BC.
+It cannot propagate to carry-out before the next error-byte reload, so it does
+not create a false code, but Step 109 preserves it because L00BC is observable
+source RAM.
+
+Scheduler and baseline boundary
+-------------------------------
+Normal `ecm_reset()` enables the completed Segment-D implementation. Segment D
+therefore runs once per 16 ordinary 6.25-ms IRQs, or every 100 ms.
+
+The Step-104 and Step-105 functions explicitly enable a PC-only legacy replay
+switch around their historical traces. That switch suppresses newly added
+Segment-D behavior only for comparison with those already-frozen signatures.
+It is not source RAM, calibration behavior, or a target-HAL assumption.
+
+Regression contract
+-------------------
+Step-109 Segment-D integration regression: PASS 40/40
+Step-109 integrated Segment-D signature: F357A5F2
+Step-108 diagnostic qualification: PASS 22/22
+Step-107 diagnostic front/logger: PASS 17/17
+Step-106 listing coolant: PASS 12/12
+Step-104 normal-operation signature: 4BA6B7C6
+Step-105 transmission signature: 9732D09B
+
+The 40 checks cover three field-service branch families, mandatory code 12,
+flash countdown, lamp-on/lamp-off phases, first/second digit transitions,
+three-repeat state, stored-code selection, scan exhaustion, explicit legacy
+replay, full Segment-D dispatch, and the 16-IRQ 8-odd/8-even/16-IAC/16-major
+cadence.
+
+Evidence boundary
+-----------------
+This completes the internal listing-backed Segment-D routes audited in Steps
+107 through 109. Electrical malfunction-lamp polarity remains at the raw MPU/
+HAL boundary. Comments remain secondary to emitted instructions and address
+use, and `BUA` remains a source label rather than a proven calibration identity.
+
+Remaining whole-image work
+--------------------------
+Segment D is no longer the largest scheduler-reachable omission. Remaining
+work is the broader completeness audit: 8192-baud receive/error protocol,
+factory-test and Mode-4 forcing branches, ignition-off/SWI/reset behavior,
+optional $5800 heads-up ROM, and physical MPU/HAL event generation. These are
+not silently claimed complete by Step 109.
+
+Verified build
+--------------
+Command:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step109
+
+Compiler diagnostics:
+  No compiler warnings.
+
+Runtime exit status:
+  0
+
+Genuine FAIL search:
+  No failed regression. The only FAIL text is the expected Step-44 summary
+  `PASS 14/14, FAIL 0`.
+
+Complete Step-109 output SHA-256:
+  292d0940cd2a10aa52f7b20d062e69969b79660de123af40763de455cd4aadfb
+
+Step-109 main.c SHA-256:
+  c063769b6e3cf8b52321674e52ab77cbfa420e165c3b2f94fb4f67f11b0f2366
+
+Total C/include source lines:
+  17,851
+
+Next
+----
+Use the listing to perform the remaining whole-image completeness audit. Rank
+each executable omission by whether it can affect normal driving, diagnostic
+service, shutdown/startup, serial communications, or only external hardware.
+Translate the highest-value internally executable path before expanding the
+driving plant or freezing a broader behavioral baseline.
