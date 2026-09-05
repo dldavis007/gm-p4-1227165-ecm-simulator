@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c89 -Wall -Wextra -pedantic
-TARGET = build/bua_step111
-OUTPUT = build/bua_step111_output.txt
+TARGET = build/bua_step112
+OUTPUT = build/bua_step112_output.txt
 
 .PHONY: all run test clean
 
@@ -29,8 +29,9 @@ test: $(TARGET)
 	grep -q "step-110 Segment-1 output regression result: PASS (22/22)" $(OUTPUT)
 	grep -q "Step-111 ignition lifecycle signature: 16D17C9C" $(OUTPUT)
 	grep -q "step-111 ignition shutdown regression result: PASS (40/40)" $(OUTPUT)
+	grep -q "step-112 reset/startup regression result: PASS (19/19)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines and Step-106 through Step-111 regressions pass."
+	@echo "Step-104/105 baselines and Step-106 through Step-112 regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt

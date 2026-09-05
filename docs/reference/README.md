@@ -14,7 +14,7 @@ variant.
 
 When sources disagree, use this order:
 
-1. Executable assembly behavior and emitted listing bytes.
+1. Emitted instructions, addresses, and bytes in the verified `bua-hac.lst`.
 2. Calibration tables and their executable address usage.
 3. Independent cross-checks, measurements, and repeatable tests.
 4. Source comments and labels.
@@ -22,6 +22,10 @@ When sources disagree, use this order:
 
 Translate behavior first and assign semantics second. Unknown hardware and
 damaged source remain explicitly unresolved.
+
+`bua-hac.txt` is excluded from firmware evidence because its corrected-revision
+status is not established. Do not use it to fill, reinterpret, or override the
+assembled listing.
 
 ## Reference documents
 
@@ -51,4 +55,3 @@ For each new finding:
 5. Link the corresponding C implementation and regression when present.
 6. If behavior changes, rerun the strict C89 build and all regressions and
    document the intentional baseline change.
-

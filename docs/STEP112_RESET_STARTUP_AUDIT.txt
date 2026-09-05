@@ -1,0 +1,94 @@
+BUA / GM 1227165 STEP-112 RESET/STARTUP AUDIT
+============================================
+
+Evidence
+--------
+The sole firmware source for this step is bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+The file bua-hac.txt was not used because its corrected-revision status is not
+established. Emitted instructions, addresses, operands, and branch targets
+control this translation; listing comments do not override them.
+
+Scope
+-----
+Step 112 models the source-ordered reset/startup front at $C800..$C9F3. It
+records decisions and boundary events before the ordinary scheduler begins.
+It does not claim completion of factory-test behavior, optional HUD ROM,
+physical MPU/A-D/FMD behavior, SWI recovery, or the 8192-baud protocol.
+
+Source-ordered path
+-------------------
+  $C800  stack, delay, logical-RAM mapping and early MPU word
+  $C818  clear internal MPU RAM $3FC0..$3FF9
+  $C826  serial prescaler $8C
+  $C82B  direction register $8F
+  $C830  I/O control $90; $C848 subsequently sets bit 3 -> $98
+  $C835  A/D test boundary
+  $C83A  clear ordinary RAM $01B2 down through $002E
+  $C84D  FMD/SPI initialization boundary
+  $C85F  socketed-device checksum and Error-51 result
+  $C881  final MPU word FB1A, or FB12 for the entry Error-51 mode
+  $C88E  battery, pump and diagnostic comparisons
+  $C8B2  factory-test selection and direct $C9E3 continuation
+  $C8E2  optional $5800 identity and external $5812 call
+  $C8ED  retained error-RAM checksum decision
+  $C8F5  invalid-retained-RAM clear, checksum, BLM and IAC recovery
+  $C90E  retained-error/diagnostic SWI wait decision
+  $C93B  coolant, enrichment, spark, TPS, AFR and IAC initialization
+  $C9C0  8192-baud service boundary
+  $C9E3  timer match setup
+  $C9F1  transfer to the ordinary scheduler
+
+Executable comparison corrections
+---------------------------------
+The factory-test gate follows the emitted unsigned comparisons, not conflicting
+comments. It is reached only when battery A/D is below 100, pump A/D is at
+least 160, and diagnostic A/D is in the inclusive/exclusive range 40..99.
+Equality at battery 100, pump 159, diagnostic 39, or diagnostic 100 bypasses
+factory selection as dictated by BCC/BCS.
+
+Integration boundary
+--------------------
+The source-ordered evaluator is called by the normal PC reset. Its normal-path
+application deliberately writes only values already established by the frozen
+PC reset outcome. Decisions for hardware and incomplete firmware areas are
+observable in BuaStartupResult112 rather than being simulated speculatively.
+This preserves existing behavioral signatures while making the startup route
+available for later exact subsystem integration.
+
+Regression contract
+-------------------
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 integrated output-stage signature: FAADF8A6 (unchanged)
+Step-109 integrated Segment-D signature: F357A5F2 (unchanged)
+Step-105 transmission trace signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+The 19 checks cover normal and Error-51 MPU words, literal I/O setup, socket
+checksum result, every factory-test comparison boundary, FMD AA-fill choice,
+optional-ROM call recording, retained-RAM recovery, SWI wait recording, the
+8192-baud boundary, and scheduler entry.
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step112
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-112 output SHA-256:
+  9cd4ba997bd984090a27e00a1f261d963c6e7deb0a59294a03558d391abb965c
+Step-112 main.c SHA-256:
+  1e87a915a972955abb46424250045d4cafb4ccae96c4f66e789a96e95676650d
+Total C/include source lines: 18,695
+
+Deferred work
+-------------
+Exact electrical MPU/A-D/FMD behavior remains HAL work. Factory-test internals
+and the 8192-baud protocol require their own listing-backed steps. Optional HUD
+behavior cannot be translated without its absent ROM. The retained-RAM checksum
+algorithm and initialization helpers can be integrated more deeply only when
+their complete live side effects are reconciled with every frozen baseline.

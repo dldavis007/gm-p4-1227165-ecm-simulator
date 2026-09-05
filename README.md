@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-111 ignition-shutdown lifecycle project
+# BUA / GM 1227165 Step-112 source-ordered reset/startup project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -9,8 +9,13 @@ Step 110 audits the remaining executable image and completes the listing-exact
 Segment-1 MPU/I/O output staging at `$EDA3..$EF03`. Step 111 translates and
 scheduler-wires the key-off front at `$D6D1..$D769`, the LF447 block-learn
 commit, the IAC reset/park state machine at `$D370..$D3DB`, and a thin HAL
-event at the software-powerdown endpoint. It
-targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
+event at the software-powerdown endpoint.
+Step 112 adds a listing-only, source-ordered model of `$C800..$C9F3`, including
+the normal scheduler handoff and explicit boundaries for factory test, the
+optional HUD ROM, SWI wait, MPU peripherals, and 8192-baud service. It does
+not use `bua-hac.txt` as firmware evidence.
+
+The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
 independently proven calibration identity.
 
@@ -19,7 +24,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step111
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step112
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -64,6 +69,7 @@ compilers from treating them as separate C source files.
 - Step-110 integrated output-stage signature: `FAADF8A6`
 - Step-111 ignition shutdown/IAC homing regression: 40/40
 - Step-111 ignition lifecycle signature: `16D17C9C`
+- Step-112 source-ordered reset/startup regression: 19/19
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -78,9 +84,9 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP111_IGNITION_SHUTDOWN_AUDIT.txt` for the listing-backed lifecycle
-translation and HAL boundary. Earlier audit files remain as historical
-checkpoints.
+See `docs/STEP112_RESET_STARTUP_AUDIT.txt` for the listing-backed reset/startup
+decision model and its explicit HAL/deferred boundaries. Earlier audit files
+remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

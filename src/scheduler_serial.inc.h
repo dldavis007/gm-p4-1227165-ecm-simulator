@@ -713,6 +713,7 @@ static void ecm_reset(void)
     ram16be_set(0x00CEu, 445u);
     RAM8(0x007Eu) = hw_adc(0x10u);
     RAM8(0x0081u) = hw_adc(0x50u);
+    bua_startup_apply_normal_step112();
     /* Cold reset leaves ENGINE RUNNING clear; LCD4B..LCD8F qualifies it. */
 }
 static void irq_6p25ms(void)
