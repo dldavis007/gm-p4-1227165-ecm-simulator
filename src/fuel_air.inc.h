@@ -77,7 +77,7 @@ static BuaSensorFuelResult bua_sensor_to_injector_step31(BuaMafFilterState *st,
 /* Steps 96-97 connect DFCO and the 50-ms BLM update tail.                     */
 /* -------------------------------------------------------------------------- */
 #define STEP94_FAST_O2_COEF 240u       /* LC39E */
-#define STEP103_BLM_DEFAULT             120u /* LF434 */
+#define STEP103_BLM_DEFAULT             128u /* LF434 emits LDAA #$80 */
 #define STEP103_BLM_CELL_COUNT           16u
 #define STEP103_BLM_MAX                 160u /* LC5E2 */
 #define STEP103_BLM_MIN                 108u /* LC5E3 */
@@ -108,6 +108,7 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     bua_u8 flow_band;
     bua_u8 stays;
     bua_u8 value;
+    bua_u8 default_value;
     unsigned int i;
     r.cell=current_cell;
     r.current_blm=128u;
@@ -154,12 +155,17 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     value=cells[r.cell];
     if(value>STEP103_BLM_MAX || value<STEP103_BLM_MIN) {
         /* LDB1C calls LF434. LF434 starts with CLRB, so LDB25 then selects
-         * cell zero as well as replacing every matrix byte with 120. */
+         * cell zero. Step 113 corrects the historical decimal-120 value to
+         * emitted immediate $80; explicit frozen replays retain 120. */
+        default_value=(bua_u8)((sim_legacy_segment_d_freeze!=0u ||
+                                sim_legacy_segment1_output_freeze!=0u ||
+                                sim_legacy_ignition_shutdown_freeze!=0u)?120u:
+                                                                        128u);
         r.air_mode_word|=0x40u;
         for(i=0u;i<STEP103_BLM_CELL_COUNT;++i)
-            cells[i]=STEP103_BLM_DEFAULT;
+            cells[i]=default_value;
         r.cell=0u;
-        value=STEP103_BLM_DEFAULT;
+        value=default_value;
         r.reinitialized=1u;
     }
     r.current_blm=value;
@@ -456,4 +462,3 @@ static void bua_odd_fuel_chain_12p5ms(void)
         bua_odd_normal_fuel_after_load_12p5ms();
     ++stats.odd_fuel_chain_calls;
 }
-

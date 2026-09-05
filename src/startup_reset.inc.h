@@ -112,3 +112,44 @@ static void bua_startup_apply_normal_step112(void)
     RAM8(0x010Cu) = 144u;
     ALCL_TABLE_INDEX = 0x19u;
 }
+
+/* LF3A7: D starts at one and sums exactly L0005..L0009 with 16-bit wrap. */
+static bua_u16 bua_error_word_checksum_step113(void)
+{
+    bua_u16 sum;
+    bua_u16 address;
+    sum = 1u;
+    for (address = 0x0005u; address <= 0x0009u; ++address)
+        sum = (bua_u16)(sum + (bua_u16)RAM8(address));
+    return sum;
+}
+
+/* LF434: emitted LDAA #$80 initializes both SAM bytes and all 16 BLM cells. */
+static void bua_blm_initialize_step113(void)
+{
+    unsigned int i;
+    RAM8(0x000Au) = 0x80u;
+    RAM8(0x000Bu) = 0u;
+    RAM8(0x000Cu) = 0x80u;
+    RAM8(0x000Du) = 0u;
+    for (i = 0u; i < 16u; ++i)
+        RAM8((bua_u16)(0x001Cu + i)) = 0x80u;
+}
+
+/* $C8ED..$C90C invalid-retained-RAM recovery in emitted order. */
+static void bua_retained_recovery_step113(bua_u8 checksum_valid)
+{
+    bua_u16 address;
+    if (checksum_valid != 0u)
+        return;
+    /* LC8F8 clears $002D down through $0001; address zero is not written. */
+    address = 0x002Du;
+    while (address != 0u) {
+        RAM8(address) = 0u;
+        --address;
+    }
+    ram16be_set(0x0018u, bua_error_word_checksum_step113());
+    bua_blm_initialize_step113();
+    RAM8(0x002Cu) = 144u; /* LC62F in the verified 9340 listing. */
+    RAM8(0x003Du) = 0x40u;
+}

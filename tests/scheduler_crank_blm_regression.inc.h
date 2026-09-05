@@ -257,9 +257,9 @@ static void run_step103_blm_cell_selection_test(void)
     all_default=1;
     for(i=0u;i<16u;++i)
         if(mem.low[0x001Cu+i]!=STEP103_BLM_DEFAULT) all_default=0;
-    S103(r.reinitialized!=0u && r.cell==0u && r.current_blm==120u &&
+    S103(r.reinitialized!=0u && r.cell==0u && r.current_blm==128u &&
          (r.air_mode_word&0x40u)!=0u && all_default,
-         "out-of-range selected value invokes LF434, all cells=120, and cell 0");
+         "out-of-range selected value invokes LF434, all cells=$80, and cell 0");
 
     memset(&mem.low[0x001Cu],120,16u);
     r=bua_blm_select_step103(0u,20u,5u,0u,0u,&mem.low[0x001Cu]);
@@ -334,4 +334,3 @@ static void run_step103_blm_cell_selection_test(void)
     stats=saved_stats;
 #undef S103
 }
-

@@ -47,6 +47,7 @@ current audit and allow later imports to be verified.
 | SYS-009 | Confirmed | The Step-105 transmission-aware signature is `9732D09B`; its plant parameters are simulator assumptions, not factory claims. | Step-105 audit and regression. |
 | SYS-010 | Confirmed | Step 111 exposes software powerdown as a HAL event and does not claim to model physical keep-alive power. | `$D6D1-$D769` translation and Step-111 regression. |
 | SYS-011 | Confirmed | Step 112 models the source-ordered `$C800-$C9F3` startup decisions while leaving factory-test, optional-ROM, SWI, MPU electrical behavior, and 8192-baud internals at explicit boundaries. | Verified `bua-hac.lst` and Step-112 regression. |
+| SYS-012 | Confirmed | LF3A7 computes `1 + L0005 + ... + L0009`; LF434 stores `$8000` in both SAM words and initializes all sixteen BLM cells to `$80` (128). | `bua-hac.lst` `$F3A7-$F3B4`, `$F434-$F446`; Step-113 regression. |
 
 ## MEMCAL findings
 

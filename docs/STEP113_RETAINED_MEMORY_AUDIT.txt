@@ -1,0 +1,65 @@
+BUA / GM 1227165 STEP-113 RETAINED-MEMORY STARTUP AUDIT
+======================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, SHA-256
+5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Translated behavior
+-------------------
+LF3A7 at $F3A7 initializes D to one and adds exactly five bytes, L0005 through
+L0009, using 16-bit carry propagation. The helper returns that wrapped 16-bit
+checksum.
+
+The invalid-retained path at $C8F5 clears L002D down through L0001. The emitted
+loop does not clear L0000. It recomputes LF3A7 into L0018:L0019, invokes LF434,
+stores the startup IAC position LC62F=144 at L002C, and stores $40 at L003D.
+
+LF434 at $F434 emits `LDAA #$80`. It stores $8000 at L000A:L000B and
+L000C:L000D, then stores $80 in all sixteen BLM cells L001C..L002B. Earlier PC
+code called this value 120; that was inconsistent with the emitted opcode.
+
+Integration and frozen baselines
+--------------------------------
+The live PC cold reset now uses the listing-exact LF434 value 128. The existing
+Step-103 out-of-range reinitialization also uses 128 in normal execution.
+Explicit Step-104, Step-105 and Step-109 historical signature replays restore
+their former pre-Step-113 state and retain 120 only for comparison. Those
+replay values are not presented as ECM behavior.
+
+The retained-valid/invalid helper is directly regression-tested. Full live
+selection between retained states still requires a PC/HAL power-on input model;
+ordinary ecm_reset remains a deterministic cold-reset test fixture.
+
+Regression contract
+-------------------
+Step-113 retained-memory/startup regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step113
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-113 output SHA-256:
+  14475737d70f63722354ba0e9dcc098457a5785026050863ae9c37aa9ce7c442
+Step-113 main.c SHA-256:
+  58c67345d33f0e77b4d4eca2001366f4623f9c8e1adc3dac7c0ac24d9075124b
+Total C/include source lines: 18,802
+
+Deferred boundaries
+-------------------
+Physical retained-power behavior and the source of the initial RAM contents
+belong to the PC/target HAL. Factory-test, optional HUD ROM, SWI hardware and
+the complete 8192-baud protocol remain separate work.

@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-112 source-ordered reset/startup PC harness.
+ * BUA / ECM 1227165 - Step-113 retained-memory startup PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -63,6 +63,7 @@
 #include "tests/output_stage_regression.inc.h"
 #include "tests/ignition_shutdown_regression.inc.h"
 #include "tests/startup_reset_regression.inc.h"
+#include "tests/startup_memory_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
@@ -79,7 +80,7 @@ int main(void)
     sim_set_ecm_reference_rpm(2400u);
     dash_set_test_inputs();
     dash_update_direct_inputs();
-    printf("BUA / 1227165 + 1986 Corvette cluster PC step-112 test\n");
+    printf("BUA / 1227165 + 1986 Corvette cluster PC step-113 test\n");
     printf("Initial minor count = %u (0x%02X)\n",
            (unsigned int)MINOR_COUNT,
            (unsigned int)MINOR_COUNT);
@@ -290,6 +291,7 @@ int main(void)
     run_step110_output_stage_test();
     run_step111_ignition_shutdown_test();
     run_step112_startup_reset_test();
+    run_step113_startup_memory_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

@@ -702,8 +702,8 @@ static void ecm_reset(void)
     mem.io5000 = 0x08u;
     MINOR_COUNT = 0x0Eu;
     BLM = 128u;
-    /* LF434 cold-start initialization: all sixteen BLM cells receive 120. */
-    memset(&mem.low[0x001Cu], 120, 16u);
+    /* Step 113: LF434 emits LDAA #$80, not 120. */
+    bua_blm_initialize_step113();
     RAM8(0x00C6u) = 128u;
     RAM8(0x00C9u) = 128u;
     ALCL_TABLE_INDEX = 0x19u;

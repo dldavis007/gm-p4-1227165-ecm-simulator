@@ -122,6 +122,9 @@ static void run_step109_diagnostic_integration_test(void)
     sim_legacy_segment_d_freeze=0u;
     sim_legacy_segment1_output_freeze=1u;
     sim_legacy_ignition_shutdown_freeze=1u;
+    RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
+    RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;
+    memset(&mem.low[0x001Cu],120,16u);
     for(i=0u;i<16u;++i)
         irq_6p25ms();
     S109(stats.irq_ticks==16ul && stats.air_fuel_loops==8ul &&
