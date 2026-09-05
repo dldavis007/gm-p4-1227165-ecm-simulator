@@ -20,7 +20,7 @@ names used here.
 | MAT and knock recovery | Major Segment A | MAT and knock RAM/calibration | `MAT`, `KNOCK`, ESC/CAL29/CAL32 networks | `src/mat_control.inc.h` | MAT and spark regressions | Confirmed translated behavior; custom-device analog details unresolved |
 | Diagnostics qualification | Segment D `$EF04`; `$E4F7-$E75C` | Diagnostic flags, timers and history | Diagnostic inputs and lamp output | `src/diagnostics.inc.h`, `src/diagnostic_qualification.inc.h`, `src/diagnostic_flash.inc.h` | Diagnostic regressions | Confirmed translated blocks |
 | ALDL 160-baud transmit | IRQ/serial path | Serial state and transmit data | ALDL transceiver, shared line | `src/scheduler_serial.inc.h` | Existing scheduler/serial coverage | Partial; electrical timing reference available |
-| ALDL 8192-baud protocol | IRQ front near `$C9F4`, high-ROM routines near `$FA58` | SCI and Mode-4 state | SCI registers and ALDL transceiver | Partial serial/diagnostic implementation | Whole-image audit | Provisional/partial |
+| ALDL 8192-baud protocol | IRQ front near `$C9F4`, `$FA58..$FC71` | SCI RAM, device `$80`, Modes 0–4 | SCI registers and ALDL transceiver | `src/sci_8192.inc.h` | Step-115 SCI regression | Confirmed software protocol core; physical byte timing and unrepresented ROM reads remain HAL boundaries |
 | Ignition shutdown | `$D6D1-$D769`, `LF447` | Key-off timers, BLM cells, IAC reset state | Keep-alive power and SWI endpoint | `src/ignition_shutdown.inc.h` | `tests/ignition_shutdown_regression.inc.h` | Confirmed software; physical powerdown is HAL |
 | MEMCAL cylinder selection | ECM schematic `CAL56 -> CYL` | Fixed MEMCAL network configuration | Custom U12 input | Represent as target hardware profile if processor-visible behavior requires it | Schematic connection only | Connection confirmed; consequence provisional |
 | MEMCAL oscillator configuration | ECM schematic `CAL42 -> U11 OSC` | Fixed MEMCAL network configuration | U11 analog/timing network | Normally implicit at HAL signal boundary | Schematic connection only | Connection confirmed; transfer unknown |
@@ -38,4 +38,3 @@ names used here.
 - MEMCAL resistance values do not by themselves prove the meaning of a CAL
   connection; schematic destination and executable consequences are separate
   evidence steps.
-

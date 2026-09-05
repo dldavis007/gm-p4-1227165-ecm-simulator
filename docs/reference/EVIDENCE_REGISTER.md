@@ -47,6 +47,7 @@ current audit and allow later imports to be verified.
 | SYS-009 | Confirmed | The Step-105 transmission-aware signature is `9732D09B`; its plant parameters are simulator assumptions, not factory claims. | Step-105 audit and regression. |
 | SYS-010 | Confirmed | Step 111 exposes software powerdown as a HAL event and does not claim to model physical keep-alive power. | `$D6D1-$D769` translation and Step-111 regression. |
 | SYS-011 | Confirmed | Step 112 models the source-ordered `$C800-$C9F3` startup decisions while leaving factory-test, optional-ROM, SWI, MPU electrical behavior, and 8192-baud internals at explicit boundaries. | Verified `bua-hac.lst` and Step-112 regression. |
+| SYS-012 | Confirmed | Step 115 translates the sole device `$80` SCI initialization, receive validation/checksum, Modes 0–4 response construction, and transmit-state core at `$C9F4` and `$FA58-$FC71`. | Verified `bua-hac.lst` and Step-115 regression. Physical byte timing and unavailable ROM reads remain boundaries. |
 | SYS-012 | Confirmed | LF3A7 computes `1 + L0005 + ... + L0009`; LF434 stores `$8000` in both SAM words and initializes all sixteen BLM cells to `$80` (128). | `bua-hac.lst` `$F3A7-$F3B4`, `$F434-$F446`; Step-113 regression. |
 
 ## MEMCAL findings
@@ -70,7 +71,7 @@ current audit and allow later imports to be verified.
 | OPEN-003 | Variant-dependent | Whether the available MEMCAL photograph is the exact source unit or another model with similar construction. |
 | OPEN-004 | Boundary | Internal behavior and undocumented register bits of the custom MPU/peripheral devices beyond what executable use and schematics expose. |
 | OPEN-005 | Boundary | Optional heads-up-display ROM behavior in the `$5800` region, whose bytes are absent from the supplied PROM. |
-| OPEN-006 | Provisional | Complete 8192-baud receive, validation, response, and Mode-4 command path semantics. Listing-backed translation remains incomplete. |
+| OPEN-006 | Boundary | Step 115 completes the listing-backed software message core. Exact electrical byte timing, transceiver behavior, and arbitrary ROM-dump bytes are not modeled by the C core. |
 | OPEN-007 | Provisional | Source-ordered reset/startup composition, including retained-RAM validation and optional-ROM decisions. |
 
 ## Identity boundary

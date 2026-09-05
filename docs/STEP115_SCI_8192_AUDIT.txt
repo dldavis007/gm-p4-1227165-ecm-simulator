@@ -1,0 +1,69 @@
+BUA / GM 1227165 STEP-115 8192-BAUD SCI AUDIT
+==============================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Scope and translated behavior
+-----------------------------
+Step 115 translates the software message core selected by the SCI IRQ front
+near $C9F4 and the routines at $FA58..$FC71. The listing contains one top-level
+device, ID $80, and mode descriptors for Modes 0 through 4.
+
+Implemented behavior includes LFA58/LFA7A initialization, the shared ICB/OCB
+status locations, device matching, biased length decoding, modulo-256 receive
+checksum, input-buffer and Mode-2/3/4 mirror transfer, reply selection,
+two's-complement transmit checksum, transmitter/wakeup register states, and
+the source-specific Mode 0, 1, 2, 3 and 4 payload rules.
+
+Executable arithmetic controls the translation where comments conflict or are
+ambiguous. Mode 1 emits the mode plus 63 C75B table-selected bytes. Mode 2 uses
+the descriptor NOUT=64 and therefore emits the mode plus 63 sequential bytes.
+Modes 3 and 4 derive their output count from the received NIN value exactly as
+LFBBB does. Mode 4 copies its ten control bytes to $0152..$015B and makes the
+accepted lock/Mode-4 state visible to the scheduler-facing RAM flags.
+
+Boundaries
+----------
+The PC HAL supplies complete received byte frames; electrical bit timing,
+transceiver polarity, collision behavior and interrupt latency are not inferred.
+RAM $0000..$04FF and the listing-proven EPROM ID bytes $C000/$C001 are readable.
+An arbitrary Mode-2/3/4 ROM address that is not represented in the C calibration
+model returns an explicit address/boundary result instead of invented data.
+
+Regression contract
+-------------------
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step115
+
+The warnings artifact contains exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-115 output SHA-256:
+  8f15e02da394a425d1bc825a4a5181f59370a2a43ec7e58572a716a46ca740b8
+Step-115 main.c SHA-256:
+  da164c8a780e6b9bdc82e79b016abe5457474a798f602d2c0ae8c98375642e00
+Total C/include source lines: 19,291
+
+Deferred work
+-------------
+Physical SCI timing and the ALDL transceiver belong to the HAL. Complete ROM
+address exposure would require a source-backed ROM image/read map rather than
+invented calibration bytes. Factory-test, optional HUD ROM and SWI hardware
+remain separate boundaries.

@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-114 normal startup initialization project
+# BUA / GM 1227165 Step-115 8192-baud SCI/message project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -22,6 +22,10 @@ Step 114 integrates the listing-ordered normal startup initializer at
 `$C93B..$C9F3` through a distinct power-on entry point. It reuses established
 coolant, TPS and Segment-E behavior, preserves the direct SCI/MPU/timer writes,
 and leaves the unresolved SCI device-control-block walk as a named boundary.
+Step 115 resolves that device-control-block initialization and translates the
+listing's sole device `$80` receive, validation, checksum, Modes 0–4, response,
+and transmit-state core. Physical byte timing and unrepresented ROM reads stay
+behind explicit PC/HAL boundaries.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -32,7 +36,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step114
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step115
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -80,6 +84,7 @@ compilers from treating them as separate C source files.
 - Step-112 source-ordered reset/startup regression: 19/19
 - Step-113 retained-memory/startup regression: 10/10
 - Step-114 source-ordered normal-startup regression: 14/14
+- Step-115 8192-baud SCI/message regression: 20/20
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -94,8 +99,8 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP114_NORMAL_STARTUP_AUDIT.txt` for the listing-backed normal
-startup integration. Earlier audit files remain as historical checkpoints.
+See `docs/STEP115_SCI_8192_AUDIT.txt` for the listing-backed SCI/message core.
+Earlier audit files remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

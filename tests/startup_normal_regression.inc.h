@@ -36,8 +36,9 @@ static void run_step114_startup_normal_test(void)
     STEP114_CHECK(RAM8(0x012Du)==0u && RAM8(0x012Fu)==0u &&
                   RAM8(0x0130u)==0u && ram16be_get(0x0131u)==0u,
                   "LFA58 clears directly addressed SCI status, count, checksum and pointer RAM");
-    STEP114_CHECK(bua_startup_trace114.sci_device_boundary!=0u,
-                  "LFA58 device-control-block walk remains an explicit SCI boundary");
+    STEP114_CHECK(bua_startup_trace114.sci_device_boundary==0u &&
+                  RAM8(0x0133u)==0u && RAM8(0x016Fu)==0u,
+                  "Step 115 resolves LFA58's sole-device ICB/OCB clear boundary");
     STEP114_CHECK(mpu16be_get(0x3FFCu)==0xFB06u,
                   "LF4A8 with A=$04 emits the listing-exact MPU CSR update");
     STEP114_CHECK(MINOR_COUNT==0x0Eu && BLM==128u &&

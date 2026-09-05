@@ -24,8 +24,10 @@ static void bua_startup_sci_direct_init_step114(void)
     ram16be_set(0x0131u,0u);
     RAM8(0x012Fu)=0u;
     RAM8(0x0130u)=0u;
-    /* LFA69's device-control-block walk belongs to the later SCI audit. */
-    bua_startup_trace114.sci_device_boundary=1u;
+    /* LC73D is the sole top-level device entry: clear its ICB and OCB. */
+    RAM8(0x0133u)=0u;
+    RAM8(0x016Fu)=0u;
+    bua_startup_trace114.sci_device_boundary=0u;
 }
 
 static void bua_startup_csr_set_step114(bua_u8 mask)

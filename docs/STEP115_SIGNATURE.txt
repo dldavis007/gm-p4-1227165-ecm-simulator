@@ -1,0 +1,16 @@
+STEP115-SCI-8192-V1
+
+regression=PASS 20/20
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=da164c8a780e6b9bdc82e79b016abe5457474a798f602d2c0ae8c98375642e00
+output_sha256=8f15e02da394a425d1bc825a4a5181f59370a2a43ec7e58572a716a46ca740b8
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 115. Its contract is the focused
+20/20 SCI/message regression plus the unchanged historical signatures above.
