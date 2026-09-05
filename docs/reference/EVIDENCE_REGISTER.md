@@ -1,0 +1,79 @@
+# Evidence register
+
+## Status vocabulary
+
+| Status | Meaning |
+| --- | --- |
+| Confirmed | Directly established by emitted instructions, exact address use, schematic connectivity, continuity measurement, or a repeatable test of the stated behavior. |
+| Strongly supported | Independent evidence agrees, but one direct proof step remains. |
+| Provisional | Best current interpretation; competing explanations remain possible. |
+| Variant-dependent | May legitimately differ by ECM, MEMCAL, calibration, or board revision. |
+| Unknown | Evidence is presently insufficient. |
+| Boundary | Behavior belongs to hardware or code outside the supplied PROM image. |
+
+Confidence applies to the specific claim, not to an entire source. For
+example, source instructions can be authoritative while a nearby comment is
+wrong.
+
+## Source inventory
+
+The primary source artifacts are not yet stored in this repository. The hashes
+below identify the material used for the current audit and allow later imports
+to be verified.
+
+| Artifact | Size | SHA-256 | Role |
+| --- | ---: | --- | --- |
+| `bua-hac.txt` | 429,349 bytes | `36f20ba8e64cce07d41c7c5eaf3d74f4507c852adf5e1cd239cd6a14fbaf23dd` | Corrected, compilable commented assembly/disassembly; executable behavior is primary evidence. |
+| `bua-hac.lst` | 938,156 bytes | `5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83` | Zero-error assembled listing used to resolve emitted bytes, addresses, and targets. |
+| `Resistors.txt` | not recorded here | `350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de` | Two measured/reconstructed MEMCAL resistor lists. |
+| `MemCal, Cal connections.docx` | not recorded here | `f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6` | User connection notes from CAL29 through CAL61. Contains at least one apparent duplicated-label transcription error. |
+| 1227165 schematic GIF set | six sheets | Individual hashes to be recorded when the verified set is imported. | Processor, inputs, outputs, ignition/injection, connectors, and power supply. |
+| MEMCAL and network images | several variants | Individual hashes to be recorded when provenance is verified. | Physical layout and inferred resistor topology; applicability can be model-dependent. |
+| `GM-8192-160-Baud-ALDL-Interface.pdf` | approximately 595 kB | not yet recorded | External ALDL electrical and timing reference; useful for the HAL, not primary proof of PROM behavior. |
+
+## Confirmed or strongly supported system facts
+
+| ID | Status | Statement | Principal evidence |
+| --- | --- | --- | --- |
+| SYS-001 | Confirmed | The target ECM service number is 1227165. | Project hardware identification and schematic title blocks. |
+| SYS-002 | Confirmed | The supplied program window is 32 KiB at `$8000-$FFFF`; the PROM interface exposes `A0-A14`, `D0-D7`, `/ROMCS`, and `/ROMOE`. | Connector/processor schematics and assembled image addresses. |
+| SYS-003 | Confirmed | Ordinary IRQ cadence is 6.25 ms. Odd and even minor branches each execute at 12.5 ms, and all sixteen major segments are selected once per sixteen IRQs. | Listing-backed scheduler translation and regression. |
+| SYS-004 | Confirmed | IAC motor service executes every 6.25 ms; the IAC control producer executes at 50 ms where established. | Executable call graph and scheduler regressions. |
+| SYS-005 | Confirmed | `LC014 = $B4` has bit 1 clear, selecting normal double-fire behavior in the translated branch. | Calibration byte and executable test. |
+| SYS-006 | Strongly supported | V8 geometry uses four distributor reference pulses per crankshaft revolution; one reference interval represents 90 crank degrees. | Executable arithmetic, calibration usage, and cross-checks. |
+| SYS-007 | Confirmed | Normal physical batch-injection bookkeeping represents one simultaneous all-eight-injector batch per crankshaft revolution. | Executable scheduling and translated injector regression. |
+| SYS-008 | Confirmed | The Step-104 normal-operation behavioral signature is `4BA6B7C6`. | Frozen serialization contract and regression. |
+| SYS-009 | Confirmed | The Step-105 transmission-aware signature is `9732D09B`; its plant parameters are simulator assumptions, not factory claims. | Step-105 audit and regression. |
+| SYS-010 | Confirmed | Step 111 exposes software powerdown as a HAL event and does not claim to model physical keep-alive power. | `$D6D1-$D769` translation and Step-111 regression. |
+
+## MEMCAL findings
+
+| ID | Status | Statement | Notes |
+| --- | --- | --- | --- |
+| MEM-001 | Confirmed | The motherboard schematic provides a 66-contact J4 MEMCAL interface, 33 contacts per side. | Connector schematic. |
+| MEM-002 | Confirmed | The MEMCAL supplies the external PROM address/data/control connections and CAL29-CAL61 hardware connections. | Connector and processor/ignition schematics. |
+| MEM-003 | Strongly supported | The relevant MEMCAL architecture includes a 28-pin EPROM, one 14-pin resistor network, and one 16-pin resistor network on a pin-corresponding carrier. | User physical inspection and two independent resistor reconstructions. Treat exact model applicability as provisional until verified. |
+| MEM-004 | Confirmed | Many CAL connections configure custom ignition/injection circuitry rather than mapping directly to processor-readable bits. | `MemCal, Cal connections.docx` cross-checked against the ignition/injection schematic. |
+| MEM-005 | Confirmed | CAL56 reaches the custom device cylinder-selection input; CAL42 participates in an oscillator connection; CAL61 reaches the MAP-related custom-device input. | ECM schematic connectivity. Functional consequences beyond the visible connections require additional proof. |
+| MEM-006 | Variant-dependent | Physical network pin count, part marking, placement, and resistor population can differ across MEMCAL models. | User warning and uncertain photograph provenance. |
+| MEM-007 | Provisional | The complex-network drawing is a later refinement of the second `Resistors.txt` list. | Several values and designators differ; no date or netlist yet establishes revision order. |
+
+## Open evidence items
+
+| ID | Status | Question or required evidence |
+| --- | --- | --- |
+| OPEN-001 | Unknown | Exact package-pin-to-J4/CAL mapping for both resistor networks on the verified 9340 MEMCAL. |
+| OPEN-002 | Unknown | Which conflicting complex-network resistor values are physically installed. An `.asc` netlist or direct measurement would resolve this. |
+| OPEN-003 | Variant-dependent | Whether the available MEMCAL photograph is the exact source unit or another model with similar construction. |
+| OPEN-004 | Boundary | Internal behavior and undocumented register bits of the custom MPU/peripheral devices beyond what executable use and schematics expose. |
+| OPEN-005 | Boundary | Optional heads-up-display ROM behavior in the `$5800` region, whose bytes are absent from the supplied PROM. |
+| OPEN-006 | Provisional | Complete 8192-baud receive, validation, response, and Mode-4 command path semantics. Listing-backed translation remains incomplete. |
+| OPEN-007 | Provisional | Source-ordered reset/startup composition, including retained-RAM validation and optional-ROM decisions. |
+
+## Identity boundary
+
+The text `BUA` appears in the supplied source labeling and on an available
+MEMCAL photograph alongside `9340`. That is useful corroboration, but the
+project does not use the label alone to claim calibration identity or to prove
+that every photographed hardware variant contains the supplied PROM image.
+
