@@ -44,6 +44,7 @@ Every source fragment is well below the previously observed approximately
 | `simulation/` | Original scripted drive plus the PC-only transmission-aware plant |
 | `tests/` | Regression models and regression functions |
 | `docs/` | Frozen evidence and Step-106/107 listing-backed audits |
+| `docs/reference/` | Living evidence register, hardware/firmware cross-reference, MEMCAL model, and theory-of-operation index |
 | `build/` | Generated executables, output, and compiler diagnostics |
 
 Files ending in `.inc.h` are implementation fragments, not independent public
