@@ -17,14 +17,15 @@ wrong.
 
 ## Source inventory
 
-The primary source artifacts are not yet stored in this repository. The hashes
-below identify the material used for the current audit and allow later imports
-to be verified.
+The authoritative assembled listing is stored under `evidence/firmware/`.
+Other primary artifacts remain external until their provenance and applicable
+variant are verified. The hashes below identify the material used for the
+current audit and allow later imports to be verified.
 
 | Artifact | Size | SHA-256 | Role |
 | --- | ---: | --- | --- |
 | `bua-hac.txt` | 429,349 bytes | `36f20ba8e64cce07d41c7c5eaf3d74f4507c852adf5e1cd239cd6a14fbaf23dd` | Excluded from firmware evidence: its corrected-revision status is not established. Do not use it. |
-| `bua-hac.lst` | 938,156 bytes | `5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83` | Sole primary firmware source: zero-error assembled listing used for emitted bytes, addresses, targets, tables, and execution order. |
+| [`evidence/firmware/bua-hac.lst`](../../evidence/firmware/bua-hac.lst) | 938,156 bytes | `5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83` | Sole primary firmware source: zero-error assembled listing used for emitted bytes, addresses, targets, tables, and execution order. |
 | `Resistors.txt` | not recorded here | `350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de` | Two measured/reconstructed MEMCAL resistor lists. |
 | `MemCal, Cal connections.docx` | not recorded here | `f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6` | User connection notes from CAL29 through CAL61. Contains at least one apparent duplicated-label transcription error. |
 | 1227165 schematic GIF set | six sheets | Individual hashes to be recorded when the verified set is imported. | Processor, inputs, outputs, ignition/injection, connectors, and power supply. |

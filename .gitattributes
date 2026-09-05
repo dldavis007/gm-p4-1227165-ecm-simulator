@@ -8,3 +8,4 @@
 Makefile text eol=lf
 
 *.bat text eol=crlf
+evidence/firmware/bua-hac.lst -text
