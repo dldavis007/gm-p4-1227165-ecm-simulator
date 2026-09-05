@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-113 retained-memory startup PC harness.
+ * BUA / ECM 1227165 - Step-114 normal startup initialization PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -59,11 +59,13 @@
 
 /* Final major-loop wiring, scheduler wiring, and integration tests. */
 #include "src/major_loop.inc.h"
+#include "src/startup_normal.inc.h"
 #include "tests/major_loop_regression.inc.h"
 #include "tests/output_stage_regression.inc.h"
 #include "tests/ignition_shutdown_regression.inc.h"
 #include "tests/startup_reset_regression.inc.h"
 #include "tests/startup_memory_regression.inc.h"
+#include "tests/startup_normal_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
@@ -292,6 +294,7 @@ int main(void)
     run_step111_ignition_shutdown_test();
     run_step112_startup_reset_test();
     run_step113_startup_memory_test();
+    run_step114_startup_normal_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

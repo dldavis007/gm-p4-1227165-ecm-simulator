@@ -1,0 +1,16 @@
+STEP114-NORMAL-STARTUP-V1
+
+regression=PASS 14/14
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=6d96ade7b42d342762158a342e86f7c6a30cde4d1b694c4d429b20a31d43c666
+output_sha256=4596e2109c01b9b03a9d620a2c572b43e8fa46fdf52129bc537a5e080ef217bf
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 114. Its contract is the focused
+14/14 source-order regression plus the unchanged historical signatures above.

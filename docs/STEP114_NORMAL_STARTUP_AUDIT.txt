@@ -1,0 +1,64 @@
+BUA / GM 1227165 STEP-114 NORMAL STARTUP AUDIT
+================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Translated behavior
+-------------------
+Step 114 integrates the emitted normal-startup sequence at $C93B..$C9F3.
+The order is LF3B6 coolant acquisition; conditional C3E4/C41F/C17A startup
+lookups; hot-restart and Error-32 startup qualification; LC3A0 O2 filter
+initialization; TPS A/D and LF35A processing; LDE72 Segment E; spark-period
+and LC3CB AFR initialization; transmission mode; SCI initialization; LF4A8
+MPU CSR update; final RAM constants; timer match; scheduler handoff.
+
+The C17A operation stores only the lookup result at L0013. The existing
+bua_startup_spark_initialize helper was deliberately not called because it
+also initializes delay/repeat state belonging to a different source path.
+
+Integration boundary
+--------------------
+ecm_power_on_step114 is the listing-ordered power-on entry point. ecm_reset
+remains the deterministic PC regression fixture, so historical test setup is
+not confused with physical power-on behavior.
+
+LF1E0's FMD value is supplied by the PC/HAL boundary; only emitted bit 5 is
+consumed. LFA58's directly addressed SCI RAM clears are implemented. Its
+ROM-described per-device control-block walk remains an explicit boundary for
+the complete 8192-baud SCI audit. No custom-hardware behavior is invented.
+
+Regression contract
+-------------------
+Step-114 source-ordered normal-startup regression: PASS 14/14
+Step-113 retained-memory/startup regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step114
+
+The warnings artifact contains exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-114 output SHA-256:
+  4596e2109c01b9b03a9d620a2c572b43e8fa46fdf52129bc537a5e080ef217bf
+Step-114 main.c SHA-256:
+  6d96ade7b42d342762158a342e86f7c6a30cde4d1b694c4d429b20a31d43c666
+Total C/include source lines: 18,980
+
+Deferred boundaries
+-------------------
+The complete 8192-baud protocol and its device control blocks, physical FMD
+behavior, factory-test behavior, optional HUD ROM, and SWI hardware remain
+separate work.
