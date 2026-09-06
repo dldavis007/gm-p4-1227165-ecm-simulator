@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-117 factory-test control PC harness.
+ * BUA / ECM 1227165 - Step-118 factory-test execution PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -15,6 +15,7 @@
 #include "src/ecm_core.inc.h"
 #include "src/startup_reset.inc.h"
 #include "src/factory_test_control.inc.h"
+#include "src/factory_test_execution.inc.h"
 #include "src/scheduler_serial.inc.h"
 #include "src/ignition_shutdown.inc.h"
 #include "src/diagnostics.inc.h"
@@ -72,6 +73,7 @@
 #include "tests/sci_8192_regression.inc.h"
 #include "tests/mode4_lifecycle_regression.inc.h"
 #include "tests/factory_test_control_regression.inc.h"
+#include "tests/factory_test_execution_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
@@ -304,6 +306,7 @@ int main(void)
     run_step115_sci_test();
     run_step116_mode4_lifecycle_test();
     run_step117_factory_control_test();
+    run_step118_factory_execution_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

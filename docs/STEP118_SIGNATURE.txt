@@ -1,0 +1,16 @@
+STEP118-FACTORY-TEST-EXECUTION-V1
+
+regression=PASS 31/31
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=fbc9be344e171219c5ecad147bc11cae487073f94a9fb8277d85392504e49a32
+output_sha256=a8107c3eed7944e3be3ae27f992db4dbd6c3ec82a2fcf65f0227ca8d9ef908bf
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 118. Its contract is the focused
+31/31 factory-test execution regression plus the unchanged signatures above.

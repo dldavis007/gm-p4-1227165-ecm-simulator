@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-117 factory-test control project
+# BUA / GM 1227165 Step-118 factory-test execution project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -36,6 +36,12 @@ factory data-pointer table, optional `$AA` RAM fill, FMD exchange boundary,
 96-count minor loop, serial cadence selection, battery/ignition decisions, and
 literal COP restart. Custom-control and physical output exercises beginning at
 `$FD29` remain a separate hardware-facing step.
+Step 118 completes the listing-backed factory-test execution loop at
+`$FD29..$FEA3`. It preserves the raw numeric mode-bit branches, nonvolatile
+RAM checksum, twelve-channel A/D capture, alternating coolant pull-up samples,
+six-channel PWM exercise, lamp/fan and IAC bit sequences, and the three exact
+reference-period fuel/spark branches. Electrical effects and the final wait
+loop remain HAL boundaries.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -46,7 +52,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step117
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step118
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -97,6 +103,7 @@ compilers from treating them as separate C source files.
 - Step-115 8192-baud SCI/message regression: 20/20
 - Step-116 Mode-4 lifecycle/scheduler regression: 16/16
 - Step-117 factory-test boot/control regression: 24/24
+- Step-118 factory-test execution regression: 31/31
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -111,8 +118,8 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP117_FACTORY_TEST_CONTROL_AUDIT.txt` for the source-ordered
-factory-test control path.
+See `docs/STEP118_FACTORY_TEST_EXECUTION_AUDIT.txt` for the completed
+source-ordered factory-test execution path.
 Earlier audit files remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The

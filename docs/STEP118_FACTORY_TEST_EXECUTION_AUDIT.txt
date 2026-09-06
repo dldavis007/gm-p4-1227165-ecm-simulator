@@ -1,0 +1,89 @@
+BUA / GM 1227165 STEP-118 FACTORY-TEST EXECUTION AUDIT
+======================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Scope and integration
+---------------------
+Step 118 translates $FD29..$FEA3 and connects it directly after Step 117's
+$FF00 COP restart. A factory IRQ now follows the complete represented path
+from the startup flag and IRQ branch through the final wait-loop handoff.
+Ordinary scheduler execution remains bypassed while L0047 bit 7 is set.
+
+Raw mode branches
+-----------------
+The translation does not trust inconsistent semantic labels around the mode
+branches. TST L0048 selects a complete-byte zero path. A nonzero value with
+bit 0 clear selects the async-pulse, checksum and all-off path. A nonzero
+value with bit 0 set selects the A/D, output-exercise and fuel/spark path.
+
+The zero path preserves the conditional L0031 bit-1 toggle and the L0049
+bit-2 control of MPU CSR bit 2. The nonzero-even path writes 197 to L3FF2,
+temporarily sets the CSR high-byte bit 2, calculates the modulo-65536 sum of
+exactly L0000..L002D into L0175, and performs LF32E's single COP restart for
+this 46-byte invocation. Both paths converge on the emitted all-off writes:
+zero synchronous fuel, masked parallel I/O and $7000 at all six PWM addresses.
+
+A/D and output exercise
+-----------------------
+The low-bit-set path captures twelve HAL-supplied A/D bytes in channel order
+at L017B..L0186. Every fourth factory count, it saves the L017F coolant sample
+to L0187 or L0188 according to L0031 bit 0 and then toggles that bit. No exact
+electrical transfer function or resistor-network identity is inferred.
+
+When the low nibble of L0172 is zero, the PWM selector preserves the emitted
+unsigned arithmetic: values above 32 first subtract $30 with 8-bit wrap; the
+folded result selects $D200 below 16, $D066 at 16, and $D39A above 16. The
+selected word reaches L3FCC and L3FD2/L3FD4/L3FD6/L3FD8/L3FDA. The following
+CSR and $4004 bit changes and the rotate-left IAC phase at L0179/$4002 are
+stored as raw writes without assigning physical polarity.
+
+Factory fuel and spark
+----------------------
+Every low-bit-set pass stores L3FC0/4 at L0177. Reference periods above 655
+select fuel 655, dwell 327, quarter-period fire, and zero EFI delay. Periods
+328 through 655 select fuel 327, dwell 262, zero fire offset and zero delay.
+Periods below 328 select fuel 66, dwell 197, wrapped negative quarter-period
+fire and EFI delay 66. Equality boundaries and 16-bit wrapping are regression
+tested explicitly.
+
+Boundaries
+----------
+The PC HAL supplies A/D and FMD values. SPI timing, custom MPU internals,
+output polarity, actuator/electrical response, SWI/reset consequences, and
+the continuous wait-loop timing are not invented. Numeric FMD mode-bit paths
+are established; semantic mode names are not promoted beyond the evidence.
+
+Regression contract
+-------------------
+Step-118 factory-test execution regression: PASS 31/31
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step118
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-118 output SHA-256:
+  a8107c3eed7944e3be3ae27f992db4dbd6c3ec82a2fcf65f0227ca8d9ef908bf
+Step-118 main.c SHA-256:
+  fbc9be344e171219c5ecad147bc11cae487073f94a9fb8277d85392504e49a32
+Total C/include source lines: 20,162

@@ -45,6 +45,9 @@ static bua_u8 sim_factory_fmd_byte1_117=0u;
 static bua_u8 sim_factory_fmd_byte2_117=0u;
 static bua_u8 sim_factory_swi_reason117=FACTORY117_SWI_NONE;
 
+/* Defined by the following Step-118 implementation fragment. */
+static void bua_factory_execute_step118(void);
+
 /* LF49A with A=$FB, used at $FCB7, clears low-byte CSR bit 2. */
 static void bua_factory_select_8192_step117(void)
 {
@@ -164,4 +167,5 @@ static void bua_factory_irq_step117(void)
     mem.io4000[0x0Cu]=0x00u;
     ++bua_factory_trace117.watchdog_strobes;
     ++bua_factory_trace117.deferred_output_boundaries;
+    bua_factory_execute_step118();
 }

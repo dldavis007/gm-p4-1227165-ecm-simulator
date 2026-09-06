@@ -51,6 +51,7 @@ current audit and allow later imports to be verified.
 | SYS-013 | Confirmed | Step 115 translates the sole device `$80` SCI initialization, receive validation/checksum, Modes 0–4 response construction, and transmit-state core at `$C9F4` and `$FA58-$FC71`. | Verified `bua-hac.lst` and Step-115 regression. Physical byte timing and unavailable ROM reads remain boundaries. |
 | SYS-014 | Confirmed | Step 116 defers Mode-4 activation until `$CB67-$CB72`, executes entry-only error/IAC/BLM reset commands, clears exit state at `$CBA4-$CBB1`, and forces received Mode 0 only when the one-second communication timer becomes greater than 30. | Verified `bua-hac.lst` and Step-116 regression. |
 | SYS-015 | Confirmed | Step 117 integrates the factory boot and IRQ control path through `$FD28`: optional `$AA` fill, the 24-word diagnostic pointer table, FMD exchange boundary, 96-count loop, serial cadence selection, emitted battery/ignition branches, and COP restart. | Verified `bua-hac.lst` and Step-117 regression. Custom-control and physical output exercises from `$FD29` remain deferred. |
+| SYS-016 | Confirmed | Step 118 completes the factory-test software loop at `$FD29-$FEA3`, preserving raw mode-bit branches, the 46-byte RAM checksum, A/D capture, PWM/lamp/fan/IAC writes, and reference-derived fuel/spark timer values. | Verified `bua-hac.lst` and Step-118 regression. Electrical consequences and the wait loop remain HAL boundaries. |
 
 ## MEMCAL findings
 

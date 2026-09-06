@@ -694,6 +694,7 @@ static void ecm_reset(void)
     sim_o2_adc = 128u;
     sim_tps_adc = 35u;
     sim_diag_adc = 200u;
+    bua_factory_reset_step118();
     bua_step94_fuel_state_reset();
     sim_vss_abs_ticks = 0ul;
     sim_vss_next_edge = 0ul;
