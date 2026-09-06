@@ -4,7 +4,7 @@ set -eu
 mkdir -p build
 
 if gcc -std=c89 -Wall -Wextra -pedantic main.c \
-    -o build/bua_step115 2> build/compiler_warnings.txt
+    -o build/bua_step116 2> build/compiler_warnings.txt
 then
     if test ! -s build/compiler_warnings.txt
     then
@@ -15,6 +15,6 @@ else
     exit 1
 fi
 
-./build/bua_step115 > build/bua_step115_output.txt
+./build/bua_step116 > build/bua_step116_output.txt
 printf '%s\n' 'Build and run completed.'
 cat build/compiler_warnings.txt

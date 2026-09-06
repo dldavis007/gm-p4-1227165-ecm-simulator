@@ -215,6 +215,7 @@ static void run_step105_transmission_drive(void)
     sim_legacy_segment_d_freeze=1u;
     sim_legacy_segment1_output_freeze=1u;
     sim_legacy_ignition_shutdown_freeze=1u;
+    sim_legacy_mode4_lifecycle_freeze=1u;
     /* Preserve the already-frozen Step-105 pre-Step-113 startup state. */
     RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
     RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;

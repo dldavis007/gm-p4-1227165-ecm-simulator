@@ -7,6 +7,7 @@ static void bua_odd_transient_front_12p5ms(void);
 static void bua_odd_50ms_tail_lddc2(void);
 static bua_u8 bua_ignition_shutdown_odd_step111(void);
 static void bua_iac_shutdown_homing_even_step111(void);
+static void bua_mode4_scheduler_step116(void);
 static void air_fuel_12p5ms(void)
 {
     ++stats.air_fuel_loops;
@@ -679,6 +680,7 @@ static void ecm_reset(void)
     sim_legacy_segment_d_freeze = 0u;
     sim_legacy_segment1_output_freeze = 0u;
     sim_legacy_ignition_shutdown_freeze = 0u;
+    sim_legacy_mode4_lifecycle_freeze = 0u;
     sim_soft_powerdown_latched = 0u;
     sim_timer8 = 0u;
     sim_iac_motor_on = 1u;
@@ -726,6 +728,8 @@ static void irq_6p25ms(void)
     sim_advance_ecm_reference_6p25ms();
     sim_advance_vss_6p25ms();
     bua_vss_capture_check_6p25ms();
+    /* $CB5F..$CBB4 consumes the completed SCI mode before count dispatch. */
+    bua_mode4_scheduler_step116();
     count = (bua_u8)(MINOR_COUNT + 1u);
     if (count == 160u) {
         one_second_event();

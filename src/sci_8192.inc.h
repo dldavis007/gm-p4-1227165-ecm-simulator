@@ -97,8 +97,6 @@ static bua_u8 bua_sci115_make_response(bua_u8 mode,bua_u8 length)
     bua_u16 address;
     bua_sci115.output[2]=mode;
     if(mode==0u) {
-        SERIAL_MODE_WORD=(bua_u8)(SERIAL_MODE_WORD&0xF3u);
-        MINOR_MODE_WORD2=(bua_u8)(MINOR_MODE_WORD2&0xF7u);
         bua_sci115_finish_output(1u);
         return SCI115_OK;
     }
@@ -129,8 +127,6 @@ static bua_u8 bua_sci115_make_response(bua_u8 mode,bua_u8 length)
         n=(bua_u8)((length-11u)>>1);
         for(i=0u;i<10u;++i)
             RAM8((bua_u16)(0x0152u+i))=bua_sci115.input[(bua_u8)(3u+i)];
-        SERIAL_MODE_WORD=(bua_u8)(SERIAL_MODE_WORD|0x08u);
-        MINOR_MODE_WORD2=(bua_u8)(MINOR_MODE_WORD2|0x08u);
     }
     for(i=0u;i<n;++i) {
         bua_u8 p=(bua_u8)(3u+(mode==4u?10u:0u)+(bua_u8)(i*2u));
@@ -170,6 +166,8 @@ static bua_u8 bua_sci115_receive(const bua_u8 *frame,bua_u8 count)
     if(sum!=0u)
         return bua_sci115.status=SCI115_ERR_CHECKSUM;
     bua_sci115.mode=mode;
+    /* CA03 locks 8192 reception; CB67 later interprets the completed mode. */
+    SERIAL_MODE_WORD=(bua_u8)(SERIAL_MODE_WORD|0x08u);
     ram16be_set(0x0131u,(bua_u16)(0xC73Du+(bua_u16)(mode*2u)));
     RAM8(0x012Du)=0xD0u;
     RAM8(0x0133u)=0x40u;

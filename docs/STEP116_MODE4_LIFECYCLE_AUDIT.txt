@@ -1,0 +1,70 @@
+BUA / GM 1227165 STEP-116 MODE-4 LIFECYCLE AUDIT
+================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Translated behavior
+-------------------
+Step 116 connects the Step-115 completed-message buffer to $CB5F..$CBB4.
+SCI reception sets L0046 bit 3 and copies the accepted mode/control bytes, but
+does not set the scheduler Mode-4 flag. A later scheduler pass examines L0151.
+
+On the first pass for Mode 4, $CB72 sets L0035 bit 3. L0154 bit 6 clears the
+five error bytes and immediately stores LF3A7's checksum. Bit 5 sets L00F3
+bit 2 and writes 255 to the current IAC position. Bit 4 calls LF434 to reset
+the SAM words and sixteen BLM cells. The prior-Mode-4 test prevents all three
+entry commands from repeating on subsequent passes.
+
+When the completed mode is not 4, $CBA4 clears the Mode-4 flag, L0036 bit 0,
+L003F bit 0 and the L00B4 spark-feedback counter. Existing fuel, spark, AFR,
+diagnostic and Segment-1 output consumers continue to read the ten received
+command bytes from $0152..$015B.
+
+The one-second path at $CBCA increments L0171. Equality at 30 is retained;
+only a value greater than 30 clears L0151 to force received Mode 0. Mode-4
+exit then occurs on the following scheduler pass.
+
+Frozen replay
+-------------
+The Step-104 and Step-105 signatures predate the source-wired serial timeout.
+Their explicit PC-only replay setup suppresses that new timer write. Normal
+execution uses the Step-116 path. The replay switch is not ECM RAM or claimed
+firmware behavior.
+
+Regression contract
+-------------------
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step116
+
+The warnings artifact contains exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-116 output SHA-256:
+  44bbf2a2752ae1d488a3bd403777304c8997538654c5cacfe3faa7a354d19b20
+Step-116 main.c SHA-256:
+  7d9b9774a749835d8176b5fb81ebf3e69b9fce364dbde4aa019137a8da16004b
+Total C/include source lines: 19,455
+
+Deferred boundaries
+-------------------
+Physical SCI timing/transceiver behavior and unrepresented arbitrary ROM reads
+remain HAL boundaries. Factory-test, optional HUD ROM, SWI and undocumented
+custom-hardware internals remain separate work.

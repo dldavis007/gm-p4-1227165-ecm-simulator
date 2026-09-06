@@ -35,8 +35,8 @@ static void run_step115_sci_test(void)
          "Mode 0 response is $80,$56,$00 followed by checksum");
     S115(bua_sci115_sum(bua_sci115.output,bua_sci115.output_count)==0u,
          "transmit path emits the two's-complement checksum");
-    S115((SERIAL_MODE_WORD&0x0Cu)==0u && (MINOR_MODE_WORD2&0x08u)==0u,
-         "Mode 0 returns both SCI lock and Mode-4 state to normal");
+    S115((SERIAL_MODE_WORD&0x08u)!=0u && (MINOR_MODE_WORD2&0x08u)==0u,
+         "receive locks 8192 while scheduler Mode-4 state remains separate");
 
     bua_sci115_build_request(frame,data,1u); frame[0]=0x81u;
     S115(bua_sci115_receive(frame,4u)==SCI115_ERR_DEVICE,
@@ -85,8 +85,8 @@ static void run_step115_sci_test(void)
     S115(bua_sci115_receive(frame,16u)==SCI115_OK && RAM8(0x0152u)==0x10u &&
          RAM8(0x015Bu)==0x19u,
          "Mode 4 copies all ten command words into the listing ICB mirror");
-    S115((SERIAL_MODE_WORD&0x08u)!=0u && (MINOR_MODE_WORD2&0x08u)!=0u,
-         "accepted Mode 4 locks 8192 mode and raises the scheduler Mode-4 flag");
+    S115((SERIAL_MODE_WORD&0x08u)!=0u && (MINOR_MODE_WORD2&0x08u)==0u,
+         "accepted Mode 4 locks 8192 but defers activation to the scheduler");
     S115(bua_sci115.output[1]==0x57u && bua_sci115.output[2]==4u &&
          bua_sci115.output[3]==RAM8(0x0020u),
          "Mode 4 derives its one-address response length from NIN minus 11");

@@ -533,6 +533,8 @@ static bua_u8 sim_legacy_segment_d_freeze = 0u;
 static bua_u8 sim_legacy_segment1_output_freeze = 0u;
 /* PC regression switch for signatures frozen before key-off integration. */
 static bua_u8 sim_legacy_ignition_shutdown_freeze = 0u;
+/* PC replay switch for signatures frozen before the Step-116 serial timer. */
+static bua_u8 sim_legacy_mode4_lifecycle_freeze = 0u;
 /* HAL-visible endpoint corresponding to the source's software-interrupt loop. */
 static bua_u8 sim_soft_powerdown_latched = 0u;
 static bua_u8 sim_iac_motor_on = 1u;
@@ -3243,6 +3245,7 @@ static void bua_compute_dwell_12p5ms(void)
     ram16be_set(DWELL_COUNTS_ADDR, dwell);
     ++stats.dwell_calculations;
 }
+static void bua_mode4_timeout_step116(void);
 static void one_second_event(void)
 {
     bua_u16 seconds;
@@ -3251,6 +3254,7 @@ static void one_second_event(void)
         seconds = ram16be_get(0x001Au);
         ram16be_set(0x001Au, (bua_u16)(seconds + 1u));
     }
+    bua_mode4_timeout_step116();
     ++stats.one_second_events;
 }
 /* Step 92: scheduler-facing LF4DF/LF5DF IAC motor service subset.

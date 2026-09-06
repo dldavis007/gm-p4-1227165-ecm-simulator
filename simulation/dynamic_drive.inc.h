@@ -86,6 +86,7 @@ static void run_dynamic_drive_cycle(void)
     sim_legacy_segment_d_freeze=1u;
     sim_legacy_segment1_output_freeze=1u;
     sim_legacy_ignition_shutdown_freeze=1u;
+    sim_legacy_mode4_lifecycle_freeze=1u;
     /* Step-104 was frozen before LF434's emitted $80 was reconciled. */
     RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
     RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;

@@ -48,6 +48,7 @@ current audit and allow later imports to be verified.
 | SYS-010 | Confirmed | Step 111 exposes software powerdown as a HAL event and does not claim to model physical keep-alive power. | `$D6D1-$D769` translation and Step-111 regression. |
 | SYS-011 | Confirmed | Step 112 models the source-ordered `$C800-$C9F3` startup decisions while leaving factory-test, optional-ROM, SWI, MPU electrical behavior, and 8192-baud internals at explicit boundaries. | Verified `bua-hac.lst` and Step-112 regression. |
 | SYS-012 | Confirmed | Step 115 translates the sole device `$80` SCI initialization, receive validation/checksum, Modes 0–4 response construction, and transmit-state core at `$C9F4` and `$FA58-$FC71`. | Verified `bua-hac.lst` and Step-115 regression. Physical byte timing and unavailable ROM reads remain boundaries. |
+| SYS-013 | Confirmed | Step 116 defers Mode-4 activation until `$CB67-$CB72`, executes entry-only error/IAC/BLM reset commands, clears exit state at `$CBA4-$CBB1`, and forces received Mode 0 only when the one-second communication timer becomes greater than 30. | Verified `bua-hac.lst` and Step-116 regression. |
 | SYS-012 | Confirmed | LF3A7 computes `1 + L0005 + ... + L0009`; LF434 stores `$8000` in both SAM words and initializes all sixteen BLM cells to `$80` (128). | `bua-hac.lst` `$F3A7-$F3B4`, `$F434-$F446`; Step-113 regression. |
 
 ## MEMCAL findings

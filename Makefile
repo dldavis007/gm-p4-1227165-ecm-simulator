@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c89 -Wall -Wextra -pedantic
-TARGET = build/bua_step115
-OUTPUT = build/bua_step115_output.txt
+TARGET = build/bua_step116
+OUTPUT = build/bua_step116_output.txt
 
 .PHONY: all run test clean
 
@@ -33,8 +33,9 @@ test: $(TARGET)
 	grep -q "step-113 retained-memory regression result: PASS (10/10)" $(OUTPUT)
 	grep -q "step-114 normal-startup regression result: PASS (14/14)" $(OUTPUT)
 	grep -q "step-115 SCI regression result: PASS (20/20)" $(OUTPUT)
+	grep -q "step-116 Mode-4 lifecycle regression result: PASS (16/16)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines and Step-106 through Step-115 regressions pass."
+	@echo "Step-104/105 baselines and Step-106 through Step-116 regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt

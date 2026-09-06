@@ -1,0 +1,16 @@
+STEP116-MODE4-LIFECYCLE-V1
+
+regression=PASS 16/16
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=7d9b9774a749835d8176b5fb81ebf3e69b9fce364dbde4aa019137a8da16004b
+output_sha256=44bbf2a2752ae1d488a3bd403777304c8997538654c5cacfe3faa7a354d19b20
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 116. Its contract is the focused
+16/16 lifecycle regression plus the unchanged historical signatures above.
