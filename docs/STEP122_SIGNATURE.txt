@@ -1,0 +1,19 @@
+STEP122-WHOLE-IMAGE-CLOSURE-AUDIT-V1
+
+change_class=documentation-only
+behavioral_source=unchanged-step121
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=fd502e0eaa900de06768af8d61ce3e936e5136a55006bdd4e27c2caedd4a9693
+output_sha256=55623763f106d4b57b8270bda29b2101c2b1022226e7f2fa9156347dbb775eb0
+warnings_sha256=ad0e8d07202637fe545d6bc2e0fa1adec9c3d75e0c069fec764dc3b740974986
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash or regression is frozen for Step 122. It is a
+documentation-only reconciliation of the listing, the Step-110 coverage map,
+the Step-111 through Step-121 integrations, and their unchanged regressions.

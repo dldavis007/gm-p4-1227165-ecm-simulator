@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-121 integrated lifecycle project
+# BUA / GM 1227165 Step-122 whole-image closure audit
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -58,6 +58,12 @@ shutdown, BLM commit, IAC homing, the software-powerdown boundary, and a later
 retained restart in one end-to-end PC/HAL lifecycle. It also proves corrupted
 retained recovery and factory-path isolation. Physical power switching and
 processor reset consequences remain explicitly acknowledged HAL boundaries.
+Step 122 re-audits the complete assembled image after the Step-111 through
+Step-121 integrations. It finds no known reachable, internally defined
+firmware area still classified as unported. Remaining limitations are
+calibration/data, external or absent ROM, processor/custom-device behavior,
+and physical electrical/timing boundaries. This is a coverage conclusion,
+not a claim of instruction-by-instruction or whole-machine equivalence.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -138,7 +144,8 @@ assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
 See `docs/STEP121_LIFECYCLE_INTEGRATION_AUDIT.txt` for the end-to-end lifecycle
-integration audit. Earlier audit files remain as historical checkpoints.
+integration audit and `docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt` for the
+post-integration coverage conclusion. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

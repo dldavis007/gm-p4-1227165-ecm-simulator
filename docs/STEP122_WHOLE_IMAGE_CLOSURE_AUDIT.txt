@@ -1,0 +1,158 @@
+BUA / GM 1227165 STEP-122 POST-INTEGRATION WHOLE-IMAGE CLOSURE AUDIT
+===================================================================
+
+Purpose
+-------
+This documentation-only audit revisits the Step-110 whole-image coverage map
+after Steps 111 through 121. It asks whether any reachable, internally defined
+software behavior in the supplied image is still known to be absent from the
+behavioral C port. It does not modify behavioral code.
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+The listing reports zero assembly errors and zero warnings. bua-hac.txt was
+not used. Emitted instructions, bytes, resolved targets, address use, and
+tables outrank comments. BUA remains a source label rather than independently
+proved calibration identity.
+
+Classification
+--------------
+  TRANSLATED   Source behavior is represented in the live behavioral core.
+  DATA         Calibration, lookup table, identifier, checksum, or literal data.
+  HAL          Software-visible reads/writes are represented; physical effect is external.
+  BOUNDARY     Required bytes, circuitry, or processor behavior are not in this PROM.
+  UNPORTED     Reachable internally defined executable behavior has no current model.
+
+Image-level reconciliation
+--------------------------
+Region / route                  Step-122 classification and evidence
+------------------------------  -----------------------------------------------
+$C000-$C7FF calibration area    DATA. Constants and tables are represented where
+                                consumed by translated behavior; unused bytes do
+                                not become executable behavior by inference.
+
+$C800-$C9F3 reset/startup       TRANSLATED/HAL. Steps 112-114 and 120 preserve
+                                source ordering, exact RAM/MPU clear endpoints,
+                                retained validation/recovery, factory selection,
+                                Error 51/SWI decision, and normal handoff.
+
+$C9F4 IRQ and normal scheduler  TRANSLATED/HAL. Ordinary/factory dispatch, the
+                                6.25-ms IRQ, odd/even minors, sixteen majors,
+                                event services, and output writes are connected.
+
+Major segments 0 through F     TRANSLATED/HAL except Segment 4's optional-ROM
+                                call. Steps through 110 cover all internally
+                                defined normal segment behavior; raw electrical
+                                consequences remain in HALs.
+
+$CB5F-$CBD9 Mode-4 lifecycle    TRANSLATED. Step 116 connects accepted messages,
+                                entry-only commands, exit, and timeout behavior.
+
+$D387-$D3DB IAC shutdown       TRANSLATED/HAL. Step 111 connects homing selection
+$D6D1-$D769 key-off             and key-off behavior; motor motion and keep-alive
+                                power remain physical boundaries.
+
+$EF04-$F10D diagnostics         TRANSLATED/HAL. Steps 107-109 connect fault
+                                qualification, field service, flash routing, and
+                                scheduler execution without assigning semantics
+                                beyond the emitted tests and address use.
+
+$FA58-$FC71 SCI/message core    TRANSLATED/HAL. Steps 115-116 model device $80,
+                                validation/checksum, Modes 0-4, response, transmit
+                                state, and lifecycle. Electrical byte timing and
+                                reads outside represented ROM stay boundaries.
+
+$FC72-$FEA3 factory test        TRANSLATED/HAL. Steps 117-118 connect factory boot,
+                                IRQ control, RAM/NV checks, A/D and output exercises,
+                                reference-derived timers, and wait-loop handoffs.
+
+$FEA7-$FECC tables              DATA. Two coolant tables and the four-byte stepper
+                                state table are represented where consumed.
+
+$FFF0-$FFFE vectors             TRANSLATED/BOUNDARY. Step 119 preserves all eight
+                                words, connects represented IRQ/reset requests, and
+                                leaves external/processor consequences explicit.
+
+Step-110 ranked-gap disposition
+-------------------------------
+Prior rank  Prior area                       Closure
+----------  -------------------------------  -------------------------------
+1           Key-off and IAC homing            Step 111; integrated by Step 121
+2           Reset/startup                     Steps 112-114 and 120; Step 121
+3           8192-baud SCI                     Step 115
+4           Mode-4 lifecycle                  Step 116
+5           Factory-test boot and loop        Steps 117-118
+6           SWI/illegal/reset vectors         Step 119; hardware parts boundary
+7           Optional HUD ROM $5800            Still BOUNDARY; bytes absent
+8           MPU/electrical plant              Still HAL/BOUNDARY by design
+
+Remaining evidence boundaries
+-----------------------------
+1. The two vector destinations at $6000 are outside the supplied PROM.
+2. Optional heads-up-display code in the $5800 window is absent.
+3. The processor's exception-entry, COP, clock-fail, reset, and stack mechanics
+   cannot be proved from application bytes alone.
+4. Internal behavior of custom MPU/peripheral devices is represented only to
+   the extent established by executable register use and independent hardware
+   evidence.
+5. SCI/ALDL and FMD electrical timing, transceivers, wiring, and analog effects
+   belong to target-specific HALs.
+6. Output polarity, driver response, ignition/injector electrical timing, A/D
+   transfer functions, and physical plants are not software algorithms.
+7. Factory wait-loop duration and hardware stimulus consequences remain HAL
+   boundaries even though their software control and raw values are modeled.
+
+Closure conclusion
+------------------
+No known reachable, internally defined executable area remains classified as
+UNPORTED after Step 121. This is strongly supported rather than absolute:
+future byte-level control-flow tooling or new primary evidence could identify
+a missed side effect. The conclusion means another behavioral translation step
+should require a specific listing-backed gap; it does not authorize invented
+behavior for any boundary above.
+
+This audit does not claim byte-for-byte emulation, cycle accuracy, complete
+processor emulation, exact electrical behavior, exact calibration identity,
+or equivalence to the absent optional ROM. Behavioral translation and semantic
+identification remain separate claims.
+
+Verification basis
+------------------
+Step-121 end-to-end ignition-lifecycle integration: PASS 18/18
+Step-120 unified power-on-dispatch regression: PASS 24/24
+Step-119 vector/exception-boundary regression: PASS 19/19
+Step-118 factory-test execution regression: PASS 31/31
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+The unchanged Step-121 executable was rebuilt with:
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+
+Compiler diagnostics: No compiler warnings.
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Step-122 verification output SHA-256:
+  55623763f106d4b57b8270bda29b2101c2b1022226e7f2fa9156347dbb775eb0
+Unchanged Step-121 main.c SHA-256:
+  fd502e0eaa900de06768af8d61ce3e936e5136a55006bdd4e27c2caedd4a9693
+Step-122 warnings artifact SHA-256:
+  ad0e8d07202637fe545d6bc2e0fa1adec9c3d75e0c069fec764dc3b740974986
+
+Recommended next action
+-----------------------
+Preserve this completed software milestone with a Git tag/release, then import
+and classify the important external Library evidence before any cleanup. Any
+later Step-123 behavioral work should begin with a newly identified exact
+listing range and executable discrepancy, not with a presumed missing feature.

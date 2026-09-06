@@ -55,6 +55,7 @@ current audit and allow later imports to be verified.
 | SYS-017 | Confirmed | The eight emitted vector words at `$FFF0-$FFFE` target `$6000`, `$C9F4`, `$F27B`, `$6000`, and four copies of `$C800`; `$F27B` is an immediate `RTI`. | Verified `bua-hac.lst` and Step-119 regression. `$6000`, reset consequences, and the processor-specific SWI slot remain boundaries. |
 | SYS-018 | Confirmed | The live Step-120 power-on path executes `$C800-$C9F3` in source order: exact volatile clears, socket result, factory selection, optional-ROM boundary, retained validation/recovery, Error 51/SWI decision, and normal initialization. | Verified `bua-hac.lst` and Step-120 regression. Socket/checksum samples and absent HUD ROM behavior remain explicit boundaries. |
 | SYS-019 | Confirmed | Step 121 composes reset-vector power-on, normal IRQ execution, `$D6D1-$D769` ignition shutdown, LF447 BLM commit, IAC homing, the `$D6EA` software-powerdown boundary, and retained restart without bypassing their established source order. | Step-111, Step-119, Step-120 implementations and Step-121 end-to-end regression. Physical power/reset effects remain a HAL boundary. |
+| SYS-020 | Strongly supported | After reconciliation of the Step-110 whole-image gap list against Steps 111–121, no known reachable and internally defined firmware region remains classified as unported. | `bua-hac.lst`, Step-122 closure audit, current module/call-graph inventory, and regressions through Step 121. This does not assert instruction-level or whole-machine equivalence. |
 
 ## MEMCAL findings
 
