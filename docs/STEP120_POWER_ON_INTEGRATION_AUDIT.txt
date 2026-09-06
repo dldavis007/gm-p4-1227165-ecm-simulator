@@ -1,0 +1,72 @@
+BUA / GM 1227165 STEP-120 UNIFIED POWER-ON INTEGRATION AUDIT
+===========================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Integrated source order
+-----------------------
+Step 120 adds a real power-on dispatcher distinct from the frozen ecm_reset()
+PC-test fixture. It composes the already audited software from $C800 through
+$C9F3 in emitted order:
+
+  * $C800-$C824: initial mode, I/O, MPU CSR, and MPU-word clearing;
+  * $C826-$C85D: literal I/O setup and exact L01B2..L002E volatile clear;
+  * $C85F-$C88B: explicit ROM/socket result, run CSR, and battery sample;
+  * $C895-$C8DF: unsigned factory-test selection before retained recovery;
+  * $C8E2: optional HUD ROM call recorded as an absent-ROM boundary;
+  * $C8ED-$C90C: LF3A7 validation and Step-113 retained recovery;
+  * $C90E-$C939: Error 51 latch/lamp/checksum and exact $C938 SWI boundary;
+  * $C93B-$C9F3: Step-114 normal initializer and scheduler handoff.
+
+Observable branch outcomes
+--------------------------
+Normal, factory-test, unresolved-SWI, and rejected-entry outcomes are explicit.
+Factory selection returns without running normal initialization. Invalid
+retained data is recovered only after factory selection. The four Step-119
+$C800 vector requests can be explicitly acknowledged by the dispatcher;
+non-reset vector slots cannot use that entry.
+
+Evidence boundaries
+-------------------
+The whole-ROM checksum value, socket-check result, battery/pump/diagnostic
+samples, initial FMD byte, and HUD presence are explicit inputs. Step 120 does
+not fabricate ROM reads, optional HUD code, custom-device electrical behavior,
+processor exception mechanics, or reset circuitry. The historical Step-112
+pure decision evaluator remains available for audit compatibility; live branch
+authority now belongs to the source-ordered Step-120 dispatcher.
+
+Regression contract
+-------------------
+Step-120 unified power-on-dispatch regression: PASS 24/24
+Step-119 vector/exception-boundary regression: PASS 19/19
+Step-118 factory-test execution regression: PASS 31/31
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step120
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-120 output SHA-256:
+  ff6eebe6ea765c17fbb1bd1c2292b3c878d12a8ee3142c3928347069c141fa4c
+Step-120 main.c SHA-256:
+  bfe56bd4e5e065ad24fd0071dbb30e13ece4d382422b899d8778d19cdb5171c5
+Total C/include source lines: 20,740

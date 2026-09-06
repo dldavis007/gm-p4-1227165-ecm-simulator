@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-119 vector-boundary project
+# BUA / GM 1227165 Step-120 unified power-on project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -47,6 +47,12 @@ the `$C9F4` slot to ordinary/factory IRQ dispatch, confirms `$F27B` is an
 immediate `RTI`, and represents the four `$C800` destinations as reset/startup
 requests. Both `$6000` targets and the processor-specific SWI-to-slot mapping
 remain explicit boundaries rather than comment-derived assumptions.
+Step 120 composes the previously audited startup pieces into one live,
+source-ordered `$C800..$C9F3` power-on dispatcher. It preserves retained RAM
+until validation, clears the exact volatile ranges, selects factory test
+before retained recovery, records the absent HUD ROM and `$C938` SWI as
+boundaries, and hands normal boots to the Step-114 initializer. ROM checksum,
+socket-check result, and hardware samples remain explicit host/HAL inputs.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -57,7 +63,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step119
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step120
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -110,6 +116,7 @@ compilers from treating them as separate C source files.
 - Step-117 factory-test boot/control regression: 24/24
 - Step-118 factory-test execution regression: 31/31
 - Step-119 vector/exception-boundary regression: 19/19
+- Step-120 unified power-on-dispatch regression: 24/24
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -124,9 +131,8 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP119_VECTOR_BOUNDARY_AUDIT.txt` for the vector and exceptional-
-entry boundary audit.
-Earlier audit files remain as historical checkpoints.
+See `docs/STEP120_POWER_ON_INTEGRATION_AUDIT.txt` for the unified power-on
+integration audit. Earlier audit files remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

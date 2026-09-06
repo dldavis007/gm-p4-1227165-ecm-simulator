@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c89 -Wall -Wextra -pedantic
-TARGET = build/bua_step119
-OUTPUT = build/bua_step119_output.txt
+TARGET = build/bua_step120
+OUTPUT = build/bua_step120_output.txt
 
 .PHONY: all run test clean
 
@@ -37,8 +37,9 @@ test: $(TARGET)
 	grep -q "step-117 factory-test control regression result: PASS (24/24)" $(OUTPUT)
 	grep -q "step-118 factory-test execution regression result: PASS (31/31)" $(OUTPUT)
 	grep -q "step-119 vector-boundary regression result: PASS (19/19)" $(OUTPUT)
+	grep -q "step-120 power-on-dispatch regression result: PASS (24/24)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines and Step-106 through Step-119 regressions pass."
+	@echo "Step-104/105 baselines and Step-106 through Step-120 regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt

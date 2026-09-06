@@ -53,6 +53,7 @@ current audit and allow later imports to be verified.
 | SYS-015 | Confirmed | Step 117 integrates the factory boot and IRQ control path through `$FD28`: optional `$AA` fill, the 24-word diagnostic pointer table, FMD exchange boundary, 96-count loop, serial cadence selection, emitted battery/ignition branches, and COP restart. | Verified `bua-hac.lst` and Step-117 regression. Custom-control and physical output exercises from `$FD29` remain deferred. |
 | SYS-016 | Confirmed | Step 118 completes the factory-test software loop at `$FD29-$FEA3`, preserving raw mode-bit branches, the 46-byte RAM checksum, A/D capture, PWM/lamp/fan/IAC writes, and reference-derived fuel/spark timer values. | Verified `bua-hac.lst` and Step-118 regression. Electrical consequences and the wait loop remain HAL boundaries. |
 | SYS-017 | Confirmed | The eight emitted vector words at `$FFF0-$FFFE` target `$6000`, `$C9F4`, `$F27B`, `$6000`, and four copies of `$C800`; `$F27B` is an immediate `RTI`. | Verified `bua-hac.lst` and Step-119 regression. `$6000`, reset consequences, and the processor-specific SWI slot remain boundaries. |
+| SYS-018 | Confirmed | The live Step-120 power-on path executes `$C800-$C9F3` in source order: exact volatile clears, socket result, factory selection, optional-ROM boundary, retained validation/recovery, Error 51/SWI decision, and normal initialization. | Verified `bua-hac.lst` and Step-120 regression. Socket/checksum samples and absent HUD ROM behavior remain explicit boundaries. |
 
 ## MEMCAL findings
 
@@ -76,7 +77,7 @@ current audit and allow later imports to be verified.
 | OPEN-004 | Boundary | Internal behavior and undocumented register bits of the custom MPU/peripheral devices beyond what executable use and schematics expose. |
 | OPEN-005 | Boundary | Optional heads-up-display ROM behavior in the `$5800` region, whose bytes are absent from the supplied PROM. |
 | OPEN-006 | Boundary | Step 115 completes the listing-backed software message core. Exact electrical byte timing, transceiver behavior, and arbitrary ROM-dump bytes are not modeled by the C core. |
-| OPEN-007 | Provisional | Source-ordered reset/startup composition, including retained-RAM validation and optional-ROM decisions. |
+| OPEN-007 | Boundary | Step 120 composes the source-ordered software startup path; physical reset causes, socket checksum acquisition, and optional HUD ROM execution remain outside the supplied PROM/software model. |
 
 ## Identity boundary
 
