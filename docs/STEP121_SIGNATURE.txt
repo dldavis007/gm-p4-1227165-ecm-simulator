@@ -1,0 +1,16 @@
+STEP121-END-TO-END-LIFECYCLE-V1
+
+regression=PASS 18/18
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=fd502e0eaa900de06768af8d61ce3e936e5136a55006bdd4e27c2caedd4a9693
+output_sha256=55623763f106d4b57b8270bda29b2101c2b1022226e7f2fa9156347dbb775eb0
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash is frozen for Step 121. Its contract is the focused
+18/18 lifecycle integration regression plus the unchanged signatures above.

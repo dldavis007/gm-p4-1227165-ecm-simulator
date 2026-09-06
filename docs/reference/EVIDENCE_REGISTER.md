@@ -54,6 +54,7 @@ current audit and allow later imports to be verified.
 | SYS-016 | Confirmed | Step 118 completes the factory-test software loop at `$FD29-$FEA3`, preserving raw mode-bit branches, the 46-byte RAM checksum, A/D capture, PWM/lamp/fan/IAC writes, and reference-derived fuel/spark timer values. | Verified `bua-hac.lst` and Step-118 regression. Electrical consequences and the wait loop remain HAL boundaries. |
 | SYS-017 | Confirmed | The eight emitted vector words at `$FFF0-$FFFE` target `$6000`, `$C9F4`, `$F27B`, `$6000`, and four copies of `$C800`; `$F27B` is an immediate `RTI`. | Verified `bua-hac.lst` and Step-119 regression. `$6000`, reset consequences, and the processor-specific SWI slot remain boundaries. |
 | SYS-018 | Confirmed | The live Step-120 power-on path executes `$C800-$C9F3` in source order: exact volatile clears, socket result, factory selection, optional-ROM boundary, retained validation/recovery, Error 51/SWI decision, and normal initialization. | Verified `bua-hac.lst` and Step-120 regression. Socket/checksum samples and absent HUD ROM behavior remain explicit boundaries. |
+| SYS-019 | Confirmed | Step 121 composes reset-vector power-on, normal IRQ execution, `$D6D1-$D769` ignition shutdown, LF447 BLM commit, IAC homing, the `$D6EA` software-powerdown boundary, and retained restart without bypassing their established source order. | Step-111, Step-119, Step-120 implementations and Step-121 end-to-end regression. Physical power/reset effects remain a HAL boundary. |
 
 ## MEMCAL findings
 

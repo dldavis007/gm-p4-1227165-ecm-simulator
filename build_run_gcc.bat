@@ -2,10 +2,10 @@
 call build_gcc.bat
 if errorlevel 1 exit /b 1
 
-build\bua_step120.exe > build\bua_step120_output.txt
+build\bua_step121.exe > build\bua_step121_output.txt
 if errorlevel 1 (
     echo Program returned an error.
     exit /b 1
 )
 
-type build\bua_step120_output.txt
+type build\bua_step121_output.txt

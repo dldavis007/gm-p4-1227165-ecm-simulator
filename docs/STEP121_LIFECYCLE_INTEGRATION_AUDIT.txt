@@ -1,0 +1,68 @@
+BUA / GM 1227165 STEP-121 END-TO-END LIFECYCLE INTEGRATION AUDIT
+================================================================
+
+Evidence and scope
+------------------
+The sole firmware source remains evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used. Step 121 adds no inferred firmware algorithm; it
+composes the listing-backed Step-111, Step-119, and Step-120 paths.
+
+Integrated lifecycle
+--------------------
+The regression executes these observable transitions:
+
+  * a Step-119 reset vector request is acknowledged at the PC/HAL boundary;
+  * Step 120 executes the real $C800 power-on path and normal initialization;
+  * ordinary IRQs execute both odd fuel and even spark/IAC branches;
+  * ignition off enters the Step-111 shutdown front;
+  * LF447 commits bounded SAM values to the retained BLM cells;
+  * the following even IRQ begins the IAC close/homing phase;
+  * the terminal key-off timer reaches the exact $D6EA SWI boundary;
+  * the software-powerdown latch blocks further simulated IRQ execution;
+  * a later acknowledged reset preserves valid low retained RAM while $C800
+    clears volatile RAM and returns to normal scheduling;
+  * a separately corrupted retained error byte invokes Step-113 recovery;
+  * the factory-test outcome remains isolated from normal initialization.
+
+HAL boundary
+------------
+The PROM does not define the external power supply, keep-alive switching, or
+processor reset circuitry. bua_lifecycle_power_cycle_step121() therefore
+records an explicit host acknowledgement, releases only the PC powerdown
+latch, and enters an emitted $C800 reset vector. It deliberately does not
+pre-clear RAM; the Step-120 $C800 implementation owns all source-ordered RAM
+and MPU clearing.
+
+Regression contract
+-------------------
+Step-121 end-to-end ignition-lifecycle integration: PASS 18/18
+Step-120 unified power-on-dispatch regression: PASS 24/24
+Step-119 vector/exception-boundary regression: PASS 19/19
+Step-118 factory-test execution regression: PASS 31/31
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-121 output SHA-256:
+  55623763f106d4b57b8270bda29b2101c2b1022226e7f2fa9156347dbb775eb0
+Step-121 main.c SHA-256:
+  fd502e0eaa900de06768af8d61ce3e936e5136a55006bdd4e27c2caedd4a9693
+Total C/include source lines: 20,891

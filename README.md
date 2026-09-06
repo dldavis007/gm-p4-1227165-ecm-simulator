@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-120 unified power-on project
+# BUA / GM 1227165 Step-121 integrated lifecycle project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -53,6 +53,11 @@ until validation, clears the exact volatile ranges, selects factory test
 before retained recovery, records the absent HUD ROM and `$C938` SWI as
 boundaries, and hands normal boots to the Step-114 initializer. ROM checksum,
 socket-check result, and hardware samples remain explicit host/HAL inputs.
+Step 121 connects reset-vector power-on, normal IRQ operation, ignition-off
+shutdown, BLM commit, IAC homing, the software-powerdown boundary, and a later
+retained restart in one end-to-end PC/HAL lifecycle. It also proves corrupted
+retained recovery and factory-path isolation. Physical power switching and
+processor reset consequences remain explicitly acknowledged HAL boundaries.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -63,7 +68,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step120
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -117,6 +122,7 @@ compilers from treating them as separate C source files.
 - Step-118 factory-test execution regression: 31/31
 - Step-119 vector/exception-boundary regression: 19/19
 - Step-120 unified power-on-dispatch regression: 24/24
+- Step-121 end-to-end ignition-lifecycle integration: 18/18
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -131,7 +137,7 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP120_POWER_ON_INTEGRATION_AUDIT.txt` for the unified power-on
+See `docs/STEP121_LIFECYCLE_INTEGRATION_AUDIT.txt` for the end-to-end lifecycle
 integration audit. Earlier audit files remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
