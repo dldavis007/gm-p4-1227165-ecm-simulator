@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-116 Mode-4 lifecycle PC harness.
+ * BUA / ECM 1227165 - Step-117 factory-test control PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -14,6 +14,7 @@
 /* Base platform, RAM/MPU model, translated algorithms, and scheduler. */
 #include "src/ecm_core.inc.h"
 #include "src/startup_reset.inc.h"
+#include "src/factory_test_control.inc.h"
 #include "src/scheduler_serial.inc.h"
 #include "src/ignition_shutdown.inc.h"
 #include "src/diagnostics.inc.h"
@@ -70,6 +71,7 @@
 #include "tests/startup_normal_regression.inc.h"
 #include "tests/sci_8192_regression.inc.h"
 #include "tests/mode4_lifecycle_regression.inc.h"
+#include "tests/factory_test_control_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
@@ -86,7 +88,7 @@ int main(void)
     sim_set_ecm_reference_rpm(2400u);
     dash_set_test_inputs();
     dash_update_direct_inputs();
-    printf("BUA / 1227165 + 1986 Corvette cluster PC step-113 test\n");
+    printf("BUA / 1227165 + 1986 Corvette cluster PC step-117 test\n");
     printf("Initial minor count = %u (0x%02X)\n",
            (unsigned int)MINOR_COUNT,
            (unsigned int)MINOR_COUNT);
@@ -301,6 +303,7 @@ int main(void)
     run_step114_startup_normal_test();
     run_step115_sci_test();
     run_step116_mode4_lifecycle_test();
+    run_step117_factory_control_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

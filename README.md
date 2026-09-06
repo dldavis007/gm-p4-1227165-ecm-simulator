@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-116 Mode-4 lifecycle project
+# BUA / GM 1227165 Step-117 factory-test control project
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -30,6 +30,12 @@ Step 116 connects completed SCI messages to the source-ordered `$CB5F..$CBB4`
 Mode-4 scheduler lifecycle and `$CBCA..$CBD9` communication timeout. Mode-4
 activation now occurs after reception, and entry-only error, IAC and BLM reset
 commands execute exactly once.
+Step 117 integrates the factory-test boot and IRQ control path at
+`$C8B2..$C8DF`, `$CA6F..$CA73`, and `$FC72..$FD28`. It preserves the emitted
+factory data-pointer table, optional `$AA` RAM fill, FMD exchange boundary,
+96-count minor loop, serial cadence selection, battery/ignition decisions, and
+literal COP restart. Custom-control and physical output exercises beginning at
+`$FD29` remain a separate hardware-facing step.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -40,7 +46,7 @@ independently proven calibration identity.
 The project deliberately builds as one translation unit:
 
 ```text
-gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step116
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step117
 ```
 
 The included implementation fragments must not be compiled separately.
@@ -90,6 +96,7 @@ compilers from treating them as separate C source files.
 - Step-114 source-ordered normal-startup regression: 14/14
 - Step-115 8192-baud SCI/message regression: 20/20
 - Step-116 Mode-4 lifecycle/scheduler regression: 16/16
+- Step-117 factory-test boot/control regression: 24/24
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -104,7 +111,8 @@ The listing proves that LF42A is an RTS at $F42A.  It also proves that the
 assembled ERR14/15 fallback at $F418 branches to LF42A; the `COOLS8` spelling
 in the supplied text is not an unresolved executable destination.
 
-See `docs/STEP116_MODE4_LIFECYCLE_AUDIT.txt` for the source-ordered Mode-4 lifecycle.
+See `docs/STEP117_FACTORY_TEST_CONTROL_AUDIT.txt` for the source-ordered
+factory-test control path.
 Earlier audit files remain as historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The

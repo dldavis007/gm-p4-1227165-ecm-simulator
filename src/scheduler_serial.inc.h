@@ -681,6 +681,12 @@ static void ecm_reset(void)
     sim_legacy_segment1_output_freeze = 0u;
     sim_legacy_ignition_shutdown_freeze = 0u;
     sim_legacy_mode4_lifecycle_freeze = 0u;
+    memset(&bua_factory_trace117, 0, sizeof(bua_factory_trace117));
+    sim_factory_battery_adc117 = 128u;
+    sim_factory_diagnostic_adc117 = 40u;
+    sim_factory_fmd_byte1_117 = 0u;
+    sim_factory_fmd_byte2_117 = 0u;
+    sim_factory_swi_reason117 = FACTORY117_SWI_NONE;
     sim_soft_powerdown_latched = 0u;
     sim_timer8 = 0u;
     sim_iac_motor_on = 1u;
@@ -723,6 +729,10 @@ static void irq_6p25ms(void)
     bua_u8 count;
     if(sim_soft_powerdown_latched!=0u)
         return;
+    if((RAM8(0x0047u)&FACTORY117_MODE_BIT)!=0u) {
+        bua_factory_irq_step117();
+        return;
+    }
     ++stats.irq_ticks;
     sim_advance_dash_signals_6p25ms();
     sim_advance_ecm_reference_6p25ms();

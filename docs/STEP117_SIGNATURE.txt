@@ -1,0 +1,16 @@
+STEP117-FACTORY-TEST-CONTROL-V1
+
+regression=PASS 24/24
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=75c945d41fd82b36e91a8b70e0eac96aea772c658b62634ed6b02e23f9f3f375
+output_sha256=d1b9da3f902196a2379eb9cae219ec063309b008162b5a6b88c7652aec4abbeb
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 117. Its contract is the focused
+24/24 factory-test control regression plus the unchanged signatures above.

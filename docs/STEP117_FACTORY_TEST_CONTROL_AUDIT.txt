@@ -1,0 +1,74 @@
+BUA / GM 1227165 STEP-117 FACTORY-TEST CONTROL AUDIT
+====================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Scope and translated behavior
+-----------------------------
+Step 117 integrates the bounded factory-test control path at $C8B2..$C8DF,
+$CA6F..$CA73, and $FC72..$FD28. Startup sets L0047 bit 7 and L0031 bit 2,
+stores the whole-ROM checksum result at L0173, initializes L0179 and L0032 to
+204, and optionally fills exactly L0000..L002D with $AA when the initial FMD
+byte has both low bits clear. The whole-ROM checksum value is supplied at an
+explicit ROM/HAL boundary; no missing ROM bytes are invented.
+
+The factory flag now routes the 6.25-ms IRQ away from the ordinary scheduler.
+The literal $FC72..$FCA0 table preserves all 24 emitted pointer words. The
+factory loop selects +205 timer counts when L0048 bits 0 and 1 are both clear
+and +11 counts otherwise, with 8-bit wrap. The nonzero branch selects the
+emitted 8192-cadence CSR state. SPI/FMD reply bytes remain HAL inputs and are
+stored at L0049/L004A after the listing's set-bit7/clear-bit7 transmit pair.
+
+L0172 increments with 8-bit behavior and resets when the new value reaches
+96. FDA7 accepts diagnostic A/D values from 40 through 99; values below 40 or
+at least 100 reach a named SWI boundary before the FMD exchange.
+
+Battery/ignition branch correction
+----------------------------------
+The emitted CMPA/BHI/BCS instructions, not conflicting comments, control the
+translation. Battery values at or below 40 increment a timer below 160 and
+reach SWI when the timer is already at least 160. Values from 41 through 89
+preserve a nonzero timer. Values at or above 90 clear it. When the FMD low-two
+mode value changes, the code stores the new mode, clears the serial bit count
+and factory minor count, and primes the table index to $FF.
+
+Boundaries and deferral
+-----------------------
+The SWI/reset consequence is a HAL boundary. FMD electrical behavior, SPI
+timing and the semantic meaning of its mode bits are not invented. Step 117
+includes the literal $FF00 COP restart write at $FD23..$FD28, then stops.
+Custom MPU/FMD controls, PWM/lamp/fan/IAC exercises, A/D sweep, checksum exercise, factory
+fuel/spark scheduling, and wait-loop handoff at $FD29..$FEA3 remain Step 118.
+
+Regression contract
+-------------------
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step117
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-117 output SHA-256:
+  d1b9da3f902196a2379eb9cae219ec063309b008162b5a6b88c7652aec4abbeb
+Step-117 main.c SHA-256:
+  75c945d41fd82b36e91a8b70e0eac96aea772c658b62634ed6b02e23f9f3f375
+Total C/include source lines: 19,757
