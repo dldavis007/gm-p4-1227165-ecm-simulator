@@ -1,0 +1,100 @@
+BUA / GM 1227165 STEP-125 HISTORICAL PACKAGE AUDIT
+==================================================
+
+Purpose and limits
+------------------
+This documentation-only step completes the first historical-package manifest
+required by Step 123. It audits seven unique ZIP packages, proves the duplicate
+Step-111 copy byte-identical, changes no behavioral C code, and deletes nothing
+from the historical collection. The packages are not committed because their
+useful audit, output, warning, and signature evidence is already represented in
+the repository and exact historical distribution reconstruction is not a
+project requirement.
+
+Package manifest
+----------------
+Package                                           Bytes   Files  SHA-256
+------------------------------------------------  ------  -----  ----------------------------------------------------------------
+bua_step104_modular.zip                          236,334     47  238b996e1b4d092178344666f935884065cce756795ccb92bbfef77a2061cd43
+bua_step104_onlinegdb.zip                        207,863      6  bf7b6503cd69f6e1ae167413d776f44c56a14325c213e72aed6f0fd5d65bd019
+bua_step104_split_onlinegdb_gcc.zip               213,061     11  105d97a1a74e37aeb13342f5c959f8961b7e5252f1d5f7a7370834737d444162
+bua_step105_transmission.zip                      274,587     50  9940c1d70cb631cf1b58d353aaa15cb6f28c9a3c9487841e3eca1cf0d906a4e4
+bua_step109_segment_d_integrated_onlinegdb.zip    454,802     68  0319d7c912f60e5b341ff18c7367ad557faf0d37f04825006e64b7653b9f2c6a
+bua_step110_output_stage_audit_onlinegdb.zip      492,858     71  d832a85c83920252542c2c11939457f22608cb2b943f64bfd9d5a82012c58310
+bua_step111_ignition_shutdown_onlinegdb.zip       498,148     73  343726d4019fe959e5ec5a02bdbcef92044747532ffe729225b669c78ba836ee
+
+Duplicate proof
+---------------
+The two historical Step-111 files were independently materialized and hashed:
+
+  bua_step111_ignition_shutdown_onlinegdb.zip
+  bua_step111_ignition_shutdown_onlinegdb(1).zip
+
+Both are 498,148 bytes and both have SHA-256
+343726d4019fe959e5ec5a02bdbcef92044747532ffe729225b669c78ba836ee.
+They are byte-for-byte identical. Neither copy is committed.
+
+Content comparison
+------------------
+All eight packages were expanded for inspection, producing 399 files including
+the duplicate Step-111 tree. Package-relative paths and SHA-256 values were
+compared with the current repository and with the Step-105 and Step-111 Git
+checkpoints.
+
+The named Step-104 through Step-111 audit documents, regression outputs, and
+Step-104 signature record inside the packages match their committed records.
+The Step-105 and Step-111 modular source trees also match their corresponding
+Git checkpoints except for checkout line-ending normalization in the two
+Windows batch files. Later main-branch source files correctly differ because
+Steps 112 through 121 extended the active implementation.
+
+The Step-109 and Step-110 packages contain intermediate source/build states not
+represented as separate commits in the current Git history. The Step-104
+OnlineGDB and split packages likewise retain distribution-specific monolithic
+and split layouts. Those packaging states are redundant for continued
+development and are deliberately excluded rather than copied into Git. Their
+filenames, sizes, file counts, and hashes above retain an exact identity record.
+
+Warning records
+---------------
+Every package-specific warning record says only `No compiler warnings.` The
+Step-104 modular and Step-105 files are 23 bytes because of a final blank line;
+the other inspected warning files are 22 bytes. Their only two SHA-256 values
+are:
+
+  0ca9058ed6bc8aaa91dc0ed6888dc22414a9ba7afab62eb58888205a7856a743
+  ad0e8d07202637fe545d6bc2e0fa1adec9c3d75e0c069fec764dc3b740974986
+
+The substantive result is already stated by each committed audit. Separate
+standalone warning copies or complete ZIP copies would add no useful evidence.
+
+Authority and historical statements
+-----------------------------------
+These packages are historical checkpoints, not current instructions. The old
+Step-104 baseline statement naming bua-hac.txt as authoritative is superseded.
+Only evidence/firmware/bua-hac.lst may be used as firmware evidence.
+
+Cleanup classification
+----------------------
+The seven unique source packages are deliberately excluded as redundant
+historical distributions. The exact manifest hashes above allow later copies to
+be recognized. They are cleanup candidates, subject to the user's later
+retention decision. The numbered Step-111 copy is a proved duplicate candidate.
+This audit does not authorize or perform deletion.
+
+Other historical packages remain outside this completed manifest and are not
+cleanup candidates on the strength of Step 125. The Step-104 glossary and
+hardware-clarification Markdown review, original PROM/S-record comparison
+search, external-PDF rights decision, and DG128 target-port classification also
+remain open.
+
+Verification
+------------
+The unchanged behavioral core was rebuilt with:
+
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+
+Compiler diagnostics: No compiler warnings.
+All Step-104/105 baselines and Step-106 through Step-121 regressions passed.
+Frozen signatures remain unchanged. No behavioral source or baseline was
+modified.

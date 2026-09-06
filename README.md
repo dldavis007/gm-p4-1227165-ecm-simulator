@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-124 controlled evidence import
+# BUA / GM 1227165 Step-125 historical package audit
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -74,6 +74,11 @@ Step 124 imports one hash-verified copy of each of the six ECM schematic sheets,
 the MEMCAL photograph, connection notes, and resistor notes. It proves the
 numbered schematic and photograph copies byte-identical, preserves all variant
 and provenance limitations, and still authorizes no historical-file deletion.
+Step 125 audits seven unique historical Step-104/105/109/110/111 packages,
+proves the two Step-111 ZIPs byte-identical, and records how their source,
+output, warning, audit, and signature content relates to the active repository.
+The redundant packages are intentionally not committed. It changes no
+behavioral code and performs no historical-file deletion.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -160,7 +165,9 @@ integration audit and `docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt` for the
 post-integration coverage conclusion. See
 `docs/STEP123_LIBRARY_EVIDENCE_INVENTORY.txt` for the pre-cleanup archive gate.
 See `docs/STEP124_CONTROLLED_EVIDENCE_IMPORT.txt` for the imported artifact
-manifest and duplicate proof. Earlier audits remain checkpoints.
+manifest and duplicate proof. See
+`docs/STEP125_HISTORICAL_PACKAGE_AUDIT.txt` for the package-level
+manifest and preservation decisions. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
