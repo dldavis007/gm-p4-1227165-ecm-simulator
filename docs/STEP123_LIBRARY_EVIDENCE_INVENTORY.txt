@@ -1,0 +1,182 @@
+BUA / GM 1227165 STEP-123 LIBRARY EVIDENCE INVENTORY
+=====================================================
+
+Purpose and limits
+------------------
+This documentation-only checkpoint inventories historical project evidence
+before any Library cleanup. It compares the accessible Library/Google Drive
+material with the authoritative GitHub main branch at commit 64423b0. No
+Library file was moved, renamed, overwritten, or deleted. No behavioral C code
+was changed.
+
+Firmware-evidence rule
+----------------------
+The sole firmware source remains evidence/firmware/bua-hac.lst. The Library
+copy is 938,156 bytes and has SHA-256:
+
+  5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+
+That exactly matches the committed file. bua-hac.txt and 261589869-bua-hac.txt
+were not read as firmware evidence and must not be substituted for the compiled
+listing. The Drive PDF 261589869-bua-hac.pdf is likewise contextual material,
+not a replacement for the listing.
+
+Inventory method
+----------------
+The recursive Library listing returned 812 entries: one connector root and
+811 files. Filename classification found 201 Step-related files. Google Drive
+was searched separately because nested Drive content is not included in a
+recursive Library listing. Counts describe the accessible snapshot on
+2026-09-06; they are not a proof that no differently named evidence exists.
+
+Primary hardware and MEMCAL records
+-----------------------------------
+Artifact                              Bytes   SHA-256
+------------------------------------  ------  ----------------------------------------------------------------
+1 Processor.gif                       41,817  fe81ce7a03263d935d246fd7721d4c70ef7699b956851cf13c0845b5d22109b2
+2 Inputs.gif                          25,194  68381dab2f13e569d4afdd15e7c502558f569a78c5a776a527c181b140406e6e
+3 Outputs.gif                         29,230  1f531d32ded948cb4c293048aa6bfd2d305219accfeb1ec257747f74d0c55758f
+4 Ignition-Injection.gif              30,337  a139bb3795b40a913458e7d2c8867b7834f162809e2bf60e386b06c0f1eb675b
+5 Connectors.gif                      50,644  1cae49dbf5fba03714d0208e055223e0fc058e3703bd39393833341e1d375c0f
+6 Power Supply.gif                    16,869  90a0f2c4c66d71177a1ba1cd906d37dad613a0a96652d557bd81a54bb4747e5d
+MemCal photo 86 Vette BUA.png        255,584  3010972285864033e73fcb63b9eec84f9f2e616e95cc5c0dccb5563aa57bfd25
+MemCal, Cal connections.docx           7,121  f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6
+Resistors.txt                            219  350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de
+
+Only bua-hac.lst is presently committed under evidence/. The six ECM sheets,
+MEMCAL photograph, connection notes, and resistor notes should be added to the
+repository in a controlled evidence import after provenance/redistribution
+review. The photograph must retain the warning that it may represent another
+application or MEMCAL variant. The connection and resistor records must retain
+their documented discrepancies rather than being silently reconciled.
+
+Duplicate candidates
+--------------------
+The accessible Library contains 21 ECM schematic GIFs:
+
+  Processor:             canonical plus (1) through (5), six files total
+  Inputs:                canonical plus (1) and (2), three files total
+  Outputs:               canonical plus (1) and (2), three files total
+  Ignition-Injection:    canonical plus (1) and (2), three files total
+  Connectors:            canonical plus (1) and (2), three files total
+  Power Supply:          canonical plus (1) and (2), three files total
+
+Step 124 subsequently hashed every file in each name family and proved all
+numbered copies byte-identical to their canonical sheet. It also proved the two
+255,584-byte MEMCAL photographs byte-identical. This later verification does
+not authorize deleting any historical copy without the remaining cleanup gate.
+
+Historical Step checkpoints
+---------------------------
+The Library contains these focused Step-104 through Step-111 packages:
+
+  BUA_STEP104_GLOSSARY.md                         34,822 bytes
+  BUA_STEP104_HARDWARE_CLARIFICATIONS.md           6,208 bytes
+  bua_step104_modular.zip                        236,334 bytes
+  bua_step104_onlinegdb.zip                      207,863 bytes
+  bua_step104_split_onlinegdb_gcc.zip            213,061 bytes
+  bua_step105_transmission.zip                   274,587 bytes
+  bua_step109_segment_d_integrated_onlinegdb.zip 454,802 bytes
+  bua_step110_output_stage_audit_onlinegdb.zip   492,858 bytes
+  bua_step111_ignition_shutdown_onlinegdb.zip    498,148 bytes
+  bua_step111_ignition_shutdown_onlinegdb(1).zip 498,148 bytes
+
+The broader collection also contains earlier monolithic C checkpoints,
+regression outputs, warning records, and Step ZIP packages. These are
+historical checkpoints, not an active source tree. They should remain in place
+until a package-by-package manifest proves that each important source state,
+audit statement, output, warning result, and signature is either committed or
+deliberately classified as unnecessary. The two equal-sized Step-111 ZIPs are
+duplicate candidates only until their hashes are compared.
+
+GitHub preservation status for Steps 104-111
+--------------------------------------------
+Record class                        Present on main
+----------------------------------  --------------------------------------------
+Step-104 baseline documentation    Yes: README, freeze, refactor audit, signature
+Step-105 through Step-111 audits    Yes: one named audit for every step
+Step-104 through Step-111 outputs   Yes: one output artifact for every step
+Standalone warning artifacts       Step 104 only
+Frozen signature evidence          Step 104 dedicated record; Step 105/109/110/111
+                                    values also appear in audits and outputs
+
+The absence of standalone Step-105 through Step-111 warning files is an archive
+gap even though the audit documents record clean strict builds. Before deleting
+the corresponding Library packages, compare their warning/output contents and
+either commit distinct artifacts or document that the committed audits fully
+subsume them.
+
+The historical STEP104_BASELINE_FREEZE.txt says bua-hac.txt was authoritative.
+That statement is retained as checkpoint history but is superseded by the
+current evidence policy and evidence/firmware/README.md: only bua-hac.lst may be
+used. Future readers must not treat the old sentence as current authority.
+
+Additional contextual records
+-----------------------------
+The Drive search found GM-8192-160-Baud-ALDL-Interface.pdf (594,929 bytes).
+It is useful external electrical/interface context, but it is not primary proof
+of this PROM's behavior. The large 84-89 Cluster Schematics Early PDF may help
+with cluster/HUD context but is not one of the six ECM schematic sheets.
+
+The Drive document Usefull Info is a mixed notebook of part numbers, web links,
+lookup data, and copied secondary material. It may help locate provenance but
+must not be promoted wholesale as established evidence. Its BUA and PROM
+identity entries require independent confirmation.
+
+DEFAULT.s19 (101,668 bytes) and dg128_smoke.s19 (2,130 bytes) use MC9S12/DG128
+addressing and belong to later target-port history; they are not the 32-KiB
+1227165 PROM image or the historical AS11M comparison S-record.
+
+Evidence not located by targeted search
+---------------------------------------
+No exact original PROM binary, AS11M-generated comparison S-record, or saved
+byte-comparison report was located under targeted BUA/9340/S-record/S19/AS11M
+queries. This is a search result, not proof of absence. Because the historical
+claim of an essentially matching working PROM is important, any such artifact
+found later should be prioritized for import with exact size, hash, tool/version,
+command, expected metadata difference, and comparison output.
+
+Required actions before any Library cleanup
+-------------------------------------------
+1. Completed by Step 124: import one verified copy of each of the six ECM
+   schematic sheets with provenance limitations, size, and hash.
+2. Completed by Step 124: import the MEMCAL photograph and two MEMCAL note files
+   with variant and discrepancy warnings intact.
+3. Completed by Step 124: hash every numbered schematic/photo copy; all copies
+   in each filename family are byte-identical.
+4. Build a manifest for the Step packages, beginning with Steps 104, 105, 109,
+   110, and 111, and compare their audit/output/warning/signature contents with
+   the committed records.
+5. Review the two Step-104 Markdown files and merge only non-duplicated,
+   supportable evidence into the living reference documents.
+6. Locate and preserve the original PROM/S-record comparison evidence if it
+   still exists; otherwise record that the historical comparison is presently
+   unverified by a retained artifact.
+7. Decide whether external ALDL and cluster PDFs may be redistributed. If not,
+   retain a provenance citation/hash manifest rather than copying the PDFs.
+8. Classify the DG128 S-records as target-port checkpoints and record their
+   generating source/toolchain before considering cleanup.
+
+Cleanup gate
+------------
+No Library cleanup is safe yet. A file becomes a cleanup candidate only after
+exact hashing and one of these recorded outcomes: committed evidence; proved
+byte-identical duplicate of committed/preserved evidence; deliberately excluded
+with a reason; or contextual material retained by a sufficient provenance
+record. Filename similarity and equal size are not enough.
+
+Verification
+------------
+The unchanged behavioral core was rebuilt with:
+
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+
+Compiler diagnostics: No compiler warnings.
+All Step-104/105 baselines and Step-106 through Step-121 regressions passed.
+The output search found no genuine FAIL occurrence; the sole FAIL text remains
+the expected historical `FAIL 0` summary. No new runtime output is archived for
+this documentation-only step because it is byte-identical to Step 122:
+
+  output SHA-256: 55623763f106d4b57b8270bda29b2101c2b1022226e7f2fa9156347dbb775eb0
+  main.c SHA-256: fd502e0eaa900de06768af8d61ce3e936e5136a55006bdd4e27c2caedd4a9693
+  warnings SHA-256: ad0e8d07202637fe545d6bc2e0fa1adec9c3d75e0c069fec764dc3b740974986

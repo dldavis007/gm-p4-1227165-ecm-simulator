@@ -26,10 +26,10 @@ current audit and allow later imports to be verified.
 | --- | ---: | --- | --- |
 | `bua-hac.txt` | 429,349 bytes | `36f20ba8e64cce07d41c7c5eaf3d74f4507c852adf5e1cd239cd6a14fbaf23dd` | Excluded from firmware evidence: its corrected-revision status is not established. Do not use it. |
 | [`evidence/firmware/bua-hac.lst`](../../evidence/firmware/bua-hac.lst) | 938,156 bytes | `5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83` | Sole primary firmware source: zero-error assembled listing used for emitted bytes, addresses, targets, tables, and execution order. |
-| `Resistors.txt` | not recorded here | `350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de` | Two measured/reconstructed MEMCAL resistor lists. |
-| `MemCal, Cal connections.docx` | not recorded here | `f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6` | User connection notes from CAL29 through CAL61. Contains at least one apparent duplicated-label transcription error. |
-| 1227165 schematic GIF set | six sheets | Individual hashes to be recorded when the verified set is imported. | Processor, inputs, outputs, ignition/injection, connectors, and power supply. |
-| MEMCAL and network images | several variants | Individual hashes to be recorded when provenance is verified. | Physical layout and inferred resistor topology; applicability can be model-dependent. |
+| [`evidence/memcal/Resistors.txt`](../../evidence/memcal/Resistors.txt) | 219 bytes | `350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de` | Two measured/reconstructed MEMCAL resistor lists. |
+| [`evidence/memcal/MemCal, Cal connections.docx`](../../evidence/memcal/MemCal,%20Cal%20connections.docx) | 7,121 bytes | `f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6` | User connection notes from CAL29 through CAL61. Contains at least one apparent duplicated-label transcription error. |
+| [1227165 schematic GIF set](../../evidence/hardware/1227165-schematics/) | six sheets, 194,091 bytes total | See `docs/STEP124_CONTROLLED_EVIDENCE_IMPORT.txt`. | Processor, inputs, outputs, ignition/injection, connectors, and power supply. Imported with provenance/rights limitations explicit. |
+| [`evidence/memcal/MemCal photo 86 Vette BUA.png`](../../evidence/memcal/MemCal%20photo%2086%20Vette%20BUA.png) | 255,584 bytes | `3010972285864033e73fcb63b9eec84f9f2e616e95cc5c0dccb5563aa57bfd25` | Physical-layout image; exact source-unit applicability remains variant-dependent. |
 | `GM-8192-160-Baud-ALDL-Interface.pdf` | approximately 595 kB | not yet recorded | External ALDL electrical and timing reference; useful for the HAL, not primary proof of PROM behavior. |
 
 ## Confirmed or strongly supported system facts
@@ -80,6 +80,7 @@ current audit and allow later imports to be verified.
 | OPEN-005 | Boundary | Optional heads-up-display ROM behavior in the `$5800` region, whose bytes are absent from the supplied PROM. |
 | OPEN-006 | Boundary | Step 115 completes the listing-backed software message core. Exact electrical byte timing, transceiver behavior, and arbitrary ROM-dump bytes are not modeled by the C core. |
 | OPEN-007 | Boundary | Step 120 composes the source-ordered software startup path; physical reset causes, socket checksum acquisition, and optional HUD ROM execution remain outside the supplied PROM/software model. |
+| OPEN-008 | Unknown | The original assembled S-record, working-PROM image, and saved byte-comparison report supporting the historical near-perfect image-match claim were not located by the Step-123 targeted search. |
 
 ## Identity boundary
 

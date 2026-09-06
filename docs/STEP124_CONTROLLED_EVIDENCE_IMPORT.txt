@@ -1,0 +1,84 @@
+BUA / GM 1227165 STEP-124 CONTROLLED EVIDENCE IMPORT
+===================================================
+
+Purpose
+-------
+This documentation/archive-only step performs the first controlled import
+recommended by the Step-123 Library inventory. It commits no interpretation as
+fact merely because a file is present, changes no behavioral code, and deletes
+nothing from the historical collection.
+
+Imported ECM schematic evidence
+-------------------------------
+Path prefix: evidence/hardware/1227165-schematics/
+
+Artifact                    Bytes   SHA-256
+--------------------------  ------  ----------------------------------------------------------------
+1 Processor.gif             41,817  fe81ce7a03263d935d246fd7721d4c70ef7699b956851cf13c0845b5d22109b2
+2 Inputs.gif                25,194  68381dab2f13e569d4afdd15e7c502558f569a78c5a776a527c181b140406e6e
+3 Outputs.gif               29,230  1f531d32ded948cb4c293048aa6bfd2d305219accfeb1ec257747f74d0c55758f
+4 Ignition-Injection.gif    30,337  a139bb3795b40a913458e7d2c8867b7834f162809e2bf60e386b06c0f1eb675b
+5 Connectors.gif            50,644  1cae49dbf5fba03714d0208e055223e0fc058e3703bd39393833341e1d375c0f
+6 Power Supply.gif          16,869  90a0f2c4c66d71177a1ba1cd906d37dad613a0a96652d557bd81a54bb4747e5d
+
+Imported MEMCAL evidence
+------------------------
+Path prefix: evidence/memcal/
+
+Artifact                              Bytes   SHA-256
+------------------------------------  ------  ----------------------------------------------------------------
+MemCal photo 86 Vette BUA.png        255,584  3010972285864033e73fcb63b9eec84f9f2e616e95cc5c0dccb5563aa57bfd25
+MemCal, Cal connections.docx           7,121  f9983509b3f7e742d889278f2d913aa4f97a3896d1a356eaa2c9af8192edf6a6
+Resistors.txt                            219  350fbc5a0e1888a86599cd451e4db1c574be500c745d4b365dacda70465ef4de
+
+Each directory includes a README that records role, limitations, variant
+warnings, provenance status, and the boundary between the repository source
+license and third-party evidence rights.
+
+Duplicate verification
+----------------------
+All 21 historical schematic files were materialized and hashed:
+
+  Processor:          six files, one unique SHA-256
+  Inputs:             three files, one unique SHA-256
+  Outputs:            three files, one unique SHA-256
+  Ignition-Injection: three files, one unique SHA-256
+  Connectors:         three files, one unique SHA-256
+  Power Supply:       three files, one unique SHA-256
+
+The two 255,584-byte MEMCAL photographs also have the same SHA-256. The
+numbered files are therefore proved byte-identical duplicates, rather than
+merely equal-sized candidates. Only one copy of each artifact was imported.
+The proof does not authorize deleting any historical copy until the broader
+cleanup manifest and retention policy are approved.
+
+Evidence boundaries retained
+----------------------------
+1. Schematic connectivity outranks inferred device function; undocumented
+   custom-device behavior remains unknown or a HAL boundary.
+2. The photograph may be from another application or MEMCAL variant.
+3. Resistor-network package, population, and mappings may vary.
+4. Conflicts among the connection notes, resistor lists, and complex-network
+   drawing remain explicit; none was silently corrected.
+5. BUA remains source/photograph label text, not independently proven
+   calibration identity.
+6. Original publication/scan provenance and third-party redistribution terms
+   have not been independently established.
+
+Still external or unresolved
+----------------------------
+The original PROM image, assembled S-record, and saved comparison report were
+not found by the Step-123 targeted search. External ALDL and cluster PDFs remain
+outside the repository pending provenance/redistribution classification. The
+historical Step packages also remain untouched pending package-level manifests.
+
+Verification
+------------
+Every imported artifact was compared by SHA-256 with its materialized source.
+The unchanged behavioral core was rebuilt with:
+
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+
+Compiler diagnostics: No compiler warnings.
+All Step-104/105 baselines and Step-106 through Step-121 regressions passed.
+No genuine FAIL occurrence was found. Frozen signatures remain unchanged.

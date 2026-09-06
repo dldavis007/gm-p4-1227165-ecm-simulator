@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-122 whole-image closure audit
+# BUA / GM 1227165 Step-124 controlled evidence import
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -64,6 +64,16 @@ firmware area still classified as unported. Remaining limitations are
 calibration/data, external or absent ROM, processor/custom-device behavior,
 and physical electrical/timing boundaries. This is a coverage conclusion,
 not a claim of instruction-by-instruction or whole-machine equivalence.
+Step 123 inventories the historical Library/Drive evidence before cleanup. It
+confirms the committed assembled listing, identifies the six ECM schematic
+sheets and MEMCAL records awaiting controlled import, classifies duplicate
+candidates and historical Step packages, and records the missing original
+PROM/S-record comparison artifact. It changes no behavioral code and authorizes
+no Library deletion.
+Step 124 imports one hash-verified copy of each of the six ECM schematic sheets,
+the MEMCAL photograph, connection notes, and resistor notes. It proves the
+numbered schematic and photograph copies byte-identical, preserves all variant
+and provenance limitations, and still authorizes no historical-file deletion.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -100,6 +110,8 @@ Every source fragment is well below the previously observed approximately
 | `tests/` | Regression models and regression functions |
 | `docs/` | Frozen evidence and Step-106/107 listing-backed audits |
 | `docs/reference/` | Living evidence register, hardware/firmware cross-reference, MEMCAL model, and theory-of-operation index |
+| `evidence/hardware/` | Hash-identified ECM schematic evidence with provenance and interpretation limits |
+| `evidence/memcal/` | Hash-identified MEMCAL photograph, connection notes, and resistor evidence |
 | `build/` | Generated executables, output, and compiler diagnostics |
 
 Files ending in `.inc.h` are implementation fragments, not independent public
@@ -145,7 +157,10 @@ in the supplied text is not an unresolved executable destination.
 
 See `docs/STEP121_LIFECYCLE_INTEGRATION_AUDIT.txt` for the end-to-end lifecycle
 integration audit and `docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt` for the
-post-integration coverage conclusion. Earlier audits remain checkpoints.
+post-integration coverage conclusion. See
+`docs/STEP123_LIBRARY_EVIDENCE_INVENTORY.txt` for the pre-cleanup archive gate.
+See `docs/STEP124_CONTROLLED_EVIDENCE_IMPORT.txt` for the imported artifact
+manifest and duplicate proof. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
