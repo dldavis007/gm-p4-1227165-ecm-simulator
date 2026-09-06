@@ -1,0 +1,85 @@
+BUA / GM 1227165 STEP-119 VECTOR/EXCEPTION BOUNDARY AUDIT
+=========================================================
+
+Evidence
+--------
+The sole firmware source is evidence/firmware/bua-hac.lst, 938,156 bytes,
+SHA-256 5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83.
+bua-hac.txt was not used.
+
+Emitted vector table
+--------------------
+Step 119 preserves the eight literal words at $FFF0..$FFFE:
+
+  $FFF0 -> $6000
+  $FFF2 -> $C9F4
+  $FFF4 -> $F27B
+  $FFF6 -> $6000
+  $FFF8 -> $C800
+  $FFFA -> $C800
+  $FFFC -> $C800
+  $FFFE -> $C800
+
+The implementation indexes only even addresses in that exact interval and
+rejects other addresses. It does not assign exception names from comments.
+
+Represented dispatch
+--------------------
+The $FFF2 target enters the existing $C9F4-facing IRQ model. With the factory
+flag clear it executes the ordinary 6.25-ms scheduler; with L0047 bit 7 set it
+uses the Step-117/118 factory path. The instruction at $F27B is the single
+emitted RTI byte, so $FFF4 records an immediate return without fabricated
+state changes.
+
+Each of the four $C800 destinations records a reset/startup request. It does
+not automatically clear RAM or claim to reproduce processor, COP, clock-fail,
+power-hold, or restart circuitry. The two $6000 destinations are outside the
+supplied PROM region and remain explicit external-code boundaries.
+
+SWI boundary handling
+---------------------
+Existing modeled SWI sites now record their exact instruction addresses:
+$CDCD for the missing-reference wait, $D6EA for ignition powerdown, $FD03 for
+factory low-power timeout, and $FDB3 for factory diagnostic rejection. The
+assembled bytes prove those SWI instructions. The listing comments do not by
+themselves prove which raw vector slot the relevant processor assigns to SWI,
+so Step 119 deliberately does not connect those events to $FFF0 or $FFF6.
+
+Boundaries and coverage conclusion
+----------------------------------
+Processor exception-entry mechanics, external code at $6000, reset electrical
+effects, and the absent optional HUD ROM remain boundaries. Step 119 closes
+the vector-table item identified by the Step-110 whole-image audit, but does
+not claim whole-machine or byte-for-byte equivalence where hardware or ROM
+evidence is absent.
+
+Regression contract
+-------------------
+Step-119 vector/exception-boundary regression: PASS 19/19
+Step-118 factory-test execution regression: PASS 31/31
+Step-117 factory-test control regression: PASS 24/24
+Step-116 Mode-4 lifecycle regression: PASS 16/16
+Step-115 SCI/message regression: PASS 20/20
+Step-114 normal-startup regression: PASS 14/14
+Step-113 retained-memory regression: PASS 10/10
+Step-112 reset/startup regression: PASS 19/19
+Step-111 ignition lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Build requirement
+-----------------
+gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step119
+
+The warnings artifact must contain exactly: No compiler warnings.
+
+Runtime exit status: 0
+Genuine FAIL search: no failed regression; the only FAIL text is the expected
+Step-44 summary `PASS 14/14, FAIL 0`.
+Complete Step-119 output SHA-256:
+  1bc18c02a88a927646824537d0a4bbf720770224de9d8257230b702c5ca4e100
+Step-119 main.c SHA-256:
+  3b3f5f90b8f1578a38d646405b0905c3aded9cecfbabda53d739453d9e02e8da
+Total C/include source lines: 20,383

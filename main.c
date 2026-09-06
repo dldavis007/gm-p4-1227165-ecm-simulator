@@ -1,5 +1,5 @@
 /*
- * BUA / ECM 1227165 - Step-118 factory-test execution PC harness.
+ * BUA / ECM 1227165 - Step-119 vector-boundary PC harness.
  *
  * The implementation fragments below intentionally form one translation
  * unit.  This preserves the frozen Step-104 static linkage, declaration
@@ -14,6 +14,7 @@
 /* Base platform, RAM/MPU model, translated algorithms, and scheduler. */
 #include "src/ecm_core.inc.h"
 #include "src/startup_reset.inc.h"
+#include "src/vector_boundaries.inc.h"
 #include "src/factory_test_control.inc.h"
 #include "src/factory_test_execution.inc.h"
 #include "src/scheduler_serial.inc.h"
@@ -74,6 +75,7 @@
 #include "tests/mode4_lifecycle_regression.inc.h"
 #include "tests/factory_test_control_regression.inc.h"
 #include "tests/factory_test_execution_regression.inc.h"
+#include "tests/vector_boundaries_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
@@ -307,6 +309,7 @@ int main(void)
     run_step116_mode4_lifecycle_test();
     run_step117_factory_control_test();
     run_step118_factory_execution_test();
+    run_step119_vector_boundaries_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

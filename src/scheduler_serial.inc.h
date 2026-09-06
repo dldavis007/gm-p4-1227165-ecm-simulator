@@ -110,6 +110,7 @@ static void bua_reference_state_12p5ms(void)
     if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u) {
         if (NO_REF_MINOR_COUNT >= CAL_NO_REF_WAIT_LOOPS) {
             ++stats.reference_wait_events;
+            bua_vector_note_swi_step119(0xCDCDu);
             return;
         }
         NO_REF_MINOR_COUNT = (bua_u8)(NO_REF_MINOR_COUNT + 1u);
@@ -677,6 +678,7 @@ static void ecm_reset(void)
 {
     memset(&mem, 0, sizeof(mem));
     memset(&stats, 0, sizeof(stats));
+    bua_vector_reset_step119();
     sim_legacy_segment_d_freeze = 0u;
     sim_legacy_segment1_output_freeze = 0u;
     sim_legacy_ignition_shutdown_freeze = 0u;

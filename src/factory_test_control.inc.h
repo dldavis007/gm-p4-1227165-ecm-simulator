@@ -91,6 +91,7 @@ static bua_u8 bua_factory_diag_valid_step117(bua_u8 diagnostic_adc)
 {
     if(diagnostic_adc<40u || diagnostic_adc>=100u) {
         sim_factory_swi_reason117=FACTORY117_SWI_DIAGNOSTIC;
+        bua_vector_note_swi_step119(0xFDB3u);
         ++bua_factory_trace117.diagnostic_swi_boundaries;
         return 0u;
     }
@@ -146,6 +147,7 @@ static void bua_factory_irq_step117(void)
     if(battery<=FACTORY117_LOW_BATTERY_LIMIT) {
         if(timer>=FACTORY117_IGN_OFF_LIMIT) {
             sim_factory_swi_reason117=FACTORY117_SWI_POWERDOWN;
+            bua_vector_note_swi_step119(0xFD03u);
             ++bua_factory_trace117.powerdown_swi_boundaries;
             return;
         }

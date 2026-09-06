@@ -1,0 +1,16 @@
+STEP119-VECTOR-BOUNDARY-V1
+
+regression=PASS 19/19
+firmware_listing_sha256=5dd9df745532fae26ef6a19deb4402690e64bb8a254aeb33d10c14a1ad6dce83
+main_c_sha256=3b3f5f90b8f1578a38d646405b0905c3aded9cecfbabda53d739453d9e02e8da
+output_sha256=1bc18c02a88a927646824537d0a4bbf720770224de9d8257230b702c5ca4e100
+
+preserved_frozen_signatures:
+  step104=4BA6B7C6
+  step105=9732D09B
+  step109=F357A5F2
+  step110=FAADF8A6
+  step111=16D17C9C
+
+No new behavioral hash was frozen for Step 119. Its contract is the focused
+19/19 vector-boundary regression plus the unchanged signatures above.
