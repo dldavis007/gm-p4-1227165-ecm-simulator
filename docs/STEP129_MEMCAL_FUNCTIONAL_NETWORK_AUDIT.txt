@@ -1,0 +1,201 @@
+BUA / GM 1227165 STEP 129 - MEMCAL FUNCTIONAL NETWORK AUDIT
+===========================================================
+
+Purpose
+-------
+Step 129 converts the reverse-engineered MEMCAL resistor networks from a
+primarily physical generic-grid representation into an evidence-linked
+functional representation. The original KiCad/LTspice/measurement evidence is
+preserved; zero-ohm grid routing is collapsed only in the new functional view.
+
+This step also incorporates direct owner inspection that resolves the physical
+66-pin carrier numbering and its interleaved relationship to J4.
+
+Step numbering
+--------------
+Step 128 already exists and implements the explicit HAL boundary. This MEMCAL
+work therefore follows as Step 129 and does not reuse or overwrite the existing
+Step-128 history.
+
+Files added
+-----------
+- docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md
+- docs/STEP129_MEMCAL_FUNCTIONAL_NETWORK_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/MEMCAL_ARCHITECTURE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- evidence/memcal/MEMCAL_16055375_RECONSTRUCTION_RECORD.md
+- evidence/memcal/MEMCAL_16055376_RECONSTRUCTION_RECORD.md
+
+Physical carrier numbering closure
+----------------------------------
+Direct physical inspection establishes IC-style top/component-side carrier
+numbering:
+
+- left side top-to-bottom: carrier 1-33
+- right side bottom-to-top: carrier 34-66
+
+The bottom 66-contact J4 header interleaves the two sides by row:
+
+- carrier 1 -> J4 1
+- carrier 2 -> J4 3
+- ...
+- carrier 33 -> J4 65
+- carrier 34 -> J4 66
+- ...
+- carrier 66 -> J4 2
+
+Equations:
+
+- carrier 1-33: J4 = 2*carrier - 1
+- carrier 34-66: J4 = 2*(67-carrier)
+
+This supersedes earlier documentation that treated the second half of the
+66-pin mapping as still open pending a blanket continuity test.
+
+16055375 result
+---------------
+The complete 14-terminal 16055375 package maps exactly across J4/CAL33-CAL46:
+
+- terminal 1 -> carrier 17 -> CAL33 -> U11 pin 22
+- terminal 2 -> carrier 18 -> CAL35 -> U11 pin 21
+- terminal 3 -> carrier 19 -> CAL37 -> U11 pin 9
+- terminal 4 -> carrier 20 -> CAL39 -> destination unresolved
+- terminal 5 -> carrier 21 -> CAL41 -> U11 pin 1
+- terminal 6 -> carrier 22 -> CAL43 -> U11 pin 2
+- terminal 7 -> carrier 23 -> CAL45 -> U11 pin 8
+- terminal 8 -> carrier 44 -> CAL46 -> destination unresolved
+- terminal 9 -> carrier 45 -> CAL44 -> U11 pin 13
+- terminal 10 -> carrier 46 -> CAL42 -> U11 pin 18, OSC
+- terminal 11 -> carrier 47 -> CAL40 -> U11 pin 10
+- terminal 12 -> carrier 48 -> CAL38 -> U11 pin 11
+- terminal 13 -> carrier 49 -> CAL36 -> U11 pin 12
+- terminal 14 -> carrier 50 -> CAL34 -> destination unresolved
+
+The LTspice direct branches can therefore be expressed as CAL-to-CAL
+relationships rather than generic-board coordinates. Examples include:
+
+- CAL33-CAL35 = 13 kOhm
+- CAL35-CAL37 = 39 kOhm
+- CAL42-CAL34 = 91 kOhm
+- CAL46-CAL44 = 75 kOhm
+
+LTspice terminals 7 and 8 are common, corresponding to a CAL45/CAL46 common
+node in the equivalent network.
+
+The CAL42 relationship is especially useful for theory-of-operation work:
+network terminal 10 reaches U11 pin 18 identified as OSC, and has a direct
+91-kOhm relationship to CAL34 in the LTspice reconstruction. The exact
+oscillator behavior remains unresolved and is not inferred by this step.
+
+16055376 result
+---------------
+The 16-terminal 16055376 package maps to absolute J4 contacts:
+
+- terminal 1 -> carrier 25 -> J4 49
+- terminal 2 -> carrier 26 -> J4 51 -> U11 pin 24
+- terminal 3 -> carrier 27 -> J4 53
+- terminal 4 -> carrier 28 -> J4 55 -> U11 pin 4
+- terminal 5 -> carrier 29 -> J4 57 -> U11 pin 3
+- terminal 6 -> carrier 30 -> J4 59 -> 100 Ohm to VIGN
+- terminal 7 -> carrier 31 -> J4 61 -> U11 pin 28, MAP
+- terminal 8 -> carrier 32 -> J4 63
+- terminal 9 -> carrier 35 -> J4 64
+- terminal 10 -> carrier 36 -> J4 62
+- terminal 11 -> carrier 37 -> J4 60 -> U11 pin 7
+- terminal 12 -> carrier 38 -> J4 58
+- terminal 13 -> carrier 39 -> J4 56 -> U12 pin 11, CYL
+- terminal 14 -> carrier 40 -> J4 54
+- terminal 15 -> carrier 41 -> J4 52 -> capacitor/U11 pin 16
+- terminal 16 -> carrier 42 -> J4 50 -> U11 pin 17
+
+The historical user connection notes explicitly cover CAL29-CAL61. Therefore
+J4 contacts 62-64 are retained as absolute connector numbers without assigning
+unsupported CAL62-CAL64 semantics.
+
+The duplicated CAL40 entry after CAL48 in the historical notes is retained as
+an apparent transcription error, probably CAL49, but that correction remains
+inferential until schematic or physical-trace corroboration is obtained.
+
+Generic-grid interpretation
+---------------------------
+The physical reconstruction boards are reusable configurable grids. Populated
+zero-ohm resistors are routing jumpers, not calibration values. Consequently,
+the grid layout is deliberately more complicated than the simplest equivalent
+network.
+
+The Step-129 functional method is:
+
+1. collapse zero-ohm-connected regions into electrical nodes;
+2. retain nonzero resistor branches between those nodes;
+3. rename external nodes by package terminal and absolute J4/CAL contact;
+4. add known motherboard destinations;
+5. compare the equivalent network against LTspice, measurements, schematic
+   behavior, and eventually firmware theory of operation.
+
+This does not replace the grid reconstruction. It creates a simpler electrical
+view that can independently audit it.
+
+New targeted discrepancy
+------------------------
+The 16055376 reconstruction record contains a potentially important mismatch:
+
+- KiCad reconstruction: 25.5 Ohm at local J5-J6
+- nominal LTspice value set: includes a 24 kOhm element
+
+Step 129 does not assume these are the same branch or silently normalize one to
+the other. This is now a targeted audit item requiring topology/measurement/
+physical-board reconciliation.
+
+Theory-of-operation value
+-------------------------
+The corrected mapping now gives direct theory-of-operation anchors including:
+
+- CAL42 -> 16055375 terminal 10 -> U11 pin 18, OSC
+- CAL56 -> 16055376 terminal 13 -> U12 pin 11, CYL
+- CAL61 -> 16055376 terminal 7 -> U11 pin 28, MAP
+- CAL59 -> 16055376 terminal 6 -> 100 Ohm to VIGN
+- CAL45/CAL46 -> common node in the 16055375 LTspice model
+
+These relationships allow verification to run in both directions:
+
+physical reconstruction -> CAL/main-board path -> functional theory
+
+and
+
+functional theory -> expected electrical role -> MEMCAL reconstruction.
+
+A discrepancy is now useful evidence rather than merely a layout mystery. It
+may reveal a resistor-reading error, jumper-placement error, missed trace/common
+node, deliberate substitute value, or an unresolved custom-device function.
+
+Verification boundary
+---------------------
+This step does NOT claim:
+
+- the exact internal physical construction of either molded resistor network;
+- the internal transfer functions of U11 or U12;
+- that every blank CAL/J4 destination is unused;
+- semantic names for J4 contacts 62-64;
+- that the 25.5-Ohm / 24-kOhm discrepancy is resolved;
+- that generic-grid component positions correspond one-for-one to original
+  internal resistor elements.
+
+The former recommendation to continuity-test every pin merely to establish the
+66-pin mechanical numbering is no longer required. Targeted continuity tests
+remain appropriate when they answer a specific unresolved electrical question.
+
+Conclusion
+----------
+Step 129 closes the major mechanical ambiguity in the MEMCAL carrier mapping
+and creates the first explicit functional-equivalent view of the 16055375 and
+16055376 networks. The evidence now supports moving theory-of-operation work
+forward while simultaneously using that theory to audit the reverse-engineered
+networks.
+
+The next useful MEMCAL task is targeted reconciliation of the unresolved
+16055376 topology/value relationships, beginning with the 25.5-Ohm versus
+24-kOhm question, followed by schematic identification of J4 contacts 62-64 and
+other blank CAL destinations.
