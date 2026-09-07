@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-126 MEMCAL and source-provenance closure
+# BUA / GM 1227165 Step-127 hardware/HAL fidelity audit
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -88,6 +88,12 @@ bua-hac.bin` build relationship. The authoritative listing remains the primary
 repository byte/address evidence. Physical carrier continuity and installed-
 resistor checks remain explicitly deferred hardware measurements rather than
 Step-126 blockers.
+Step 127 classifies the remaining hardware-facing simulator interfaces by
+fidelity: listing-exact firmware/raw-register behavior, schematic-connected
+hardware, processor-visible HAL signals, simulator-only plant/transfer
+assumptions, and external/unknown device boundaries. It confirms that no new
+translated-core behavior is required by the current evidence and prioritizes
+explicit HAL setters/observers as the safest next implementation work.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -179,8 +185,10 @@ manifest and duplicate proof. See
 `docs/STEP125_HISTORICAL_PACKAGE_AUDIT.txt` for the package-level
 manifest and preservation decisions. See
 `docs/STEP126_MEMCAL_AND_SOURCE_PROVENANCE_CLOSURE_AUDIT.txt` for the MEMCAL,
-corrected-source, build-output, and historical-PROM provenance closure. Earlier
-audits remain checkpoints.
+corrected-source, build-output, and historical-PROM provenance closure. See
+`docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt` for the current hardware/HAL
+fidelity classification and implementation backlog. Earlier audits remain
+checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
