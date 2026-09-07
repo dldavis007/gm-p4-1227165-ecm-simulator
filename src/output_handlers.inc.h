@@ -63,3 +63,6 @@ static void segC_canister_purge(void)
     RAM8(0x0114u)=c.min114;
 }
 
+/* Step 128: make the explicit hardware abstraction boundary part of the
+ * single-translation-unit build without changing existing call ordering. */
+#include "hal_interface.inc.h"
