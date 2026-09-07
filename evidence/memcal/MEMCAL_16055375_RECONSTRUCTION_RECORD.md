@@ -123,3 +123,21 @@ The strongest supported interpretation is:
 This record establishes the local 16055375 network/carrier relationship. It does **not** by itself establish the absolute 66-contact MEMCAL/J4 numbering for every network terminal. The separate MEMCAL carrier mapping must be used to connect these local network positions to absolute MEMCAL/J4 contacts and CAL signals.
 
 Accordingly, the project's open exact package-pin-to-J4/CAL mapping question should remain open until that final correspondence is traced and independently checked.
+
+## Required physical continuity verification
+
+Before closing the exact MEMCAL/J4 mapping question, perform a physical continuity check on the actual reverse-engineered MEMCAL carrier. Using an ohmmeter/continuity tester, verify the correspondence between **every accessible pin on the EPROM/resistor-network side of the carrier and the 66-contact header side**.
+
+This check should cover the EPROM pins, the 16055375 network positions, the companion resistor-network positions, and any other populated or intentionally connected carrier positions. Record both positive continuity and intentionally unconnected positions where practical.
+
+The result should be captured as a pin-by-pin table containing at least:
+
+| Carrier-side item | Local pin/position | 66-contact header pin | Continuity verified | Notes |
+|---|---:|---:|---|---|
+| EPROM | | | | |
+| 16055375 network | | | | |
+| companion network | | | | |
+
+Where multiple carrier-side pins are electrically common, record each physical correspondence rather than inferring the second connection from symmetry.
+
+This physical measurement is the preferred final verification because it will independently test the current extrapolation of the undocumented half of the 66-contact carrier and can convert the package-pin-to-J4/CAL mapping from inferred/document-derived evidence to directly measured hardware evidence.
