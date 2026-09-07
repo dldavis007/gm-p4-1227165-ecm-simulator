@@ -44,31 +44,99 @@ with 33 header positions on each side, for 66 contacts total:
 | ---: | --- |
 | 1-14 | 28-pin EPROM |
 | 15-16 | No component lead |
-| 17-23 | Network nearest EPROM: 14-pin package, seven leads per side |
+| 17-23 | 16055375 network: 14-pin package, seven leads per side |
 | 24 | No component lead |
-| 25-32 | Second network: 16-pin package, eight leads per side |
+| 25-32 | 16055376 network: 16-pin package, eight leads per side |
 | 33 | No component lead |
 
 This placement is based on user inspection and is sufficient as a working
-mechanical model. Exact package identity and pin-to-CAL continuity remain to be
-verified on the applicable 9340 MEMCAL. Network pin count and population may
-differ on other MEMCAL models.
+mechanical model. The network identities are now supported by surviving
+LTspice and KiCad reconstruction artifacts, but the final package-pin-to-J4/CAL
+continuity remains to be physically verified on the applicable 9340 MEMCAL.
+Network pin count and population may differ on other MEMCAL models.
 
 An empty component position does not prove that the corresponding motherboard
 contact is unused; the carrier can route a contact elsewhere.
 
-## Resistor evidence
+## Resistor-network reconstruction evidence
+
+The two resistor networks now have separate reconstruction records:
+
+- [`evidence/memcal/MEMCAL_16055375_RECONSTRUCTION_RECORD.md`](../../evidence/memcal/MEMCAL_16055375_RECONSTRUCTION_RECORD.md)
+- [`evidence/memcal/MEMCAL_16055376_RECONSTRUCTION_RECORD.md`](../../evidence/memcal/MEMCAL_16055376_RECONSTRUCTION_RECORD.md)
+
+### 16055375
+
+The surviving LTspice model represents 16055375 as a **14-terminal** resistor
+network. The physical replacement was implemented on a generic **16-position**
+grid board. For this reconstruction, the supported local correspondence is:
+
+- network terminals 1-7 -> J1-J7,
+- J8 and J9 -> unused package positions,
+- network terminals 8-14 -> J10-J16.
+
+Zero-ohm resistors on the board are configuration/routing jumpers rather than
+calibration resistor values. The SPICE model, KiCad board, resistance-analysis
+work, and physical photograph mutually support this interpretation.
+
+The reconstruction should be described as an implementation intended to
+reproduce the required terminal connectivity/behavior. It is not proven to be
+a component-for-component copy of the inaccessible internal construction of
+the original molded network.
+
+### 16055376
+
+The surviving LTspice model represents 16055376 as a **16-terminal** resistor
+network with nine modeled resistor elements: 150 kOhm, 1.5 kOhm, 130 kOhm,
+24 kOhm, 10 kOhm, 8.2 kOhm, 5.1 kOhm, 7.5 kOhm, and 10 kOhm.
+
+The KiCad reconstruction also exposes sixteen positions, J1-J16, so its local
+package-position correspondence is direct: network terminal 1 -> J1 through
+terminal 16 -> J16.
+
+As with the 16055375 board, the KiCad implementation uses a configurable grid
+with zero-ohm links and open positions. Some fitted values differ slightly from
+the nominal LTspice values. Those differences are preserved as reconstruction
+choices/measurement-derived substitutions rather than silently treated as
+proof of the original packaged network's internal values.
+
+## Historical resistor evidence
 
 `Resistors.txt` contains two groups:
 
 - A simple network with nine values: 150 kOhm, 1.5 kOhm, 130 kOhm, 24 kOhm,
-  10 kOhm, 8.2 kOhm, 5.1 kOhm, 7.5 kOhm, and 10 kOhm.
-- A more complex network associated with the 14-pin reconstruction.
+  10 kOhm, 8.2 kOhm, 5.1 kOhm, 7.5 kOhm, and 10 kOhm. This matches the nominal
+  16055376 LTspice model.
+- A more complex network associated with the 14-pin 16055375 reconstruction.
 
-The latest complex-network drawing differs from the text list in several
-values and designators. These differences are preserved as unresolved rather
-than silently choosing one version. The original LTspice `.asc` files, dated
-design revisions, or direct measurements would establish the correct netlist.
+Earlier documentation treated conflicts between the text list and later
+reconstruction drawings as unresolved. The surviving LTspice and KiCad files
+now establish a much stronger revision/evidence basis for both reconstructed
+networks. Remaining uncertainty is primarily whether every fitted physical
+value on the actual hand-built carrier exactly matches the design artifacts,
+and how each local network pin maps through the carrier to absolute J4/CAL
+contacts.
+
+## Required physical continuity verification
+
+Before declaring the MEMCAL carrier pinout complete, perform a physical
+continuity check on the actual reverse-engineered carrier. Verify every
+accessible EPROM and resistor-network pin against the 66-contact header side,
+including both populated and intentionally unconnected positions where
+practical.
+
+The measurement record should identify:
+
+| Carrier-side item | Local pin/position | Absolute 66-contact header pin | Verified | Notes |
+| --- | ---: | ---: | --- | --- |
+| EPROM | | | | |
+| 16055375 | | | | |
+| 16055376 | | | | |
+
+Where two component-side positions are electrically common, record each
+physical continuity independently rather than deriving one from assumed
+symmetry. This test is intended to replace the current extrapolation of the
+second half of the 66-contact carrier with directly measured hardware evidence.
 
 ## CAL connection summary
 
