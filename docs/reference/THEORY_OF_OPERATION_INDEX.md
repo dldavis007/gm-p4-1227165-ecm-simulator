@@ -14,6 +14,16 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - RAM, internal registers, external PROM, I/O windows, vectors.
 4. **MEMCAL construction and calibration hardware**
    - EPROM, both resistor networks, J4/CAL connections, model variations.
+   - Use [`MEMCAL_ARCHITECTURE.md`](MEMCAL_ARCHITECTURE.md) for the physical
+     carrier and absolute J4 mapping.
+   - Use [`MEMCAL_FUNCTIONAL_NETWORKS.md`](MEMCAL_FUNCTIONAL_NETWORKS.md) to
+     collapse the generic zero-ohm-jumper grid into electrically meaningful
+     resistor nodes tied to CAL and motherboard destinations.
+   - Validate the reconstruction bidirectionally: physical/KiCad/LTspice
+     evidence -> CAL destination -> theory of operation, and theory of
+     operation -> expected CAL electrical role -> reconstructed network.
+   - Current high-value anchors include CAL42/U11-18 `OSC`, CAL56/U12-11
+     `CYL`, CAL61/U11-28 `MAP`, CAL59/VIGN, and the CAL45/CAL46 common node.
 5. **Interrupt and scheduler architecture**
    - 6.25-ms IRQ, odd/even minors, sixteen major segments, event interrupts.
 6. **Reference pulses, RPM, dwell, and spark**
