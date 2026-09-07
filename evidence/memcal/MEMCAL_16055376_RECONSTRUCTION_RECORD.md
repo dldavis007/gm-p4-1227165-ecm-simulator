@@ -2,7 +2,11 @@
 
 ## Purpose
 
-This record consolidates the surviving evidence for the reverse-engineered 16055376 MEMCAL resistor network and its generic-PCB implementation. It is intended to preserve what is directly supported by the LTspice and KiCad source artifacts without overstating internal one-for-one component equivalence.
+This record consolidates the surviving evidence for the reverse-engineered
+16055376 MEMCAL resistor network and its generic-PCB implementation. It
+preserves what is directly supported by the LTspice, KiCad, measurement, and
+physical evidence without overstating one-for-one internal component
+correspondence.
 
 ## Evidence sources
 
@@ -10,35 +14,52 @@ The principal source artifacts are:
 
 1. `NetRes 16055376.asc` — LTspice schematic/model.
 2. `NetRes_16055376.kicad_pcb` — KiCad PCB reconstruction.
-3. `NetRes 16055375 and 16055376.ods` — historical comparison/measurement workbook.
-4. The physical reverse-engineered MEMCAL and user-supplied close-up photograph of the generic resistor/jumper board.
+3. `NetRes 16055375 and 16055376.ods` — historical comparison/measurement
+   workbook.
+4. The physical reverse-engineered MEMCAL and user-supplied close-up photograph
+   of the generic resistor/jumper board.
+5. Direct owner inspection establishing the 66-pin carrier orientation and
+   carrier-to-J4 interleave.
 
 ## Original-network terminal count
 
-The LTspice source explicitly labels terminals **1 through 16**. Unlike the 16055375 network, which is modeled as a 14-terminal package, the 16055376 evidence supports a full **16-terminal network**.
+The LTspice source explicitly labels terminals **1 through 16**. The KiCad
+reconstruction likewise provides connector positions J1 through J16, so the
+supported local correspondence is direct: terminal 1 -> J1 through terminal 16
+-> J16.
 
-The KiCad reconstruction likewise provides connector positions J1 through J16. For this network, the simplest supported local correspondence is therefore:
+## Absolute MEMCAL carrier/J4 mapping
 
-| Original network terminal | KiCad carrier position |
-|---:|---:|
-| 1 | J1 |
-| 2 | J2 |
-| 3 | J3 |
-| 4 | J4 |
-| 5 | J5 |
-| 6 | J6 |
-| 7 | J7 |
-| 8 | J8 |
-| 9 | J9 |
-| 10 | J10 |
-| 11 | J11 |
-| 12 | J12 |
-| 13 | J13 |
-| 14 | J14 |
-| 15 | J15 |
-| 16 | J16 |
+Direct physical inspection has resolved the former absolute mapping question.
+Top-side carrier pins are numbered IC-style, 1-33 down the left side and 34-66
+up the right side. The bottom header interleaves the two sides by row.
 
-This is a **local network-to-carrier mapping only**. Absolute correspondence to the 66-contact MEMCAL/J4 connector remains subject to physical continuity verification of the actual carrier.
+For the 16055376 package:
+
+| Network terminal | Absolute carrier pin | Absolute J4 contact | Known motherboard destination |
+|---:|---:|---:|---|
+| 1 | 25 | 49 | historical CAL sequence likely CAL49; destination unresolved |
+| 2 | 26 | 51 | U11 pin 24 |
+| 3 | 27 | 53 | unresolved |
+| 4 | 28 | 55 | U11 pin 4 |
+| 5 | 29 | 57 | U11 pin 3 |
+| 6 | 30 | 59 | 100 Ohm to VIGN |
+| 7 | 31 | 61 | U11 pin 28, MAP |
+| 8 | 32 | 63 | unresolved |
+| 9 | 35 | 64 | unresolved |
+| 10 | 36 | 62 | unresolved |
+| 11 | 37 | 60 | U11 pin 7 |
+| 12 | 38 | 58 | unresolved |
+| 13 | 39 | 56 | U12 pin 11, CYL |
+| 14 | 40 | 54 | unresolved |
+| 15 | 41 | 52 | capacitor / U11 pin 16 |
+| 16 | 42 | 50 | U11 pin 17 |
+
+The historical CAL-connection notes explicitly run through CAL61. Therefore
+absolute J4 contacts 62-64 above must not be casually relabeled as CAL62-CAL64
+without schematic confirmation. The duplicated `CAL40` entry after CAL48 in the
+notes is treated as a likely transcription error for CAL49, but that correction
+remains inferential.
 
 ## LTspice resistor set
 
@@ -56,81 +77,106 @@ The 16055376 LTspice schematic contains nine resistor elements:
 | R8 | 7.5 kOhm |
 | R9 | 10 kOhm |
 
-The schematic also contains terminal-resistance annotations and simulation sources used to characterize the network behavior.
+The schematic also contains terminal-resistance annotations and simulation
+sources used to characterize network behavior.
 
 ## KiCad generic-grid implementation
 
-The KiCad PCB is a 16-position generic grid implementation. It uses a matrix of populated resistors, zero-ohm links, and open positions to realize the required connectivity on a reusable board pattern.
+The KiCad PCB is a 16-position generic grid. It uses populated resistors,
+zero-ohm links, and open positions to realize the required connectivity on a
+reusable board pattern.
 
-The PCB contains direct adjacent-position components and a second internal row of configurable links. Notable populated values include:
+Notable populated values include:
 
-| KiCad ref | Value | Local role |
-|---|---:|---|
-| R1 | 150 kOhm | between J1 and J2 |
-| R2 | 1.45 kOhm | between J2 and J3 |
-| R3 | 130 kOhm | between J3 and J4 |
-| R4 | 0 Ohm | routing link between J4 and J5 |
-| R5 | 25.5 Ohm | between J5 and J6 |
-| R12 | 10 kOhm | between J12 and J11 |
-| R15 | 0 Ohm | grid routing link from J1 |
-| R17 | 0 Ohm | grid routing link from J3 |
-| R21 | 0 Ohm | grid routing link from J7 |
-| R23 | 10 kOhm | internal-grid branch to J16 |
-| R24 | 8.2 kOhm | internal-grid branch to J15 |
-| R25 | 5 kOhm | internal-grid branch to J14 |
-| R26 | 7.4 kOhm | internal-grid branch to J13 |
-| R30 | 0 Ohm | grid routing link to J9 |
-| R32 | 0 Ohm | internal routing link |
-| R33 | 0 Ohm | internal routing link |
-| R37 | 0 Ohm | internal routing link |
+| KiCad ref | Value | Local role | Absolute relationship |
+|---|---:|---|---|
+| R1 | 150 kOhm | J1-J2 | J4 49-J4 51 |
+| R2 | 1.45 kOhm | J2-J3 | J4 51-J4 53 |
+| R3 | 130 kOhm | J3-J4 | J4 53-J4 55 |
+| R4 | 0 Ohm | J4-J5 routing link | J4 55-J4 57 |
+| R5 | 25.5 Ohm | J5-J6 | J4 57-J4 59; review against nominal model |
+| R12 | 10 kOhm | J12-J11 | J4 58-J4 60 |
+| R15 | 0 Ohm | routing link from J1 | J4 49-side routing |
+| R17 | 0 Ohm | routing link from J3 | J4 53-side routing |
+| R21 | 0 Ohm | routing link from J7 | J4 61-side routing |
+| R23 | 10 kOhm | internal-grid branch to J16 | branch reaches J4 50 |
+| R24 | 8.2 kOhm | internal-grid branch to J15 | branch reaches J4 52 |
+| R25 | 5 kOhm | internal-grid branch to J14 | branch reaches J4 54 |
+| R26 | 7.4 kOhm | internal-grid branch to J13 | branch reaches J4 56 / CYL |
+| R30 | 0 Ohm | grid routing link to J9 | J4 64-side routing |
+| R32 | 0 Ohm | internal routing link | internal |
+| R33 | 0 Ohm | internal routing link | internal |
+| R37 | 0 Ohm | internal routing link | internal |
 
 Numerous other grid positions are explicitly marked `Open`.
 
 ## Interpretation of value differences
 
-The KiCad board should **not** be interpreted as a component-for-component drawing of the inaccessible internal 16055376 package.
+The KiCad board must **not** be interpreted as a component-for-component drawing
+of the inaccessible internal 16055376 package. Several fitted values are close
+to but not identical with the nominal LTspice model, including 1.45 kOhm versus
+1.5 kOhm, 5.0 kOhm versus 5.1 kOhm, and 7.4 kOhm versus 7.5 kOhm.
 
-Several populated PCB values are close to, but not numerically identical to, values in the LTspice representation. Examples include:
-
-- 1.45 kOhm on the PCB versus 1.5 kOhm in the SPICE model.
-- 5.0 kOhm on the PCB versus 5.1 kOhm in the SPICE model.
-- 7.4 kOhm on the PCB versus 7.5 kOhm in the SPICE model.
-
-The PCB also includes values and zero-ohm links that reflect the generic-grid routing implementation rather than a literal internal schematic translation.
-
-Accordingly, the strongest supported interpretation is that the PCB was constructed to reproduce the required **terminal-to-terminal electrical behavior/connectivity** of the 16055376 network using available discrete values and configurable links.
+One relationship deserves explicit review: the KiCad reconstruction record
+shows **25.5 Ohm** between local J5 and J6, while the nominal LTspice set contains
+a **24 kOhm** element. This document does not assume those are intended to be
+the same branch. Step 129 treats that as a targeted reconciliation question for
+SPICE topology, KiCad net topology, historical measurements, and the physical
+board rather than silently normalizing the values.
 
 ## Zero-ohm and open positions
 
-The same documentation rule used for the 16055375 reconstruction applies here:
-
 - `0 Ohm` parts are routing/configuration jumpers.
 - `Open` parts are intentionally unpopulated grid positions.
-- Neither should be treated as calibration resistor values.
+- Neither is a calibration resistor value.
 
-This distinction is important because the generic board contains many more possible resistor locations than the original network contains active resistor elements.
+This distinction matters because the generic board contains many more possible
+component sites than the original/equivalent network contains active resistor
+elements.
 
-## Relationship to the physical MEMCAL
+## Functional interpretation
 
-The user has the physical reverse-engineered MEMCAL and can directly continuity-test the EPROM/network side of the carrier against the 66-contact header side.
+The corrected absolute mapping gives several high-value theory-of-operation
+anchors:
 
-That physical test should eventually establish, pin by pin:
+- terminal 13 -> J4 56 -> U12 pin 11, `CYL`;
+- terminal 7 -> J4 61 -> U11 pin 28, `MAP`;
+- terminal 15 -> J4 52 -> capacitor/U11 pin 16;
+- terminal 6 -> J4 59 -> 100 Ohm to VIGN;
+- terminal 16 -> J4 50 -> U11 pin 17.
 
-- 16055376 local terminal J1-J16 -> absolute MEMCAL/J4 contact.
-- 16055375 local network positions -> absolute MEMCAL/J4 contact.
-- EPROM pins -> absolute MEMCAL/J4 contact.
-- intentionally open or common positions.
+These destinations can now be used to audit the reconstructed network from the
+functional direction. They do **not** by themselves establish the custom
+U11/U12 internal transfer functions.
 
-The continuity measurements should be recorded explicitly rather than inferred from carrier symmetry.
+The generic-grid drawing should therefore be reduced electrically by collapsing
+zero-ohm-connected regions, retaining only nonzero resistor branches, and then
+labeling external nodes with their absolute J4 and motherboard destinations.
 
 ## Confidence statement
 
-Current confidence is high for the following local conclusions:
+Current confidence is high for the following conclusions:
 
-- 16055376 is represented by a 16-terminal network.
-- The KiCad reconstruction uses all sixteen generic carrier positions J1-J16 as the local terminal set.
-- The LTspice source preserves the original/equivalent resistor network model values.
-- The KiCad PCB implements the required behavior with discrete resistors plus zero-ohm routing links and open grid positions.
-- The SPICE and KiCad representations are complementary evidence, not necessarily literal one-for-one internal schematics.
+- 16055376 is a 16-terminal network.
+- The generic KiCad reconstruction uses local positions J1-J16 as the terminal
+  set.
+- The absolute package-terminal-to-carrier-to-J4 mapping is now established.
+- The LTspice source preserves the nominal/equivalent resistor set.
+- The KiCad board implements terminal behavior using resistors plus routing
+  links and open positions.
+- SPICE and KiCad are complementary evidence and need not be literal
+  one-component-for-one-component representations.
 
-Absolute mapping from these sixteen local terminals to the 66-contact MEMCAL/J4 header remains open pending direct physical continuity verification.
+## Remaining verification
+
+The prior blanket requirement to continuity-test all sixteen terminals merely
+to discover their absolute connector numbering is superseded by direct physical
+inspection of the carrier numbering.
+
+Targeted measurements remain useful for blank destinations, unresolved J4
+62-64 identities, internal/common nodes, and any reconstructed resistor/jumper
+relationship that conflicts with the emerging theory of operation. The
+25.5-Ohm-versus-24-kOhm question is a particularly useful targeted audit item.
+
+See `docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md` for the simplified
+functional view used in Step 129.
