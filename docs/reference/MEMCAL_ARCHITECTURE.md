@@ -58,6 +58,26 @@ Network pin count and population may differ on other MEMCAL models.
 An empty component position does not prove that the corresponding motherboard
 contact is unused; the carrier can route a contact elsewhere.
 
+## Historical research-note corroboration
+
+The user-maintained `Usefull Info.pdf` preserves historical research notes that
+independently describe 1986-1988 5.0/5.7 TPI MEMCALs as using part numbers
+16055375 and 16055376 and characterize them as a **7-pin-per-side** and an
+**8-pin-per-side** network, respectively. The same note says the 16055376 is
+near the end of the MEMCAL. This independently agrees with the reconstructed
+14-terminal and 16-terminal package geometry and with the working carrier
+placement above.
+
+The PDF also records a BUA/9340/16059335/1227165/L98/5.7/MD8/G44 application
+entry and a later BUA 1728 entry. These are useful historical identity
+corroboration, but the notes are preserved as research evidence rather than
+substituted for direct hardware, schematic, PROM, or continuity evidence.
+
+A separate note in the PDF says 16055375 "appears to be" replaceable by a
+CTS8620/761-3-R15K network. Because that wording is tentative and comes from a
+historical research lead, this project does not treat the proposed substitute
+as confirmed electrical equivalence.
+
 ## Resistor-network reconstruction evidence
 
 The two resistor networks now have separate reconstruction records:
