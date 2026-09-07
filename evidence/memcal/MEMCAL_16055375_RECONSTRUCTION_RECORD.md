@@ -17,28 +17,28 @@ The original Drive copies remain historical source evidence. The user-supplied c
 
 ## Original-network model
 
-The LTspice schematic models the 16055375 as a 14-terminal resistor network. Its resistor elements are recorded as:
+The LTspice schematic models the 16055375 as a 14-terminal resistor network. The source uses bare numeric resistor values rather than values carrying an explicit `k` suffix. The physical reconstruction, KiCad values, measured terminal-resistance work, and SMD markings establish that the intended hardware scale for the corresponding branches is in kilohms. To keep the distinction explicit, the table below records the LTspice model number and the corresponding reconstructed physical scale separately.
 
-| SPICE ref | Value |
-|---|---:|
-| R1 | 13 kOhm |
-| R2 | 39 kOhm |
-| R3 | 18 kOhm |
-| R4 | 36 kOhm |
-| R5 | 47 kOhm |
-| R6 | 75 kOhm |
-| R7 | 330 kOhm |
-| R8 | 15 kOhm |
-| R9 | 510 kOhm |
-| R10 | 270 kOhm |
-| R11 | 620 kOhm |
-| R12 | 10 kOhm |
-| R13 | 91 kOhm |
-| R14 | 91 kOhm |
-| R15 | 100 kOhm |
-| R16 | 75 kOhm |
-| R17 | 470 kOhm |
-| R18 | 220 kOhm |
+| SPICE ref | LTspice model number | Reconstructed physical scale |
+|---|---:|---:|
+| R1 | 13 | 13 kOhm |
+| R2 | 39 | 39 kOhm |
+| R3 | 18 | 18 kOhm |
+| R4 | 36 | 36 kOhm |
+| R5 | 47 | 47 kOhm |
+| R6 | 75 | 75 kOhm |
+| R7 | 330 | 330 kOhm |
+| R8 | 15 | 15 kOhm |
+| R9 | 510 | 510 kOhm |
+| R10 | 270 | 270 kOhm |
+| R11 | 620 | 620 kOhm |
+| R12 | 10 | 10 kOhm |
+| R13 | 91 | 91 kOhm |
+| R14 | 91 | 91 kOhm |
+| R15 | 100 | 100 kOhm |
+| R16 | 75 | 75 kOhm |
+| R17 | 470 | 470 kOhm |
+| R18 | 220 | 220 kOhm |
 
 The SPICE source explicitly labels terminals 1 through 14. It also shows terminals 7 and 8 on a common node.
 
@@ -79,9 +79,9 @@ A useful cross-check is the common-node relationship: SPICE terminals 7 and 8 ar
 
 ## Directly comparable resistor relationships
 
-The following relationships in the LTspice model provide useful cross-checks against the reconstructed PCB/netlist:
+The following direct branches in the LTspice model provide useful cross-checks against the reconstructed PCB/netlist:
 
-| Original terminals | Carrier positions | Modeled value |
+| Original terminals | Carrier positions | Reconstructed physical scale |
 |---|---|---:|
 | 1-2 | J1-J2 | 13 kOhm |
 | 2-3 | J2-J3 | 39 kOhm |
@@ -96,10 +96,11 @@ The following relationships in the LTspice model provide useful cross-checks aga
 | 12-14 | J14-J16 | 10 kOhm |
 | 11-14 | J13-J16 | 91 kOhm |
 | 10-14 | J12-J16 | 91 kOhm |
-| 9-14 | J11-J16 | 100 kOhm |
 | 8-9 | J10-J11 | 75 kOhm |
 
-The SPICE model also contains 620 kOhm, 470 kOhm and 220 kOhm elements associated with the lower/common-node portion of the network. These must not be assumed to correspond one-for-one with a single physical resistor on the generic PCB without tracing the complete reconstructed netlist.
+The J11-J16 branch in the KiCad reconstruction is populated as 100 kOhm, but that is **not** a direct terminal-9-to-terminal-14 resistor in the LTspice model. The SPICE model instead places its 100 and 220 elements through an internal node in that portion of the network. This is one of the reasons the KiCad reconstruction must not be described as a literal one-component-for-one-component transcription of the SPICE model.
+
+The SPICE model also contains 620, 470 and 220 elements associated with the lower/common-node portion of the network. These must not be assumed to correspond one-for-one with a single physical resistor on the generic PCB without tracing the complete reconstructed netlist.
 
 ## Photograph corroboration
 
