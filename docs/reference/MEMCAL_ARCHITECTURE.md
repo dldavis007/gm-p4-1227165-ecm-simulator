@@ -13,10 +13,32 @@ processor therefore sees a 32 KiB PROM window at `$8000-$FFFF`. A larger memory
 device can hold selectable or mirrored 32 KiB images, but additional memory is
 not simultaneously addressable without bank-selection hardware and firmware.
 
+## 66-contact numbering clarification
+
+The MEMCAL/J4 interface has **66 contacts total**, arranged as 33 corresponding
+positions on each side of the carrier. The original user reverse-engineering
+notes explicitly listed only the first 33 contacts because the connections for
+the opposite side, contacts 34 through 66, were intended to be extrapolated
+from the corresponding carrier positions. The absence of a separately written
+34-66 list must not be interpreted as evidence for a 33-contact MEMCAL.
+
+For preservation and future reconstruction, references to a carrier position
+1-33 describe a physical position along one side/pairing of the 66-contact
+interface unless a document explicitly identifies a J4 contact number. A
+complete electrical pin map should distinguish physical carrier position from
+absolute J4 contact number.
+
+Two user-supplied photographs made during reverse engineering show the actual
+MEMCAL installed in the ECM and a close view of the hand-reconstructed resistor
+board. They are primary physical-layout evidence and should be retained with
+the project evidence set. The photographs support physical construction and
+population observations; individual electrical continuities still require the
+connection notes, schematics, or measurement evidence.
+
 ## Working physical model
 
 The present working model assumes an off-the-shelf, pin-corresponding carrier
-with 33 header positions on each side:
+with 33 header positions on each side, for 66 contacts total:
 
 | Carrier positions per side | Population |
 | ---: | --- |
@@ -84,4 +106,3 @@ behavior. Keep these layers distinct:
 Only the fourth layer is automatically established by the PROM source. A
 semantic claim spanning the earlier layers requires corresponding schematic,
 measurement, or test evidence.
-
