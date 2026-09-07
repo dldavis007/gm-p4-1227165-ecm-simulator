@@ -1,0 +1,333 @@
+BUA / GM 1227165 Step-127 hardware-interface and HAL fidelity audit
+
+Purpose
+=======
+
+Step 127 classifies the simulator's remaining hardware-facing interfaces after
+Steps 123-126 strengthened the schematic, MEMCAL, and source provenance record.
+This is an evidence/fidelity audit. It does not change translated ECM behavior,
+plant constants, frozen signatures, or hardware polarity assumptions.
+
+The goal is to make three questions explicit for every important interface:
+
+1. What does the firmware actually read or write?
+2. What part of the physical 1227165 hardware path is directly supported by
+   schematic or other primary evidence?
+3. What part is still a PC/HAL stimulus, plant approximation, analog transfer,
+   electrical consequence, or processor/custom-device boundary?
+
+Fidelity classes
+================
+
+F0 - Firmware-exact state/write
+    The listing establishes the address, order, mask, branch, table, or raw
+    write and the C implementation preserves that behavior.
+
+F1 - Hardware-connected
+    The corresponding ECM connector, schematic net, component path, or MEMCAL
+    connection is identified, but analog/electrical transfer may remain
+    outside the firmware model.
+
+F2 - HAL signal model
+    The PC harness supplies or receives the processor-visible quantity at the
+    hardware boundary. This is appropriate where the physical transfer is not
+    required to validate firmware behavior.
+
+F3 - Plant/transfer assumption
+    A PC-only constant, sensor transfer, mechanical response, vehicle dynamic,
+    electrical polarity, pulse calibration, or transceiver timing is assumed
+    for useful simulation but is not promoted to factory evidence.
+
+F4 - External/unknown device boundary
+    Behavior belongs to an absent ROM, custom MPU/peripheral internals,
+    transceiver, analog network, physical power system, or other hardware that
+    the available evidence does not fully specify.
+
+Interface audit
+===============
+
+IRQ / scheduler
+---------------
+Firmware fidelity: F0.
+Hardware fidelity: F2/F4.
+
+The ordinary 6.25-ms IRQ scheduler, 12.5-ms odd/even branches, and sixteen-way
+major-segment dispatch are established by the authoritative listing and current
+regressions. The PC harness directly invokes the interrupt service cadence. It
+does not attempt to reproduce the complete processor clock/interrupt-generation
+electrical path. This is a deliberate HAL boundary and does not reduce software
+scheduler fidelity.
+
+Distributor reference, RPM, dwell, and EST
+------------------------------------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Simulation stimulus/electrical output: F2/F3/F4.
+
+The firmware-visible MPU reference/counter state and spark scheduling writes are
+translated. The 1227165 hardware evidence supports the IGNREF/EST/custom-MPU
+boundary. The PC simulation generates phase-continuous reference events and
+models the documented V8 reference geometry used by the translated code.
+Waveform shape, edge conditioning, dwell-driver analog behavior, and the custom
+MPU's undocumented internal implementation remain hardware boundaries.
+
+MAF / load input
+----------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Analog transfer: F2/F3.
+
+The MAF/load/fuel chain is live and regression-tested. The simulator currently
+supplies MAF A/D stimulus directly. This is suitable for firmware testing but is
+not a claim that the PC stimulus reproduces the exact sensor, conditioning,
+A/D reference, noise, or frequency/voltage transfer of the production vehicle.
+Any future physical MAF model must remain a selectable plant/HAL layer rather
+than alter the translated algorithm.
+
+TPS
+---
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Analog transfer: F2/F3.
+
+The common TPS producer and downstream transient/load logic are translated.
+The PC drive profile supplies TPS A/D values directly. Exact potentiometer
+voltage, harness drop, A/D scaling, tolerance, and noise are outside the current
+software model unless separately established by hardware evidence.
+
+Coolant temperature (CTS)
+-------------------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Analog transfer: F2/F3/F4.
+
+The firmware's coolant processing, pull-up/range behavior visible in code, and
+lookup use are translated. The simulator may seed or stimulate processor-visible
+coolant state. Exact thermistor curve, board resistor tolerances, analog switch
+behavior, and A/D transfer are not currently asserted as factory-accurate.
+
+MAT
+---
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Analog transfer: F2/F3.
+
+The translated MAT/knock recovery path consumes the processor-visible MAT value.
+The sensor and board analog path remain HAL responsibilities unless directly
+characterized.
+
+O2 sensor
+---------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Current PC stimulus: F2/F3.
+
+The slow O2 filter, rich/lean handling, closed-loop qualification, BLM logic,
+and scheduler behavior are translated. The integrated PC drive intentionally
+uses alternating A/D values as a behavioral stimulus rather than an exhaust or
+zirconia-sensor plant model. Historical project notes describing typical O2
+voltage behavior may guide a future plant, but they do not replace direct
+1227165 hardware evidence.
+
+Vehicle speed (VSS)
+-------------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Pulse/vehicle transfer: F2/F3.
+
+The Segment-2 VSS software path is translated and the PC harness generates a
+phase-continuous VSS source. The code already labels the pulses-per-mile and
+related cluster calibration as simulator parameters pending exact hardware
+verification. These constants must remain assumptions until the production
+1986 vehicle signal path is independently established.
+
+Battery / system voltage
+------------------------
+Firmware fidelity: F0 where used by translated code.
+Hardware connectivity: F1.
+Analog transfer: F2/F3.
+
+The PC harness supplies the firmware-visible battery A/D quantity. The power
+supply schematic supports the physical power-system boundary, but exact
+voltage-divider, regulator-reference, transient, cranking-drop, and A/D transfer
+fidelity are not implied by the current stimulus.
+
+Knock / ESC
+-----------
+Firmware fidelity: F0 for processor-visible knock/retard handling.
+Hardware connectivity: F1.
+Custom analog/device behavior: F4.
+
+The MEMCAL/schematic evidence now confirms relevant CAL/ESC/custom-device
+connections, including CAL29/CAL32 and the network role. The custom-device
+analog detection behavior is not reconstructed merely from those connections.
+The simulator should therefore inject the processor-visible knock result rather
+than invent a knock-frequency analog model unless new measurement evidence is
+added.
+
+Injector output
+---------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Electrical/mechanical plant: F2/F3/F4.
+
+The listing-backed synchronous fuel command, asynchronous trigger path,
+injector-service bookkeeping, and normal batch cadence are translated. The
+hardware evidence supports the common injector-driver boundary. Driver current,
+opening delay, battery compensation as an electrical phenomenon, fuel pressure,
+flow nonlinearity, dead time, spray behavior, and cylinder mixture formation are
+not automatically proven by the firmware model.
+
+IAC stepper
+-----------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Motor/engine plant: F2/F3.
+
+The 50-ms regulator, 6.25-ms motor executor, phase sequence, key-off homing, and
+position bookkeeping are translated. The PC idle plant lets commanded IAC
+motion affect RPM for closed-loop testing. That engine response is explicitly a
+simulation plant and should remain separate from the firmware-exact stepper
+command/state behavior.
+
+AIR, EGR, purge, fan, CCP and related discrete/PWM outputs
+----------------------------------------------------------
+Firmware fidelity: F0 for raw state and register writes.
+Hardware connectivity: F1 where shown by the 1227165 schematic.
+Electrical polarity/load behavior: F3/F4.
+
+The current implementation intentionally retains raw ECM command state and raw
+MPU/I/O writes without inventing physical output polarity. This remains the
+correct fidelity boundary. A later electrical-HAL layer may name active-high or
+active-low external behavior only where the schematic/driver topology proves it.
+
+TCC / transmission
+------------------
+Firmware fidelity: F0.
+Hardware connectivity: F1.
+Vehicle/transmission plant: F3.
+
+The translated ECM logic, N/V classifier, lock/unlock state machine, output
+command, and brake-series-power distinction are retained. Gear ratios, shift
+points, converter slip, tire/axle factor, and plant response in the PC drive are
+simulator parameters, not factory calibration claims. The brake switch must not
+be invented as an ECM software input where the evidence instead supports a
+series-power hardware boundary.
+
+ALDL 160-baud
+-------------
+Firmware fidelity: partial F0.
+Hardware connectivity: F1.
+Electrical/timing implementation: F3/F4.
+
+The source-visible scheduler/serial behavior is represented, but exact line
+transceiver behavior and physical timing remain incomplete. The external ALDL
+reference may inform a future electrical model but is not primary proof of PROM
+execution.
+
+ALDL 8192-baud SCI
+------------------
+Firmware fidelity: F0 for the translated device-$80 protocol/lifecycle.
+Hardware connectivity: F1.
+Physical SCI/transceiver timing: F3/F4.
+
+The receive validation, checksum, Modes 0-4, transmit state, Mode-4 lifecycle,
+and communication timeout are translated. Physical byte timing, transceiver
+loading, shared-line behavior, and unrepresented ROM reads remain HAL
+boundaries.
+
+Factory-test hardware
+---------------------
+Firmware fidelity: F0 for emitted control flow and raw writes.
+Hardware fidelity: F1/F4.
+
+The factory-test boot/control and execution loops preserve listing-backed RAM,
+A/D, PWM, lamp/fan/IAC, timer, COP, and FMD-facing behavior. The actual FMD/SPI
+exchange, electrical output effects, hardware mode semantics, and reset/SWI
+consequences are not reconstructed beyond available evidence.
+
+Reset, keep-alive, SWI and powerdown
+------------------------------------
+Firmware fidelity: F0 for source-visible decisions and software endpoint.
+Hardware fidelity: F4.
+
+The reset/startup path, retained-memory validation, shutdown sequence, BLM
+commit, IAC homing, and software-powerdown endpoint are translated. Physical
+battery/ignition switching, keep-alive rails, processor reset physics, and the
+external consequences of the software-powerdown boundary are hardware-system
+responsibilities.
+
+MEMCAL
+------
+PROM/software relationship: F0/F1.
+Carrier/network construction: F1 with remaining physical verification.
+Custom analog consequences: F4.
+
+Step 126 established the corrected source/listing provenance, the 66-contact
+carrier model, the 14-terminal 16055375 and 16-terminal 16055376 reconstruction
+records, and the generic-grid zero-ohm routing interpretation. Exact
+component-side-to-66-contact continuity and fitted-value confirmation remain
+future physical checks. CAL connections must not be promoted directly into
+processor semantics where the custom hardware consequence is still unknown.
+
+Optional HUD ROM / external $5800 region
+----------------------------------------
+Firmware fidelity: explicit boundary.
+Hardware/external code: F4.
+
+The supplied PROM does not contain this external ROM. The simulator correctly
+retains an explicit hook/boundary instead of inventing implementation.
+
+Prioritized fidelity backlog
+============================
+
+Priority A - evidence-only improvements, low behavioral risk
+
+1. Complete the physical MEMCAL continuity table when the carrier is available.
+2. Confirm fitted resistor values on the hand-built 16055375/16055376 boards.
+3. Replace remaining generic VSS/tach pulse-calibration assumptions only when
+   exact 1986 Corvette hardware evidence is available.
+4. Record exact analog input conditioning/divider/pull-up values from the six
+   imported 1227165 schematic sheets where they are legible and unambiguous.
+5. Add explicit polarity/driver notes only for outputs whose transistor/driver
+   topology is unambiguous on the schematic.
+
+Priority B - optional HAL enhancements
+
+6. Add reusable host-facing input setters for processor-visible MAF, TPS, CTS,
+   MAT, O2, battery, knock and discrete inputs, keeping translated code
+   unchanged.
+7. Add an optional sensor/vehicle plant layer that converts engineering units
+   to processor-visible A/D/pulse values. Every conversion constant must carry
+   an evidence or simulator-assumption classification.
+8. Add output observation helpers that expose both raw register state and,
+   separately, any evidence-proven external active state.
+
+Priority C - do not infer without new evidence
+
+9. Do not invent custom U11/U12 analog transfer functions from CAL wiring alone.
+10. Do not invent optional HUD ROM behavior.
+11. Do not treat PC transmission, engine, injector, IAC, O2, or vehicle plant
+    constants as factory calibration data.
+12. Do not collapse physical power/reset/transceiver behavior into software
+    semantics merely because the firmware reaches a hardware-facing endpoint.
+
+Step-127 conclusion
+===================
+
+The simulator's strongest fidelity is now the listing-backed software state,
+scheduler, algorithms, protocol logic, and raw hardware-register activity. The
+imported schematics and Step-126 MEMCAL/source work provide a strong physical
+connection map around that software, but several analog, electrical, custom-MPU,
+transceiver, mechanical, and vehicle-dynamic consequences correctly remain HAL
+or plant boundaries.
+
+No current evidence requires a behavioral code change to the translated ECM
+core. The highest-value next implementation work is therefore HAL hygiene:
+make processor-visible input setters and raw output observers more explicit,
+while keeping optional engineering-unit/plant conversion in a separate layer
+whose constants are labeled as evidence-supported or simulator-only.
+
+Step 127 is complete as an audit/classification step. A future implementation
+step may add those HAL interfaces without altering the frozen translated-core
+behavior or historical regression signatures.
