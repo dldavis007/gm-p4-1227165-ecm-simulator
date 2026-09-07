@@ -1,0 +1,130 @@
+BUA / GM 1227165 STEP 128 - EXPLICIT HAL INTERFACE AUDIT
+=========================================================
+
+Purpose
+-------
+Step 128 introduces an explicit hardware-abstraction boundary around the
+processor-visible stimuli and raw translated output windows already present in
+the PC harness. The goal is architectural separation, not a behavioral rewrite.
+No new vehicle plant, sensor transfer function, electrical polarity, driver
+current, waveform shape, or hardware timing claim is introduced by this step.
+
+Files added
+-----------
+- src/hal_interface.inc.h
+- tests/hal_interface_regression.inc.h
+
+Files changed
+-------------
+- src/output_handlers.inc.h
+  Includes the Step-128 HAL interface as part of the existing single
+  translation-unit build.
+
+- tests/diagnostic_integration_regression.inc.h
+  Includes and invokes the Step-128 HAL regression after the existing Step-109
+  regression, avoiding any reordering of main.c's historical test sequence.
+
+Input-side boundary
+-------------------
+The HAL exposes established raw or already-existing simulator-facing input
+points:
+
+- bua_hal_set_o2_adc(raw)
+  Writes the existing sim_o2_adc byte used by the translated O2 path.
+
+- bua_hal_set_battery_adc(raw)
+  Writes the existing BATTERY_AD byte.
+
+- bua_hal_set_vss_mph(mph)
+  Delegates to the already-established sim_set_vss_mph() pulse/timing source.
+  This is intentionally a simulator command; the resulting timing source is
+  what reaches the translated firmware.
+
+- bua_hal_set_reference_rpm(rpm)
+  Delegates to the already-established sim_set_ecm_reference_rpm() source.
+
+- bua_hal_set_ram8(address,value)
+  Provides a bounded raw low-RAM injection path for tests where a translated
+  processor-visible byte is established but the external electrical transfer
+  remains unresolved.
+
+The generic RAM setter is not evidence that every low-RAM byte is a physical
+input. Callers remain responsible for using only evidence-supported locations.
+
+Output-side boundary
+--------------------
+The HAL exposes raw observers without assigning electrical semantics:
+
+- low RAM byte observer
+- MPU byte observer for $3FC0-$3FFF
+- MPU big-endian 16-bit observer
+- parallel I/O observer for $4000-$400F
+- one-byte $5000 observer
+
+Named high-value observers are supplied for:
+
+- synchronous injector command word at $3FD0
+- IAC position bookkeeping at L002C
+- raw Segment-1/MPU outputs at $3FCC, $3FD2, $3FD4, $3FD6, $3FD8
+- raw parallel-I/O output at $4004
+
+These named accessors report software-visible state only. They do not claim
+that a byte value maps directly to active-high/active-low voltage, current,
+relay state, injector waveform, motor torque, or other physical consequence.
+
+Regression coverage
+-------------------
+The Step-128 regression contains 15 checks covering:
+
+- O2 raw setter
+- battery raw setter
+- bounded low-RAM set/get behavior
+- raw MPU byte observations
+- raw MPU 16-bit observation
+- named injector command observation
+- named IAC position observation
+- raw $4004 observation
+- raw $5000 observation
+- VSS source delegation
+- reference-RPM source delegation
+- rejection of out-of-window MPU/I/O reads
+
+The regression is wired into the existing harness through the final included
+regression fragment rather than by changing the ordering in main.c.
+
+Behavioral boundary
+-------------------
+Step 128 deliberately does NOT:
+
+- change translated ECM algorithms
+- change scheduler cadence
+- change frozen Step-104/105 behavior
+- introduce new MAF/TPS/CTS/MAT engineering-unit conversion functions
+- assign electrical polarity to raw outputs
+- model injector current, IAC mechanics, TCC hydraulics, relays, fans, AIR,
+  EGR, purge hardware, or ALDL electrical timing
+- alter MEMCAL assumptions
+
+Those higher-level transformations remain in simulation/plant code or in
+future evidence-backed HAL extensions.
+
+Verification status
+-------------------
+The GitHub connector used for this step does not provide an execution shell or
+an existing repository CI workflow, so this change has been statically wired
+and regression-instrumented but has not been compiled inside the connector
+session. The next local `make test`, `build_gcc.bat`, or equivalent strict-C89
+run should verify the new Step-128 15/15 regression along with all historical
+baselines.
+
+Conclusion
+----------
+Step 128 establishes the explicit raw HAL seam requested by the Step-127
+fidelity audit while preserving the distinction between translated firmware,
+hardware-visible state, and higher-level simulator/plant assumptions.
+
+The next logical step is to migrate additional existing sensor stimuli
+(MAF/TPS/CTS/MAT/knock and similar signals) onto named HAL setters only after
+the exact processor-visible source variable or register used by the current
+translation is identified and verified, avoiding duplicate or invented signal
+paths.
