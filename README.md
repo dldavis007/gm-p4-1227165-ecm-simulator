@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-125 historical package audit
+# BUA / GM 1227165 Step-126 MEMCAL and source-provenance closure
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -79,6 +79,15 @@ proves the two Step-111 ZIPs byte-identical, and records how their source,
 output, warning, audit, and signature content relates to the active repository.
 The redundant packages are intentionally not committed. It changes no
 behavioral code and performs no historical-file deletion.
+Step 126 closes the MEMCAL/source-provenance investigation supportable from the
+retained evidence. It clarifies the 66-contact MEMCAL carrier, documents the
+14-terminal 16055375 and 16-terminal 16055376 network reconstructions and their
+zero-ohm routing-jumper scheme, adds historical package-geometry corroboration,
+and verifies the corrected `bua-hac.asm -> bua-hac.lst / bua-hac.s19 /
+bua-hac.bin` build relationship. The authoritative listing remains the primary
+repository byte/address evidence. Physical carrier continuity and installed-
+resistor checks remain explicitly deferred hardware measurements rather than
+Step-126 blockers.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -113,10 +122,11 @@ Every source fragment is well below the previously observed approximately
 | `src/` | Translated ECM algorithms, scheduler, RAM/MPU model, and feature wiring |
 | `simulation/` | Original scripted drive plus the PC-only transmission-aware plant |
 | `tests/` | Regression models and regression functions |
-| `docs/` | Frozen evidence and Step-106/107 listing-backed audits |
+| `docs/` | Frozen evidence and numbered step audits |
 | `docs/reference/` | Living evidence register, hardware/firmware cross-reference, MEMCAL model, and theory-of-operation index |
+| `evidence/firmware/` | Authoritative assembled listing and corrected-source/build provenance record |
 | `evidence/hardware/` | Hash-identified ECM schematic evidence with provenance and interpretation limits |
-| `evidence/memcal/` | Hash-identified MEMCAL photograph, connection notes, and resistor evidence |
+| `evidence/memcal/` | Hash-identified MEMCAL photograph, connection notes, resistor evidence, and reconstruction records |
 | `build/` | Generated executables, output, and compiler diagnostics |
 
 Files ending in `.inc.h` are implementation fragments, not independent public
@@ -167,7 +177,10 @@ post-integration coverage conclusion. See
 See `docs/STEP124_CONTROLLED_EVIDENCE_IMPORT.txt` for the imported artifact
 manifest and duplicate proof. See
 `docs/STEP125_HISTORICAL_PACKAGE_AUDIT.txt` for the package-level
-manifest and preservation decisions. Earlier audits remain checkpoints.
+manifest and preservation decisions. See
+`docs/STEP126_MEMCAL_AND_SOURCE_PROVENANCE_CLOSURE_AUDIT.txt` for the MEMCAL,
+corrected-source, build-output, and historical-PROM provenance closure. Earlier
+audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
