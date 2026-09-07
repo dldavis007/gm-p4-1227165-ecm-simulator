@@ -1,3 +1,5 @@
+#include "hal_interface_regression.inc.h"
+
 static bua_u32 step109_diag_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -141,4 +143,8 @@ static void run_step109_diagnostic_integration_test(void)
     printf("  step-109 Segment-D integration regression result: %s (%u/%u)\n",
            pass==total?"PASS":"FAIL",pass,total);
 #undef S109
+
+    /* Step 128 is documentation/HAL-only with respect to translated behavior;
+     * execute its boundary regression here without changing main() ordering. */
+    run_step128_hal_interface_test();
 }
