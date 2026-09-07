@@ -1,0 +1,290 @@
+Step 126 — MEMCAL and Source-Provenance Closure Audit
+=====================================================
+
+Purpose
+-------
+
+Step 126 resolves the documentation and evidence questions left open after the
+Step-125 historical-package audit, with emphasis on MEMCAL construction,
+resistor-network reconstruction, corrected BUA source provenance, and the
+boundary between evidence that is now established and physical verification
+that still requires the actual MEMCAL on the bench.
+
+This is an evidence/documentation step. It changes no simulator behavior,
+regression baseline, C source, or hardware model.
+
+Closure result
+--------------
+
+Step 126 is CLOSED.
+
+The step closes the documentation/provenance investigation that can be completed
+from the retained repository, Drive artifacts, schematics, reverse-engineering
+records, photographs, LTspice/KiCad files, and historical PROM images.
+
+Two physical MEMCAL verification tasks remain intentionally open and are
+tracked in docs/reference/EVIDENCE_REGISTER.md. They do not block Step 126:
+
+  OPEN-001  Physical EPROM/network-pin to absolute 66-contact J4/CAL mapping.
+  OPEN-002  Physical confirmation of actually fitted resistor values where the
+            reconstruction differs slightly from nominal model values.
+
+These are deferred hardware measurements, not unresolved documentation work.
+
+1. 66-contact MEMCAL architecture clarified
+--------------------------------------------
+
+The MEMCAL/J4 interface is documented as 66 contacts total, with 33
+corresponding positions on each side of the carrier.
+
+The original reverse-engineering notes enumerated only contacts/positions 1-33.
+The opposite half, contacts 34-66, was intended to be extrapolated from the
+corresponding carrier positions. The absence of a separately written 34-66 list
+must not be interpreted as evidence for a 33-contact MEMCAL.
+
+The living architecture record is:
+
+  docs/reference/MEMCAL_ARCHITECTURE.md
+
+2. MEMCAL physical evidence consolidated
+-----------------------------------------
+
+The evidence set now distinguishes:
+
+  * the previously retained historical MEMCAL photograph,
+  * the user-identified photographs of the actual reverse-engineered MEMCAL and
+    hand-built resistor/jumper reconstruction,
+  * connection notes,
+  * resistor-value notes,
+  * schematics,
+  * LTspice network models,
+  * KiCad reconstruction boards, and
+  * terminal-resistance comparison data.
+
+The user-supplied photographs are retained in the ChatGPT project/library
+workspace but were not forced into the GitHub evidence tree through an unsafe
+or lossy transfer path. The evidence register explicitly records that repository
+import as pending rather than falsely claiming a GitHub copy exists.
+
+3. 16055375 reconstruction resolved
+------------------------------------
+
+The surviving evidence establishes 16055375 as a 14-terminal resistor network.
+The physical replacement was implemented on a generic 16-position grid board.
+The supported local position mapping is:
+
+  terminals 1-7   -> J1-J7
+  J8, J9          -> unused package positions
+  terminals 8-14  -> J10-J16
+
+The zero-ohm SMD parts are routing/configuration jumpers used to adapt the
+common grid board to the required network connectivity. They are not calibration
+resistor values.
+
+A strong topology cross-check is that the LTspice model places terminals 7 and
+8 on a common node while the KiCad reconstruction uses its zero-ohm routing to
+make J7 and J10 common under the supported 14-to-16 position mapping.
+
+The reconstruction record is:
+
+  evidence/memcal/MEMCAL_16055375_RECONSTRUCTION_RECORD.md
+
+Step 126 also tightened this record so that bare LTspice numeric values are not
+silently represented as literal kOhm simulator values. The record now separates
+the LTspice source numbers from the corresponding reconstructed physical kOhm
+scale and explicitly documents the internal-node difference around the
+100/220-element region. This prevents a component-for-component equivalence
+claim that the evidence does not support.
+
+4. 16055376 reconstruction resolved
+------------------------------------
+
+The surviving evidence establishes 16055376 as a 16-terminal network. Its
+KiCad reconstruction exposes J1-J16 directly, so the local package-position
+mapping is one-to-one.
+
+The nominal LTspice/simple-network value family corresponds to the historical
+Resistors.txt group:
+
+  150, 1.5, 130, 24, 10, 8.2, 5.1, 7.5, 10
+
+at the reconstructed physical kOhm scale.
+
+The generic board again uses zero-ohm jumpers and deliberately open positions
+for routing. Slight fitted-value substitutions in the KiCad reconstruction are
+preserved as reconstruction choices rather than rewritten as proof of the
+original molded network's exact internal values.
+
+The reconstruction record is:
+
+  evidence/memcal/MEMCAL_16055376_RECONSTRUCTION_RECORD.md
+
+5. Historical research notes corroborate the network geometry
+--------------------------------------------------------------
+
+The user-maintained Usefull Info.pdf independently associates 16055375 and
+16055376 with the relevant 1986-1988 5.0/5.7 TPI MEMCAL family and describes
+them as seven-pins-per-side and eight-pins-per-side networks respectively.
+
+That independently agrees with the 14-terminal and 16-terminal reconstruction
+results.
+
+The same notes preserve BUA / 9340 / 16059335 / 1227165 application information.
+They are treated as historical corroboration rather than substituted for direct
+PROM, schematic, listing, or physical evidence. Tentative replacement-part
+language remains a research lead only.
+
+6. Corrected BUA assembly-source provenance established
+-------------------------------------------------------
+
+A complete corrected build set was located under the project owner's Drive
+ASM11 folder, including:
+
+  bua-hac.asm
+  bua-hac.lst
+  bua-hac.s19
+  bua-hac.bin
+  BUA_from_Car.bin
+  BUA 86 vette 5.7TPI auto with 3.07.bin
+
+The Drive bua-hac.lst is byte-for-byte identical to the repository's existing
+authoritative evidence/firmware/bua-hac.lst.
+
+The corrected bua-hac.asm contains source lines 1-14724 corresponding to the
+zero-error/zero-warning listing in order. The source/listing relationship is
+therefore established rather than inferred from filename similarity.
+
+The original Drive bua-hac.s19 and bua-hac.bin were compared to the listing:
+
+  * all 16,092 explicitly emitted listing bytes agree with the S-record;
+  * all 16,092 explicitly emitted listing bytes agree with the generated 16 KiB
+    binary.
+
+The verified build relationship is therefore:
+
+  bua-hac.asm -> bua-hac.lst / bua-hac.s19 / bua-hac.bin
+
+The authoritative listing remains the repository's primary emitted-address and
+byte evidence, while the corrected .asm is now a verified source counterpart.
+
+The detailed provenance record is:
+
+  evidence/firmware/BUA_SOURCE_PROVENANCE.md
+
+7. Corrected build versus historical PROM images
+------------------------------------------------
+
+The corrected generated bua-hac.bin differs from the historical
+"BUA 86 vette 5.7TPI auto with 3.07.bin" at only:
+
+  $C007  checksum byte
+  $C6AE  documented corrected value ($B6 versus historical $84)
+
+The source itself documents the $C6AE correction and resulting checksum change
+from the older $9708 result to $973A.
+
+BUA_from_Car.bin adds only one further difference at $C005, within the
+sequence-number field.
+
+This closes the earlier search for the original corrected source and generated
+comparison artifacts. The historical build products survived and their
+relationship to the authoritative listing is directly verified.
+
+8. Repository preservation boundary
+------------------------------------
+
+The corrected .asm, original .s19, generated .bin, and historical PROM images
+remain identified external Drive artifacts by exact filename, size, and
+SHA-256 in the repository evidence records.
+
+An attempted connector-based transfer of the S-record/binary into GitHub was
+rejected after verification showed the staged content was not trustworthy as a
+byte-preserving copy. Those temporary files were removed. Step 126 deliberately
+prefers a verified external artifact with a recorded cryptographic hash over a
+repository copy whose transfer fidelity cannot be proven.
+
+Therefore no repository file should be treated as a replacement for the raw
+Drive .asm/.s19/.bin unless it is later imported by a byte-preserving method
+and its SHA-256 is verified against the values already recorded in
+BUA_SOURCE_PROVENANCE.md.
+
+9. Evidence-register effect
+----------------------------
+
+The living evidence register now records:
+
+  SYS-021  Corrected bua-hac.asm corresponds to the authoritative listing and
+           associated generated outputs.
+
+  MEM-003  28-pin EPROM + 14-terminal 16055375 + 16-terminal 16055376 on the
+           66-contact carrier as the strongly supported physical architecture.
+
+  MEM-007  16055375 local reconstruction and generic-grid routing model.
+
+  MEM-008  16055376 local reconstruction and nominal/fitted-value distinction.
+
+  MEM-009  Historical resistor-set ambiguity substantially resolved.
+
+  MEM-010  Historical research-note corroboration for the two network package
+           geometries and application family.
+
+The former missing-source/build-output question is resolved by the corrected
+build-set provenance work.
+
+10. Remaining nonblocking work
+------------------------------
+
+The following tasks are intentionally deferred rather than treated as Step-126
+failures:
+
+A. Physical MEMCAL continuity table
+
+   With the actual carrier on the bench, continuity-check every accessible
+   EPROM, 16055375, and 16055376 pin against the absolute 66-contact header.
+   Record each physical correspondence directly rather than extrapolating the
+   second side from symmetry.
+
+B. Physical fitted-resistor confirmation
+
+   Check the installed nonzero resistor values, especially positions where the
+   reconstruction uses a slightly different fitted value than the nominal
+   network model.
+
+C. Optional byte-preserving archival import
+
+   If a future GitHub/desktop workflow can import the original corrected
+   bua-hac.asm, bua-hac.s19, bua-hac.bin, and relevant historical PROM images
+   without text conversion or connector corruption, verify their SHA-256 hashes
+   against BUA_SOURCE_PROVENANCE.md before committing them.
+
+These tasks may be completed later without reopening Step 126 unless they
+contradict the present evidence conclusions.
+
+No behavioral changes
+---------------------
+
+Step 126 changes no C implementation, simulation model, regression test,
+behavioral signature, scheduler behavior, firmware translation, or HAL
+semantics.
+
+The Step-104 through Step-122 behavioral conclusions remain unchanged.
+
+Final determination
+-------------------
+
+Step 126 closes the outstanding historical-source and MEMCAL documentation
+investigation that is supportable from the retained evidence.
+
+The project now has:
+
+  * a clarified 66-contact MEMCAL model,
+  * separately documented 14-terminal and 16-terminal resistor-network
+    reconstructions,
+  * explicit zero-ohm routing-jumper semantics,
+  * independent historical package-geometry corroboration,
+  * a verified corrected assembly-source/listing/output provenance chain,
+  * direct comparison to the historical Corvette PROM images, and
+  * clearly isolated physical measurements that remain to be performed.
+
+The next numbered project work may proceed as Step 127 without treating the
+pending physical continuity measurements as a documentation blocker.
