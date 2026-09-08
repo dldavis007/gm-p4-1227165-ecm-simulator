@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-127 hardware/HAL fidelity audit
+# BUA / GM 1227165 Step-135 hardware/MEMCAL signal-chain audit
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -94,6 +94,40 @@ hardware, processor-visible HAL signals, simulator-only plant/transfer
 assumptions, and external/unknown device boundaries. It confirms that no new
 translated-core behavior is required by the current evidence and prioritizes
 explicit HAL setters/observers as the safest next implementation work.
+Step 128 adds that explicit HAL seam around already-established raw inputs and
+outputs. It introduces named setters/observers for O2, battery, VSS, reference
+RPM, bounded RAM, MPU, parallel-I/O and related raw state without adding new
+electrical semantics, vehicle-plant behavior, or custom-device assumptions.
+Step 129 converts the reverse-engineered MEMCAL resistor networks from generic
+grid layouts into functional terminal-level networks, closes the physical
+66-pin carrier-to-J4 mapping, and establishes photograph-first authority for
+as-built resistor and zero-ohm-jumper population. It also closes the 16055376
+24-kOhm discrepancy in favor of the photographed hardware and LTspice model.
+Step 130 carries those MEMCAL mappings through the motherboard and into
+listing-backed firmware behavior. It establishes evidence-linked CAL42/OSC,
+CAL56/CYL, CAL61/MAP, CAL59/VIGN and ESC/KNOCK paths while keeping U11/U12
+internal transfer functions and resistor-only semantics explicitly unresolved.
+Step 131 traces the visible ignition and injection chain around U9, U11 and
+U12. It attributes the `$3FC0-$3FFF` window to U9 at the device level, closes
+the supported processor-visible reference/RPM, spark/EST and injector-command
+paths, and leaves exact pin-to-register mapping, polarity, phase and current
+control as custom-device boundaries.
+Step 132 separates the physical MAP/MAP2 and CAL61/U11 paths from the supplied
+image's actual MAF/reference-period load producer. It establishes `$0063` as a
+MAF-derived load quantity for this image and preserves U11 MAP/CAL61 behavior
+and variant-dependent MAP use as unresolved.
+Step 133 maps the visible U10 A/D channels to schematic signals, normal
+firmware selectors, factory-test capture, raw RAM state and processed behavior.
+It distinguishes MAP2, VOLT, O2, MAP, CTS, TPS, PUMPVOLT, DIAG, MAT, ESC and
+VMAF channels and records which selectors the normal image actually requests.
+Step 134 separates CAL42/U11 OSC, CAL56/U12 CYL and the distributor-reference
+path. It cross-references reference occurrence, period and RPM processing while
+preserving U11/U12/U9 internal behavior and CAL56 voltage encoding as explicit
+unknowns.
+Step 135 separates the CAL29/U10 analog ESC monitor from the CAL32/U12/U9
+knock-event path and traces the executable knock-retard, recovery, spark
+subtraction and Error-43 behavior. The U9 KNOCK-pin-to-`$3FCA` relationship is
+kept as a strong inference rather than promoted to undocumented direct proof.
 
 The project targets the 1986 Corvette L98 GM P4 ECM, service number 1227165, using the
 supplied 9340 / 16059335 PROM material.  `BUA` remains a source label, not an
@@ -186,9 +220,14 @@ manifest and duplicate proof. See
 manifest and preservation decisions. See
 `docs/STEP126_MEMCAL_AND_SOURCE_PROVENANCE_CLOSURE_AUDIT.txt` for the MEMCAL,
 corrected-source, build-output, and historical-PROM provenance closure. See
-`docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt` for the current hardware/HAL
-fidelity classification and implementation backlog. Earlier audits remain
-checkpoints.
+`docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt` for the hardware/HAL fidelity
+classification. See `docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt` for the
+explicit raw HAL boundary and `docs/STEP129_MEMCAL_FUNCTIONAL_NETWORK_AUDIT.txt`
+for the functional MEMCAL reconstruction and physical carrier mapping. See
+`docs/STEP130_MEMCAL_MOTHERBOARD_FIRMWARE_CROSS_REFERENCE_AUDIT.txt` through
+`docs/STEP135_ESC_KNOCK_SIGNAL_CHAIN_AUDIT.txt` for the current motherboard,
+custom-device, sensor-acquisition, timing and ESC/knock theory-of-operation
+cross-reference work. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
