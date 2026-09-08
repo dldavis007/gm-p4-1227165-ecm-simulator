@@ -35,6 +35,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`IGNITION_INJECTION_SIGNAL_CHAIN.md`](IGNITION_INJECTION_SIGNAL_CHAIN.md)
      for the U12-to-U9/U11 reference path, U9 register-window behavior,
      EST/feedback boundary, and injector command/driver boundary.
+   - Use [`OSC_CYL_REFERENCE_TIMING_PATHS.md`](OSC_CYL_REFERENCE_TIMING_PATHS.md)
+     to keep CAL42/U11 `OSC`, CAL56/U12 `CYL`, and distributor-reference
+     timing electrically and evidentially separate.
 7. **Sensor acquisition and filtering**
    - MAF, MAP, TPS, CTS, MAT, O2, VSS, battery and discrete inputs.
    - Use [`ADC_SENSOR_ACQUISITION.md`](ADC_SENSOR_ACQUISITION.md) for the U10

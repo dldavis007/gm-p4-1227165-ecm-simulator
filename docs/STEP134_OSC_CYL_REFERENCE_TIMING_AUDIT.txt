@@ -1,0 +1,60 @@
+BUA / GM 1227165 STEP 134 - OSC/CYL/REFERENCE-TIMING AUDIT
+=========================================================
+
+Purpose
+-------
+Step 134 separates CAL42/U11 OSC, CAL56/U12 CYL, and the actual distributor
+reference path, then cross-references each supported endpoint with firmware.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 133 commit fee2f7d8. Step 134 is the next unused
+numbered audit.
+
+Files added
+-----------
+- docs/reference/OSC_CYL_REFERENCE_TIMING_PATHS.md
+- docs/STEP134_OSC_CYL_REFERENCE_TIMING_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Findings
+--------
+1. CAL42 is mechanically mapped through 16055375 terminal 10 to U11 pin 18
+   OSC. The photographed reconstruction supports a 91-kOhm external-terminal
+   relationship to unresolved CAL34. No evidence connects this node to the U9
+   register timebase or proves any U11 internal oscillator behavior.
+
+2. CAL56 is mechanically mapped through 16055376 terminal 13 to U12 pin 11
+   CYL. The photographed functional network supports 7.5 kOhm to unresolved
+   CAL53. Its voltage encoding remains unknown.
+
+3. U12 REF pin 29 is electrically separate from CYL. Conditioned ESTHI/ESTLO
+   reaches REF; U12 outputs INJREF and IGNREF to U9 and U11. This is the
+   supported distributor-reference path.
+
+4. Firmware reads reference occurrence from $3FFA, period from $3FC0, uses
+   $3FC8 in spark-period processing, and derives RPM at $CDE6-$CE41. These are
+   direct register semantics, but the U9 pin-to-register implementation is not
+   documented.
+
+5. PROM LC009 controls reference-period normalization. Separately, $002F & $18
+   is compared with LC225 and a mismatch feeds Error 41. CAL56/U12 CYL and the
+   latter check form a strong end-to-end consistency inference, not a proven
+   direct encoding.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated outputs, or frozen
+behavioral baselines changed.
+
+Conclusion
+----------
+Step 134 establishes separate oscillator configuration, cylinder selection,
+and distributor-reference paths while preserving U11/U12/U9 internal behavior
+as an explicit unresolved boundary.

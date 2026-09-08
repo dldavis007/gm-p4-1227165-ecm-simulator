@@ -101,6 +101,10 @@ current audit and allow later imports to be verified.
 | HW-010 | Confirmed | Normal 9340 firmware explicitly acquires U10 selectors `$10/$20/$40/$50/$60/$70/$80/$A0`; MAP2 `$00`, MAP `$30`, and ESC `$90` have no explicit normal request. | Complete audit of calls to A/D routine `$F1BE`; absence is specific to the supplied image. |
 | HW-011 | Confirmed | Factory test scans 12 selectors `$00-$B0` into `$017B-$0186`. | Listing `$FDB5-$FDC5` and Step-118 implementation/regression. Selector `$B0` is not identified by the retained U10 drawing. |
 | HW-012 | Confirmed | U10 AN1 `VOLT` and AN6 `PUMPVOLT` are separate physical channels stored by firmware at `$007E` and `$007F` respectively. | Input schematic and listing acquisition paths. The firmware's “battery” label for `$007E` does not change the drawn VIGN-related source. |
+| HW-013 | Confirmed | CAL42/U11 `OSC`, CAL56/U12 `CYL`, and U12 `REF` are three distinct schematic connections. | Ignition/injection schematic plus mechanically established carrier/CAL mapping. |
+| HW-014 | Confirmed | The distributor-reference path enters U12 pin 29 `REF` from conditioned ESTHI/ESTLO; U12 exposes separate `INJREF` and `IGNREF` outputs to U9 and U11. | Ignition/injection schematic. Exact U12 pulse transformation remains unresolved. |
+| HW-015 | Confirmed | Firmware consumes reference occurrence through `$3FFA`, reference period through `$3FC0`, and spark-period state through `$3FC8`; no instruction establishes CAL42 as their clock source. | Listing `$CAC6-$CAD3`, `$CB5A-$CB5D`, `$CD2E-$CD47`, and `$CDE6-$CE41`; schematic has no visible CAL42-to-U9 connection. |
+| HW-016 | Strong inference | CAL56/U12 `CYL` participates in the cylinder/fuel-mode consistency chain checked by `$002F & $18` versus `LC225`, but is not proven to encode `$002F` directly. | Direct hardware endpoint plus listing `$F682-$F68B` and `$E6A1-$E6AA`; U12/U9 internals are undocumented. |
 
 ## Open evidence items
 
