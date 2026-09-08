@@ -37,6 +37,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      EST/feedback boundary, and injector command/driver boundary.
 7. **Sensor acquisition and filtering**
    - MAF, MAP, TPS, CTS, MAT, O2, VSS, battery and discrete inputs.
+   - Use [`MAP_LOAD_SIGNAL_CHAIN.md`](MAP_LOAD_SIGNAL_CHAIN.md) to distinguish
+     U10 MAP/MAP2 conversion channels and CAL61/U11 configuration from the
+     supplied firmware's MAF/reference-period-derived load at `$0063`.
 8. **Airflow, fuel, and injector operation**
    - Load, AFR, startup, AE, DFCO, closed loop, BLM and batch service.
 9. **Idle-air control**

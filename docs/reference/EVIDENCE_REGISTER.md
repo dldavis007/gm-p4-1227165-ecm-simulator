@@ -93,6 +93,10 @@ current audit and allow later imports to be verified.
 | HW-002 | Confirmed | U12 visibly connects conditioned `REF`, `CYL`, `IGN`, `EST`, `BYPASS`, reference outputs, EST feedback, and injector-driver/current-sense paths. | Ignition/injection schematic. No internal truth table, timing, polarity or transfer function is claimed. |
 | HW-003 | Confirmed | Firmware independently consumes reference status/periods and stages spark and injection commands in `$3FC0-$3FFF`. | Listing `$CAC6`, `$CB5A`, `$CDE6-$CE41`, `$D20C-$D301`, `$F67B-$F768`, `$F9D2-$F9E4`, and factory test `$FE4F-$FE9F`. |
 | HW-004 | Strong inference | U12 reference outputs and U9's reference inputs feed the processor-visible reference status/period mechanism, while U9 spark/injector outputs feed the drawn U12 control/driver paths. | Direct endpoints agree, but U9/U12 internal mappings are undocumented. |
+| HW-005 | Confirmed | MAP# and MAP2# are separately conditioned to U10 AN3 and AN0; conditioned MAP and CAL61 also meet at U11 pin 28. | Input and ignition/injection schematics plus established MEMCAL mapping. U11 behavior is not documented. |
+| HW-006 | Confirmed | The supplied 9340 normal-operation load at `$0063` is produced from MAF-derived airflow times reference period, not from an explicit MAP-channel A/D read. | Listing `$F7AC-$F7B6` and `$D769-$D7A0`; no normal `$00/$30` A/D selector call. Factory test `$FDB5-$FDC5` scans those channels. |
+| HW-007 | Confirmed | `$0061/$0062` are prior-load history in the executable load producer, despite the isolated “Raw Ld Val” comment for `$0061`. | At `$D782-$D786`, old `$0063` moves to `$0061` and old `$0061` moves to `$0062` before the new `$0063` is stored. |
+| HW-008 | Strongly supported | `$00B0` is a MAF diagnostic counter in the executed Error-33/34 path; occurrences of “MAP Hi” are inconsistent comments. | `$CC3A-$CC63` uses pump voltage, airflow and MAF thresholds; `$CDA5` begins the MAF hot-wire path. |
 
 ## Open evidence items
 

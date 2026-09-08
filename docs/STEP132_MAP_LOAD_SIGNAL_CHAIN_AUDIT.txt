@@ -1,0 +1,60 @@
+BUA / GM 1227165 STEP 132 - MAP/LOAD SIGNAL-CHAIN AUDIT
+=======================================================
+
+Purpose
+-------
+Step 132 separates the physical MAP/MAP2 and CAL61/U11 paths from the
+listing-backed MAF/reference-period load producer.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 131 commit b159ca0. Step 132 is the next unused
+numbered audit.
+
+Files added
+-----------
+- docs/reference/MAP_LOAD_SIGNAL_CHAIN.md
+- docs/STEP132_MAP_LOAD_SIGNAL_CHAIN_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Findings
+--------
+1. MAP# and MAP2# have separate 18-kOhm/51-kOhm/0.47-uF conditioning paths to
+   U10 A/D inputs AN3 and AN0 respectively.
+
+2. CAL61 is mechanically mapped to 16055376 terminal 7, is common with J4 64
+   in the reconstructed network, and meets the conditioned MAP net at U11 pin
+   28. This proves a MAP-related U11 configuration boundary, not its function.
+
+3. The supplied 9340 normal-operation listing has no explicit A/D request for
+   channel 0/MAP2 or channel 3/MAP. Factory test scans channels 0-B, so the
+   channels are observable there.
+
+4. The principal firmware load at $0063 is produced at $D769-$D7A0 from
+   MAF-derived airflow $00EA-$00EB multiplied by reference period $0095-$0096,
+   then scaled by LC69A. It is not shown to be a direct MAP reading.
+
+5. $0061 and $0062 are shifted load-history bytes in the executable sequence.
+   The isolated source/ALDL label “Raw Ld Val” for $0061 is weaker than the
+   instructions and is retained as a comment discrepancy.
+
+6. Mixed “MAP Hi”/“MAF Hi” comments for $00B0 are resolved at the behavioral
+   level: the code tests airflow, pump voltage, and Error-33/34 MAF thresholds.
+   “MAF diagnostic counter” is the supported description.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated outputs, or frozen
+behavioral baselines changed.
+
+Conclusion
+----------
+Step 132 closes the processor-visible load-production theory for this image
+while leaving U11 MAP/CAL61 behavior and variant-dependent MAP use unresolved.
+
