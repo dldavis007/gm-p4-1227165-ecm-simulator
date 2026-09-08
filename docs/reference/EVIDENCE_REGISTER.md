@@ -97,6 +97,10 @@ current audit and allow later imports to be verified.
 | HW-006 | Confirmed | The supplied 9340 normal-operation load at `$0063` is produced from MAF-derived airflow times reference period, not from an explicit MAP-channel A/D read. | Listing `$F7AC-$F7B6` and `$D769-$D7A0`; no normal `$00/$30` A/D selector call. Factory test `$FDB5-$FDC5` scans those channels. |
 | HW-007 | Confirmed | `$0061/$0062` are prior-load history in the executable load producer, despite the isolated “Raw Ld Val” comment for `$0061`. | At `$D782-$D786`, old `$0063` moves to `$0061` and old `$0061` moves to `$0062` before the new `$0063` is stored. |
 | HW-008 | Strongly supported | `$00B0` is a MAF diagnostic counter in the executed Error-33/34 path; occurrences of “MAP Hi” are inconsistent comments. | `$CC3A-$CC63` uses pump voltage, airflow and MAF thresholds; `$CDA5` begins the MAF hot-wire path. |
+| HW-009 | Confirmed | U10 AN0-AN10 map to MAP2, VOLT, O2, MAP, CTS, TPS, PUMPVOLT, DIAG, MAT, ESC and VMAF. | Processor and input schematics. |
+| HW-010 | Confirmed | Normal 9340 firmware explicitly acquires U10 selectors `$10/$20/$40/$50/$60/$70/$80/$A0`; MAP2 `$00`, MAP `$30`, and ESC `$90` have no explicit normal request. | Complete audit of calls to A/D routine `$F1BE`; absence is specific to the supplied image. |
+| HW-011 | Confirmed | Factory test scans 12 selectors `$00-$B0` into `$017B-$0186`. | Listing `$FDB5-$FDC5` and Step-118 implementation/regression. Selector `$B0` is not identified by the retained U10 drawing. |
+| HW-012 | Confirmed | U10 AN1 `VOLT` and AN6 `PUMPVOLT` are separate physical channels stored by firmware at `$007E` and `$007F` respectively. | Input schematic and listing acquisition paths. The firmware's “battery” label for `$007E` does not change the drawn VIGN-related source. |
 
 ## Open evidence items
 

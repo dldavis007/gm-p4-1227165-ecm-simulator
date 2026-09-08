@@ -45,6 +45,9 @@ assembled listing.
 - [MAP and firmware-load signal chain](MAP_LOAD_SIGNAL_CHAIN.md) separates
   physical MAP/MAP2 and CAL61/U11 paths from the executable
   MAF/reference-period load producer.
+- [U10 A/D and sensor acquisition](ADC_SENSOR_ACQUISITION.md) maps every visible
+  analog channel to normal firmware selectors, raw/processed state, and the
+  factory-test sweep.
 - [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the planned
   chapter structure for the eventual complete ECM description.
 

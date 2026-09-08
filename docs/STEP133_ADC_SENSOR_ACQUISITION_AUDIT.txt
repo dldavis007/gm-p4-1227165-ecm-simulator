@@ -1,0 +1,59 @@
+BUA / GM 1227165 STEP 133 - A/D SENSOR-ACQUISITION AUDIT
+=======================================================
+
+Purpose
+-------
+Step 133 maps all U10 A/D channels shown by the schematic to normal firmware
+selectors, factory-test capture, raw RAM state, and processed behavior.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 132 commit ab0dce5. Step 133 is the next unused
+numbered audit.
+
+Files added
+-----------
+- docs/reference/ADC_SENSOR_ACQUISITION.md
+- docs/STEP133_ADC_SENSOR_ACQUISITION_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Findings
+--------
+1. U10 channels AN0-AN10 map directly to MAP2, VOLT, O2, MAP, CTS, TPS,
+   PUMPVOLT, DIAG, MAT, ESC and VMAF respectively.
+
+2. Normal firmware explicitly requests selectors $10, $20, $40, $50, $60,
+   $70, $80 and $A0. It does not explicitly request $00/MAP2, $30/MAP, or
+   $90/ESC.
+
+3. Factory test $FDB5-$FDC5 scans selectors $00-$B0 and stores 12 raw samples
+   at $017B-$0186. The retained schematic does not identify a corresponding
+   AN11/external input for selector $B0, so it remains unresolved.
+
+4. The common A/D routine $F1BE-$F1DF returns an 8-bit value through temporary
+   RAM $0064. Dedicated raw and processed variables differ by channel and are
+   explicitly separated in the new reference.
+
+5. AN1 is labelled VOLT on the schematic and derives from VIGN conditioning,
+   although firmware treats $007E functionally as battery voltage. AN6
+   PUMPVOLT is a separate channel stored at $007F.
+
+6. MAT is complemented before storage at $012B/$0060. VMAF/AN10, not MAP,
+   feeds the supplied image's main MAF/airflow/load path.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated outputs, or frozen
+behavioral baselines changed.
+
+Conclusion
+----------
+Step 133 establishes the complete visible U10 channel map and the actual
+image-specific acquisition schedule while leaving U10 reference accuracy,
+selector $B0, unused-channel roles, and custom-device behavior unresolved.
