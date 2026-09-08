@@ -1,0 +1,73 @@
+BUA / GM 1227165 STEP 131 - IGNITION/INJECTION SIGNAL-CHAIN AUDIT
+=================================================================
+
+Purpose
+-------
+Step 131 traces the visible ignition and injection signal chain around U11,
+U12, bus-connected U9, and the executable firmware. It improves device
+attribution and theory of operation without inventing custom-device internals.
+
+Repository state and numbering
+------------------------------
+Remote main ended at the Step-130 correction commit a5ef924. Step 131 is the
+next unused numbered audit.
+
+Files added
+-----------
+- docs/reference/IGNITION_INJECTION_SIGNAL_CHAIN.md
+- docs/STEP131_IGNITION_INJECTION_SIGNAL_CHAIN_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Findings
+--------
+1. U9 (16045148), not the CPU itself, is the bus-connected custom peripheral
+   whose visible pins include INJREF, IGNREF, ESTLOOP, KNOCK, IGN, INJS and
+   INJA. The listing's $3FC0-$3FFF window is strongly attributable to U9 at the
+   device level; exact pin-to-register mapping remains unresolved.
+
+2. U12 visibly receives the conditioned REF path, CYL, IGN, EST, BYPASS and
+   loop/limit inputs; it produces INJREF, IGNREF, IRQ, PUMP and ESTLOOP. A
+   second drawn U12 section accepts INJS/INJA and current-sense signals and
+   drives INJOUT/Q1. No undocumented logic or polarity is assigned.
+
+3. The firmware consumes distributor-reference status at $3FFA, copies the
+   period from $3FC0, reads $3FC8, and derives RPM at $CDE6-$CE41. This closes
+   the supported processor-visible side of the reference path without claiming
+   that one U9 input pin maps directly to a specific bit or register.
+
+4. Spark timing is staged through $3FDC, $3FE4, $3FE6, $3FE8, $3FEC and $3FF6,
+   with EST/bypass control through $3FFC. Error 42 uses feedback state and
+   transition logic, but its precise electrical derivation from ESTLOOP is a
+   strong inference rather than direct proof.
+
+5. Injection service is gated by sampled-status bit $00A0 bit 6, distinct from
+   reference bit 3. Normal synchronous pulse width is written to $3FD0;
+   factory-test writes independently confirm $3FCE as an EFI delay register.
+   Driver waveform, double-fire phase and current limiting remain custom-device
+   boundaries.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, regression, generated output, or
+behavioral baseline is changed.
+
+Verification
+------------
+- Direct schematic endpoints were checked against the processor and
+  ignition/injection drawings.
+- Firmware statements were checked against emitted listing addresses.
+- Existing C modules and regression files were linked, not modified.
+- Strict C89 build and full regression output remain unchanged.
+
+Conclusion
+----------
+Step 131 establishes the supported end-to-end reference, spark/EST and
+injection signal-chain theory while retaining U9/U11/U12 implementation,
+waveform, phase, polarity and current-control behavior as explicit boundaries.
+

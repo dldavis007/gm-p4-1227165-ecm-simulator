@@ -39,6 +39,9 @@ assembled listing.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
   traces selected CAL connections through U11/U12 and into listing-backed
   behavior while preserving custom-device boundaries.
+- [Ignition/injection signal chain](IGNITION_INJECTION_SIGNAL_CHAIN.md) traces
+  reference, EST/feedback, and injector paths across U11/U12/U9 and the
+  executable `$3FC0-$3FFF` firmware interface.
 - [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the planned
   chapter structure for the eventual complete ECM description.
 

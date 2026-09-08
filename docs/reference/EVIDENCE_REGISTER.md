@@ -85,6 +85,15 @@ current audit and allow later imports to be verified.
 | MEM-011 | Strong inference | CAL56/U12 `CYL` hardware configuration and the firmware's MPU-status-versus-`LC225` Error-41 check are parts of a cylinder-configuration consistency path. | Direct schematic endpoints plus executable `$F682-$F68B` and `$E6A1-$E6AA`. U12/MPU encoding is undocumented, so CAL56 is not equated directly with `LC009` or `LC225`. |
 | MEM-012 | Confirmed | CAL29's analog ESC path and CAL32's U12/U9 KNOCK path are electrically distinct even though both contribute to knock/ESC system behavior. | 1227165 input and processor schematics; listing-backed knock and Error-43 paths. Exact custom-device conversion remains open. |
 
+## Ignition/injection hardware findings
+
+| ID | Status | Statement | Notes |
+| --- | --- | --- | --- |
+| HW-001 | Confirmed | U9 `16045148` is the bus-connected custom peripheral with visible `INJREF`, `IGNREF`, `ESTLOOP`, `KNOCK`, `IGN`, `INJS`, and `INJA` pins. | Processor schematic. The device-level association with firmware window `$3FC0-$3FFF` is strong; exact internal pin-to-register mapping is unresolved. |
+| HW-002 | Confirmed | U12 visibly connects conditioned `REF`, `CYL`, `IGN`, `EST`, `BYPASS`, reference outputs, EST feedback, and injector-driver/current-sense paths. | Ignition/injection schematic. No internal truth table, timing, polarity or transfer function is claimed. |
+| HW-003 | Confirmed | Firmware independently consumes reference status/periods and stages spark and injection commands in `$3FC0-$3FFF`. | Listing `$CAC6`, `$CB5A`, `$CDE6-$CE41`, `$D20C-$D301`, `$F67B-$F768`, `$F9D2-$F9E4`, and factory test `$FE4F-$FE9F`. |
+| HW-004 | Strong inference | U12 reference outputs and U9's reference inputs feed the processor-visible reference status/period mechanism, while U9 spark/injector outputs feed the drawn U12 control/driver paths. | Direct endpoints agree, but U9/U12 internal mappings are undocumented. |
+
 ## Open evidence items
 
 | ID | Status | Question or required evidence |

@@ -32,6 +32,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - 6.25-ms IRQ, odd/even minors, sixteen major segments, event interrupts.
 6. **Reference pulses, RPM, dwell, and spark**
    - Distributor reference geometry, counter capture, advance and knock.
+   - Use [`IGNITION_INJECTION_SIGNAL_CHAIN.md`](IGNITION_INJECTION_SIGNAL_CHAIN.md)
+     for the U12-to-U9/U11 reference path, U9 register-window behavior,
+     EST/feedback boundary, and injector command/driver boundary.
 7. **Sensor acquisition and filtering**
    - MAF, MAP, TPS, CTS, MAT, O2, VSS, battery and discrete inputs.
 8. **Airflow, fuel, and injector operation**
