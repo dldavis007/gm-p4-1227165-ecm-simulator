@@ -1,0 +1,91 @@
+BUA / GM 1227165 STEP 137 - U9 REGISTER-WINDOW FUNCTIONAL MAP
+===========================================================
+
+Purpose
+-------
+Step 137 consolidates the firmware-visible behavior of bus-connected custom
+peripheral U9 (16045148) across the $3FC0-$3FFF window and cross-references
+those addresses with the already established U9/U12 schematic endpoints. It
+builds a functional black-box map without inventing U9 internal circuitry or a
+one-to-one pin-to-register assignment.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 136 commit fc69780. Step 137 is therefore the next
+unused numbered audit.
+
+Files added
+-----------
+- docs/reference/U9_REGISTER_WINDOW_MAP.md
+- docs/STEP137_U9_REGISTER_WINDOW_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+
+Main findings
+-------------
+1. U9 is the bus-connected custom peripheral whose visible external pins include
+   INJREF, IGNREF, ESTLOOP, KNOCK inputs and IGN, INJS, INJA outputs. The
+   device-level association with the $3FC0-$3FFF firmware window remains
+   strongly supported; exact pin/register mappings are not documented.
+
+2. The processor-visible window can be evidence-bounded into functional groups:
+   reference/counter state ($3FC0, $3FC8, $3FEC, $3FFA), knock event state
+   ($3FCA), injection command/timing ($3FCE, $3FD0), and spark/dwell/control
+   ($3FDC, $3FE4, $3FE6, $3FE8, $3FF6, $3FFC). These are functional groupings,
+   not claims about U9's internal block structure.
+
+3. $3FC0 is directly used as reference-period state, $3FC8 as spark/reference
+   period state, and $3FFA as aggregate status. High-byte bit 3 of $3FFA marks
+   distributor-reference occurrence; sampled status also supplies the distinct
+   injector-service bit represented by $00A0 bit 6. The exact U9 input source of
+   each status bit remains unresolved.
+
+4. $3FCA is directly used by firmware as the changing knock-event count. The
+   schematic directly connects U12 KNOCK output to U9 pin 42, so pin 42 ->
+   $3FCA is a strong inference but is deliberately not promoted to direct proof.
+
+5. $3FD0 is the synchronous injector pulse-width command and $3FCE is
+   independently exercised as EFI delay by factory test. U9's INJS/INJA outputs
+   feed U12's injector-driver section, but waveform, phase, polarity, and the
+   distinction between INJS and INJA remain unresolved.
+
+6. Spark scheduling directly uses $3FDC, $3FE4, $3FE6, $3FE8, $3FEC, and
+   $3FF6, while $3FFC is manipulated during EST/bypass handling. U9 IGN and
+   ESTLOOP endpoints make a coherent command/feedback envelope; internal timer
+   architecture, edge definitions, and individual undocumented $3FFC bits
+   remain boundaries.
+
+Evidence discipline
+-------------------
+- Address semantics are taken from listing-backed executable use and existing
+  factory-test cross-checks.
+- Visible U9/U12 pin connections are direct hardware evidence.
+- Pin-to-register joins remain strong inference unless independently proven.
+- Unlisted addresses inside $3FC0-$3FFF are left unclassified, not declared
+  unused.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated output, or frozen
+behavioral baseline changed. The current simulator should continue to model the
+processor-visible register behavior while leaving U9 waveform generation and
+external electrical behavior at the custom-device/HAL boundary.
+
+Highest-value remaining questions
+---------------------------------
+- exact INJREF/IGNREF contribution to reference counters/status;
+- exact ESTLOOP contribution to status/control and Error 42;
+- direct confirmation of U9 pin 42 to $3FCA;
+- INJS versus INJA timing and electrical meaning;
+- undocumented $3FFC bit semantics; and
+- classification of the remaining U9-window addresses not yet reached by
+  established normal/factory firmware paths.
+
+Conclusion
+----------
+Step 137 creates the first evidence-bounded U9 register-window map. It closes a
+major theory-of-operation organization gap while preserving the undocumented
+custom-device internals as explicit unresolved boundaries.

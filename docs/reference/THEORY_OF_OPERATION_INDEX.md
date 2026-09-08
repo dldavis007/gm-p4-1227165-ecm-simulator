@@ -15,6 +15,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`U11_U12_FUNCTIONAL_BOUNDARIES.md`](U11_U12_FUNCTIONAL_BOUNDARIES.md)
      for the evidence-bounded external roles of U11 and U12; do not substitute
      inferred internal transfer functions for the documented F4 boundaries.
+   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP.md) for the
+     evidence-bounded `$3FC0-$3FFF` processor-visible reference, knock,
+     injection, spark/dwell, status and EST/bypass control map. Treat its
+     functional groupings as external semantics, not an internal U9 design.
 4. **MEMCAL construction and calibration hardware**
    - EPROM, both resistor networks, J4/CAL connections, model variations.
    - Use [`MEMCAL_ARCHITECTURE.md`](MEMCAL_ARCHITECTURE.md) for the physical
@@ -38,6 +42,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`IGNITION_INJECTION_SIGNAL_CHAIN.md`](IGNITION_INJECTION_SIGNAL_CHAIN.md)
      for the U12-to-U9/U11 reference path, U9 register-window behavior,
      EST/feedback boundary, and injector command/driver boundary.
+   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP.md) for the exact
+     currently established firmware-visible roles of `$3FC0`, `$3FC8`,
+     `$3FCA`, `$3FCE`, `$3FD0`, `$3FDC`, `$3FE4`, `$3FE6`, `$3FE8`, `$3FEC`,
+     `$3FF6`, `$3FFA`, and `$3FFC`.
    - Use [`OSC_CYL_REFERENCE_TIMING_PATHS.md`](OSC_CYL_REFERENCE_TIMING_PATHS.md)
      to keep CAL42/U11 `OSC`, CAL56/U12 `CYL`, and distributor-reference
      timing electrically and evidentially separate.
