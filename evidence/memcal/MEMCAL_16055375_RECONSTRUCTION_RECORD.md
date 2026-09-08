@@ -22,8 +22,12 @@ the project owner:
 5. Direct owner inspection establishing the 66-pin carrier orientation and
    carrier-to-J4 interleave.
 
-The original Drive copies remain historical source evidence. The close-up
-photograph is primary physical evidence of the implemented reconstruction.
+The original Drive copies remain historical source evidence. For the **as-built
+hand reconstruction**, the completed MEMCAL photograph and direct owner
+inspection are authoritative wherever a component marking, jumper, open
+position, or orientation is legible. KiCad, LTspice, and historical records are
+supporting evidence and must not override a clearly visible installed part.
+See `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md`.
 
 ## Original-network model
 
@@ -167,15 +171,19 @@ Likewise, the SPICE common node at terminals 7 and 8 is now CAL45/CAL46. That
 relationship should be considered when interpreting the motherboard traces and
 any separate semantic labels for those contacts.
 
-## Photograph corroboration
+## Photograph authority
 
-The close-up photograph shows the expected generic-grid construction and
-numerous zero-ohm routing links. Several visible nonzero SMD markings are
-consistent with values represented in the reconstruction/model, including
-markings corresponding to 13 kOhm, 75 kOhm, 330 kOhm, and 10 kOhm.
+The close-up photograph of the completed reconstructed MEMCAL is the controlling
+record of the **as-built** resistor/jumper population wherever the relevant
+marking or placement is legible. It shows the generic-grid construction,
+numerous zero-ohm routing links, and visible nonzero SMD markings.
 
-Ambiguous or rotated markings must not override the KiCad/SPICE source data
-without a position-specific visual review.
+If a legible photographed component conflicts with KiCad, LTspice, or a
+historical note, record the photographed installed component as the as-built
+value/population and preserve the conflicting model/design value separately as
+an audit discrepancy. If the image is genuinely ambiguous at a location, leave
+the value unresolved until direct inspection or targeted measurement resolves
+it; do not substitute a model value merely because it is expected.
 
 ## Interpretation boundary
 
@@ -186,8 +194,10 @@ The strongest supported interpretation is:
 - Generic J8 and J9 are unused package positions.
 - Zero-ohm parts configure/reroute the grid and are not calibration values.
 - The absolute package-terminal-to-carrier-to-J4 mapping is now established.
-- KiCad, LTspice, resistance-comparison work, and the physical photograph
-  mutually corroborate the reconstruction.
+- The completed MEMCAL photograph is authoritative for the as-built physical
+  population wherever legible.
+- KiCad, LTspice, resistance-comparison work, and the photograph remain useful
+  complementary evidence for topology and intended/equivalent behavior.
 - The reconstruction should not be described as a proven
   component-for-component copy of the inaccessible molded network.
 
@@ -203,4 +213,5 @@ routing, or any resistor/jumper relationship that conflicts with the emerging
 theory of operation.
 
 See `docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md` for the simplified
-functional view used in Step 129.
+functional view used in Step 129 and `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md`
+for the as-built evidence-priority rule.
