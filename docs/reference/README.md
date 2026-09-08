@@ -51,6 +51,9 @@ assembled listing.
 - [OSC, CYL, and reference timing](OSC_CYL_REFERENCE_TIMING_PATHS.md) separates
   CAL42/U11 oscillator configuration, CAL56/U12 cylinder selection, and the
   actual distributor-reference path into U9/U11 and firmware.
+- [ESC and knock signal chain](ESC_KNOCK_SIGNAL_CHAIN.md) keeps CAL29/U10 AN9
+  separate from CAL32/U12/U9 event counting and follows the listing-backed
+  retard, recovery, spark, and Error-43 behavior.
 - [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the planned
   chapter structure for the eventual complete ECM description.
 

@@ -1,0 +1,56 @@
+BUA / GM 1227165 STEP 135 - ESC/KNOCK SIGNAL-CHAIN AUDIT
+========================================================
+
+Purpose
+-------
+Step 135 separates the CAL29/U10 analog ESC monitor from the CAL32/U12/U9
+knock-event path and traces the supported firmware behavior through retard,
+recovery, spark subtraction, and Error 43.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 134 commit 1be45edc. Step 135 is the next unused
+numbered audit.
+
+Files added
+-----------
+- docs/reference/ESC_KNOCK_SIGNAL_CHAIN.md
+- docs/STEP135_ESC_KNOCK_SIGNAL_CHAIN_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Findings
+--------
+1. CAL29 belongs to the analog ESC# conditioning network. Its ESC result reaches
+   U10 AN9/selector $90. The supplied normal image never explicitly requests
+   $90; factory test stores it at $0184.
+
+2. CAL32 and external KNOCK# meet at U12 pin 15. U12 pin 14 outputs KNOCK to U9
+   pin 42. Threshold, polarity, filtering, and CAL32's exact role are not shown.
+
+3. Firmware $D0D1-$D157 uses changes in U9-window counter $3FCA as the knock
+   event quantity, applies qualifications and RPM-indexed attack, stores retard
+   at $00A5, and subtracts half that value from spark.
+
+4. Segment A $EB3A-$EB59 recovers knock retard. $EB5B-$EBB1 evaluates counter
+   activity for Error 43, and $E6DF-$E6E9 latches the fault.
+
+5. The U9 KNOCK-pin-to-$3FCA relationship is strongly inferred from coherent
+   endpoints and executable use, but the pin-to-register mapping is not
+   documented. The analog AN9 path is not substituted for this missing link.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated outputs, or frozen
+behavioral baselines changed.
+
+Conclusion
+----------
+Step 135 establishes two distinct ESC/knock electrical paths and the exact
+processor-visible knock behavior while preserving U12/U9 internal conversion
+as an unresolved boundary.

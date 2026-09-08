@@ -38,6 +38,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`OSC_CYL_REFERENCE_TIMING_PATHS.md`](OSC_CYL_REFERENCE_TIMING_PATHS.md)
      to keep CAL42/U11 `OSC`, CAL56/U12 `CYL`, and distributor-reference
      timing electrically and evidentially separate.
+   - Use [`ESC_KNOCK_SIGNAL_CHAIN.md`](ESC_KNOCK_SIGNAL_CHAIN.md) for the
+     separate CAL29 analog monitor and CAL32/U12/U9 event paths, knock-retard
+     arithmetic, recovery, spark subtraction, and Error 43.
 7. **Sensor acquisition and filtering**
    - MAF, MAP, TPS, CTS, MAT, O2, VSS, battery and discrete inputs.
    - Use [`ADC_SENSOR_ACQUISITION.md`](ADC_SENSOR_ACQUISITION.md) for the U10

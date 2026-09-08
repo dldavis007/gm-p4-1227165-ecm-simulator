@@ -105,6 +105,10 @@ current audit and allow later imports to be verified.
 | HW-014 | Confirmed | The distributor-reference path enters U12 pin 29 `REF` from conditioned ESTHI/ESTLO; U12 exposes separate `INJREF` and `IGNREF` outputs to U9 and U11. | Ignition/injection schematic. Exact U12 pulse transformation remains unresolved. |
 | HW-015 | Confirmed | Firmware consumes reference occurrence through `$3FFA`, reference period through `$3FC0`, and spark-period state through `$3FC8`; no instruction establishes CAL42 as their clock source. | Listing `$CAC6-$CAD3`, `$CB5A-$CB5D`, `$CD2E-$CD47`, and `$CDE6-$CE41`; schematic has no visible CAL42-to-U9 connection. |
 | HW-016 | Strong inference | CAL56/U12 `CYL` participates in the cylinder/fuel-mode consistency chain checked by `$002F & $18` versus `LC225`, but is not proven to encode `$002F` directly. | Direct hardware endpoint plus listing `$F682-$F68B` and `$E6A1-$E6AA`; U12/U9 internals are undocumented. |
+| HW-017 | Confirmed | CAL29's analog ESC path reaches U10 AN9/selector `$90`, but the supplied image explicitly samples it only in the factory sweep, not normal acquisition. | Input/processor schematics and complete `$F1BE` call audit; factory `$FDB5-$FDC5` stores AN9 at `$0184`. |
+| HW-018 | Confirmed | CAL32 and external `KNOCK#` meet at U12 pin 15; U12 pin 14 `KNOCK` reaches U9 pin 42. | Input and processor schematics. Threshold, polarity and pulse transformation remain undocumented. |
+| HW-019 | Confirmed | `$3FCA` counter deltas drive normal knock attack, `$00A5` retard and the Error-43 activity test; recovery occurs at `$EB3A-$EB59`. | Listing `$D0D1-$D157`, `$EB3A-$EBB1`, and `$E6DF-$E6E9`. |
+| HW-020 | Strong inference | U9 pin 42 `KNOCK` contributes to `$3FCA` counter behavior, but the exact pin-to-register map is not directly documented. | Coherent schematic endpoint, U9 factory-address description, and executable knock use; custom U9 internals remain unresolved. |
 
 ## Open evidence items
 
