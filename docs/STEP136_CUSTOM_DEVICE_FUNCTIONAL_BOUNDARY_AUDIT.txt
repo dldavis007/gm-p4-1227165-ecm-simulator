@@ -1,0 +1,97 @@
+BUA / GM 1227165 STEP 136 - U11/U12 CUSTOM-DEVICE FUNCTIONAL-BOUNDARY AUDIT
+===========================================================================
+
+Purpose
+-------
+Step 136 consolidates the Step-130 through Step-135 MEMCAL, reference,
+ignition/injection, MAP, OSC/CYL, and ESC/knock findings into an explicit
+black-box functional envelope for U11 (16054995) and U12 (16034984). It does
+not invent undocumented custom-device internals.
+
+Repository state and numbering
+------------------------------
+Remote main was verified at f817ab6668cdc2a14913916bf210b2f7976f09d7,
+"Normalize MEMCAL photo filenames". The existing numbered history ends at Step
+135, so Step 136 is the next unused audit number.
+
+Files added
+-----------
+- docs/reference/U11_U12_FUNCTIONAL_BOUNDARIES.md
+- docs/STEP136_CUSTOM_DEVICE_FUNCTIONAL_BOUNDARY_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+
+Main findings
+-------------
+1. U11 is now bounded as a MEMCAL-configured reference/sensor custom device.
+   Direct visible anchors include INJREF pin 5, IGNREF pin 6, OSC pin 18, TPS
+   pin 20, CTS pin 23, MAP pin 28, multiple CAL inputs, and INJ pin 19 to
+   INJLIMP. Its internal injection/limiting rule, oscillator transfer, MAP
+   transfer, thresholds and polarities remain unresolved.
+
+2. U12 is bounded in two visible sections. The reference/control section
+   receives REF, CYL, KNOCK, IGN, EST, BYPASS and INJLOOP and emits INJREF,
+   IGNREF, ESTLOOP, KNOCK, IRQ and PUMP. The injector-driver section receives
+   INJS, INJA, ~LIMP and current-sense signals and drives INJOUT/Q1. Pulse
+   decoding, phase, polarity, current control and truth tables remain unknown.
+
+3. CAL42 -> U11 OSC, CAL61/MAP -> U11 MAP, and CAL59/VIGN-related bias are
+   direct/mechanically derived U11 configuration anchors. None is promoted to
+   a processor-readable value or to the firmware load producer.
+
+4. CAL56 -> U12 CYL remains separate from U12 REF. Firmware's $002F & $18
+   versus LC225 consistency check and Error 41 provide a strongly supported
+   end-to-end cylinder-mode relationship, but the CAL56 voltage encoding and
+   $002F provenance remain unresolved. LC009 and LC225 are not equated with
+   CAL56.
+
+5. The distributor-reference envelope is direct at both ends: conditioned
+   ESTHI/ESTLO reaches U12 REF; U12 emits INJREF/IGNREF to U9/U11; firmware
+   consumes $3FFA/$3FC0/$3FC8 and derives RPM. The U12/U9 pulse and
+   pin-to-register transformations remain bounded.
+
+6. The EST/bypass and injection envelopes are now explicitly separated into
+   processor-visible U9 register behavior versus unresolved U9/U12 electrical
+   waveform generation and current limiting.
+
+7. CAL32/U12 KNOCK -> U9 pin 42 and firmware counter $3FCA form a coherent
+   strong inference, while the separate CAL29/U10 AN9 analog ESC path remains
+   distinct. U12 threshold/filtering and U9 pin/register mapping are not
+   invented.
+
+Theory-of-operation consequence
+-------------------------------
+The accumulated evidence is sufficient to describe U11 and U12 as black-box
+subsystems with known external roles and known firmware-facing consequences.
+It is not sufficient to emulate their comparators, counters, waveform phase,
+thresholds, polarity, oscillator frequency, or current-control algorithms.
+This is an important closure point: unknown internals no longer prevent a
+coherent whole-ECM theory, provided the unknown transformations stay explicit.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated output, or frozen
+behavioral baseline is changed. The current F4 custom-device boundary remains
+the correct simulation treatment.
+
+Highest-value remaining evidence
+--------------------------------
+- Trace or measure CAL34 and CAL53 references.
+- Measure CAL42/U11 OSC and CAL56/U12 CYL on a running ECM.
+- Observe U12 REF, INJREF and IGNREF simultaneously.
+- Establish U9 pin-to-register/status mapping by independent documentation or
+  controlled hardware testing.
+- Determine meanings/polarities of INJS, INJA, INJLIMP, INJLOOP and ~LIMP.
+- Characterize U11's use of OSC/MAP/TPS/CTS/reference/CAL inputs only if direct
+  evidence becomes available.
+
+Conclusion
+----------
+Step 136 closes the descriptive U11/U12 boundary at the highest fidelity the
+current evidence supports: external pins and networks are direct, several
+end-to-end system relationships are strongly inferred, and undocumented
+internal transformations remain explicit F4 boundaries rather than guessed
+behavior.

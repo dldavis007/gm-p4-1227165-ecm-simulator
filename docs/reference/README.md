@@ -42,6 +42,9 @@ assembled listing.
 - [Ignition/injection signal chain](IGNITION_INJECTION_SIGNAL_CHAIN.md) traces
   reference, EST/feedback, and injector paths across U11/U12/U9 and the
   executable `$3FC0-$3FFF` firmware interface.
+- [U11/U12 functional boundaries](U11_U12_FUNCTIONAL_BOUNDARIES.md) consolidates
+  the known external roles of both custom devices while keeping undocumented
+  transfer functions, thresholds, phase, polarity and current control explicit.
 - [MAP and firmware-load signal chain](MAP_LOAD_SIGNAL_CHAIN.md) separates
   physical MAP/MAP2 and CAL61/U11 paths from the executable
   MAF/reference-period load producer.

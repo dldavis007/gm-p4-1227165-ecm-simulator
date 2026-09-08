@@ -12,6 +12,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - VIGN, VBATT, standby supply, reset controller, key-off boundary.
 3. **Processor, memory map, and custom peripherals**
    - RAM, internal registers, external PROM, I/O windows, vectors.
+   - Use [`U11_U12_FUNCTIONAL_BOUNDARIES.md`](U11_U12_FUNCTIONAL_BOUNDARIES.md)
+     for the evidence-bounded external roles of U11 and U12; do not substitute
+     inferred internal transfer functions for the documented F4 boundaries.
 4. **MEMCAL construction and calibration hardware**
    - EPROM, both resistor networks, J4/CAL connections, model variations.
    - Use [`MEMCAL_ARCHITECTURE.md`](MEMCAL_ARCHITECTURE.md) for the physical
@@ -51,6 +54,8 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      supplied firmware's MAF/reference-period-derived load at `$0063`.
 8. **Airflow, fuel, and injector operation**
    - Load, AFR, startup, AE, DFCO, closed loop, BLM and batch service.
+   - Keep U11 `INJ`/`INJLIMP` and U12/U9 injector-driver transformations as
+     custom-device boundaries unless direct electrical evidence closes them.
 9. **Idle-air control**
    - PID cadence, motor service, A/C compensation, reset and park.
 10. **Emissions and accessory controls**
