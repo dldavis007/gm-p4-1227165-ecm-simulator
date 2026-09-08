@@ -115,10 +115,6 @@ The historical user connection notes explicitly cover CAL29-CAL61. Therefore
 J4 contacts 62-64 are retained as absolute connector numbers without assigning
 unsupported CAL62-CAL64 semantics.
 
-The duplicated CAL40 entry after CAL48 in the historical notes is retained as
-an apparent transcription error, probably CAL49, but that correction remains
-inferential until schematic or physical-trace corroboration is obtained.
-
 Generic-grid interpretation
 ---------------------------
 The physical reconstruction boards are reusable configurable grids. Populated
@@ -128,30 +124,43 @@ network.
 
 The Step-129 functional method is:
 
-1. collapse zero-ohm-connected regions into electrical nodes;
-2. retain nonzero resistor branches between those nodes;
-3. rename external nodes by package terminal and absolute J4/CAL contact;
-4. add known motherboard destinations;
-5. compare the equivalent network against LTspice, measurements, schematic
-   behavior, and eventually firmware theory of operation.
+1. establish the as-built population from the completed MEMCAL photograph or
+   direct owner inspection;
+2. collapse zero-ohm-connected regions into electrical nodes;
+3. retain nonzero resistor branches between those nodes;
+4. rename external nodes by package terminal and absolute J4/CAL contact;
+5. add known motherboard destinations;
+6. compare the equivalent network against LTspice, KiCad, measurements,
+   schematic behavior, and firmware theory of operation.
 
-This does not replace the grid reconstruction. It creates a simpler electrical
-view that can independently audit it.
+The completed photograph is authoritative for the as-built reconstruction when
+its markings and placement are legible. KiCad and LTspice remain supporting
+records and may expose discrepancies, but they do not override the physical
+board.
 
-New targeted discrepancy
-------------------------
-The 16055376 reconstruction record contains a potentially important mismatch:
+Resolved 16055376 discrepancy
+-----------------------------
+The previously open J5-J6 value discrepancy is now closed from the authoritative
+MEMCAL close-up photograph.
 
-- KiCad reconstruction: 25.5 Ohm at local J5-J6
-- nominal LTspice value set: includes a 24 kOhm element
+The installed resistor is visibly marked **2402**, which decodes to
+**24,000 Ohm = 24 kOhm**. The surrounding component sequence is consistent with
+the expected 150 kOhm / 1.5 kOhm / 130 kOhm / zero-ohm-routing / 24 kOhm chain.
 
-Step 129 does not assume these are the same branch or silently normalize one to
-the other. This is now a targeted audit item requiring topology/measurement/
-physical-board reconciliation.
+Evidence result:
+
+- as-built J5-J6: **24 kOhm**, authoritative from photograph;
+- LTspice nominal: **24 kOhm**, agrees with as-built hardware;
+- KiCad record: **25.5 Ohm**, retained as an erroneous reconstruction/design
+  entry and not used as the physical value.
+
+This is a concrete example of why the physical MEMCAL photograph must control
+as-built questions while the model/design artifacts remain valuable secondary
+checks.
 
 Theory-of-operation value
 -------------------------
-The corrected mapping now gives direct theory-of-operation anchors including:
+The corrected mapping gives direct theory-of-operation anchors including:
 
 - CAL42 -> 16055375 terminal 10 -> U11 pin 18, OSC
 - CAL56 -> 16055376 terminal 13 -> U12 pin 11, CYL
@@ -167,10 +176,6 @@ and
 
 functional theory -> expected electrical role -> MEMCAL reconstruction.
 
-A discrepancy is now useful evidence rather than merely a layout mystery. It
-may reveal a resistor-reading error, jumper-placement error, missed trace/common
-node, deliberate substitute value, or an unresolved custom-device function.
-
 Verification boundary
 ---------------------
 This step does NOT claim:
@@ -179,7 +184,6 @@ This step does NOT claim:
 - the internal transfer functions of U11 or U12;
 - that every blank CAL/J4 destination is unused;
 - semantic names for J4 contacts 62-64;
-- that the 25.5-Ohm / 24-kOhm discrepancy is resolved;
 - that generic-grid component positions correspond one-for-one to original
   internal resistor elements.
 
@@ -189,13 +193,11 @@ remain appropriate when they answer a specific unresolved electrical question.
 
 Conclusion
 ----------
-Step 129 closes the major mechanical ambiguity in the MEMCAL carrier mapping
-and creates the first explicit functional-equivalent view of the 16055375 and
-16055376 networks. The evidence now supports moving theory-of-operation work
-forward while simultaneously using that theory to audit the reverse-engineered
-networks.
+Step 129 closes the major mechanical ambiguity in the MEMCAL carrier mapping,
+creates the first explicit functional-equivalent view of the 16055375 and
+16055376 networks, and now closes the first photo-authoritative component-value
+discrepancy: 16055376 J5-J6 is 24 kOhm as built.
 
-The next useful MEMCAL task is targeted reconciliation of the unresolved
-16055376 topology/value relationships, beginning with the 25.5-Ohm versus
-24-kOhm question, followed by schematic identification of J4 contacts 62-64 and
-other blank CAL destinations.
+The next useful MEMCAL task is to continue the same photograph-first audit over
+the remaining 16055376 resistor values and jumper population, then simplify the
+full network topology before assigning additional theory-of-operation meaning.
