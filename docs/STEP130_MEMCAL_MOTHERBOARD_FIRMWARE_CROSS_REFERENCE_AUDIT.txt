@@ -1,0 +1,82 @@
+BUA / GM 1227165 STEP 130 - MEMCAL/MOTHERBOARD/FIRMWARE CROSS-REFERENCE
+======================================================================
+
+Purpose
+-------
+Step 130 uses the Step-129 physical carrier mapping and functional resistor
+networks to improve the ECM theory of operation without inventing U11/U12
+internals or assigning meaning from resistance alone.
+
+Repository state and numbering
+------------------------------
+The repository already contained Step 129 and subsequent Step-129 closure
+commits through 859416f. This work therefore uses Step 130; it does not reuse
+Step 125-129 or rewrite their historical audits.
+
+Files added
+-----------
+- docs/reference/MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md
+- docs/STEP130_MEMCAL_MOTHERBOARD_FIRMWARE_CROSS_REFERENCE_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/EVIDENCE_REGISTER.md
+
+Main findings
+-------------
+1. CAL42 is mechanically mapped to 16055375 terminal 10 and directly traced to
+   U11 pin 18 OSC. The 91-kOhm CAL42-CAL34 relationship is useful electrical
+   evidence, but oscillator behavior remains unresolved.
+
+2. CAL56 is mechanically mapped to 16055376 terminal 13 and directly traced to
+   U12 pin 11 CYL. Firmware independently contains an eight-cylinder PROM code
+   at LC009 and an MPU-status-versus-LC225 consistency check at $F682-$F68B,
+   with Error 41 latching at $E6A1-$E6AA. The overall consistency relationship
+   is strongly inferred; CAL56 voltage encoding and U12/MPU internals remain
+   unresolved. CAL56 is not equated directly with LC009 or LC225.
+
+3. CAL61 is mechanically mapped to 16055376 terminal 7 and directly reaches
+   U11 pin 28 MAP, where the conditioned MAP sensor path also terminates. The
+   scaling/threshold/selection consequence is unresolved.
+
+4. CAL59 is mechanically mapped to 16055376 terminal 6 and has a direct
+   100-Ohm-to-VIGN motherboard path with a shunt capacitor. Its reconstructed
+   24-kOhm relationship to the CAL55/CAL57 common node provides a strong
+   electrical validation anchor but does not prove a U11 function.
+
+5. CAL29 and CAL32 are separate paths. CAL29 belongs to the analog ESC network
+   that reaches U10 A/D channel AN9. CAL32 reaches U12 KNOCK, and U12's KNOCK
+   output reaches U9. Listing-backed knock attack/recovery and Error 43 behavior
+   are documented without inventing the custom-device conversion.
+
+Evidence classification
+-----------------------
+The new path document explicitly distinguishes direct evidence, mechanically
+derived mapping, strong inference, and unresolved behavior. It also retains the
+existing F0-F4 hardware-fidelity vocabulary.
+
+Source and baseline impact
+--------------------------
+Documentation/evidence only. No C source, tests, generated output, or behavioral
+baseline was changed. The available evidence supports better cross-reference,
+not a new U11/U12 simulation.
+
+Remaining boundaries
+--------------------
+- undocumented U11 and U12 internal transfer functions;
+- exact CAL56 electrical encoding and $002F bit provenance;
+- precise relationship between analog ESC, digital KNOCK, U9 event counting,
+  and all Error-43 state;
+- CAL34/CAL53/J4 62-64 motherboard destinations;
+- future 16055375 full terminal resistance matrix.
+
+Conclusion
+----------
+Step 130 establishes the first explicit end-to-end MEMCAL path audit from
+physical terminal mapping through motherboard nets to listing-backed firmware
+behavior. It strengthens the theory of operation while keeping custom-device
+behavior and resistor-only semantics properly unresolved.
+

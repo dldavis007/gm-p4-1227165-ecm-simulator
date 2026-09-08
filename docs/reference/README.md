@@ -34,8 +34,11 @@ assembled listing.
 - [Hardware/firmware cross-reference](HARDWARE_FIRMWARE_CROSS_REFERENCE.md)
   connects functions to assembly, RAM or registers, calibration, schematic
   nets, C modules, and tests.
-- [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) separates confirmed electrical
-  facts from the provisional physical carrier reconstruction.
+- [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
+  carrier/J4 mapping while separating it from unresolved electrical behavior.
+- [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
+  traces selected CAL connections through U11/U12 and into listing-backed
+  behavior while preserving custom-device boundaries.
 - [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the planned
   chapter structure for the eventual complete ECM description.
 

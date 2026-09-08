@@ -24,6 +24,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      operation -> expected CAL electrical role -> reconstructed network.
    - Current high-value anchors include CAL42/U11-18 `OSC`, CAL56/U12-11
      `CYL`, CAL61/U11-28 `MAP`, CAL59/VIGN, and the CAL45/CAL46 common node.
+   - Use [`MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md`](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
+     for the evidence-classified end-to-end traces. In particular, keep the
+     CAL29 analog ESC path separate from the CAL32/U12/U9 KNOCK path, and do
+     not equate CAL56 directly with PROM bytes `LC009` or `LC225`.
 5. **Interrupt and scheduler architecture**
    - 6.25-ms IRQ, odd/even minors, sixteen major segments, event interrupts.
 6. **Reference pulses, RPM, dwell, and spark**
@@ -61,4 +65,3 @@ A chapter is complete only when it:
 - links regression proof or records the missing test;
 - expands acronyms and initialisms on first use;
 - lists unresolved and variant-dependent details without guessing.
-
