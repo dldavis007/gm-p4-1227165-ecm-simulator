@@ -6,3 +6,6 @@
 # Generated compiler-warning capture files
 *_warning.txt
 *_warnings.txt
+
+# Generated regression/run output captures
+docs/bua_step*_output.txt
