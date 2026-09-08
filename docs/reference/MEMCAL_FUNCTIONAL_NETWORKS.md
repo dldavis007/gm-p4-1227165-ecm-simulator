@@ -165,17 +165,19 @@ The nominal LTspice model contains nine resistor values:
 150 kOhm, 1.5 kOhm, 130 kOhm, 24 kOhm, 10 kOhm, 8.2 kOhm, 5.1 kOhm,
 7.5 kOhm, and 10 kOhm.
 
-The generic KiCad board records routing links and substitute/measured values.
-Known local relationships include:
+The completed MEMCAL close-up resolves the previously disputed adjacent-chain
+J5-J6 branch: the installed component is marked **`2402`**, which is **24 kOhm**.
+This agrees with the nominal LTspice value. The KiCad `25.5 Ohm` entry is retained
+as a reconstruction/design-record error, not as the as-built value.
 
-| Local reconstruction relationship | J4/CAL relationship | KiCad/model record |
+| Local reconstruction relationship | J4/CAL relationship | As-built / evidence status |
 | --- | --- | --- |
-| J1-J2 | J4 49-CAL51 | 150 kOhm |
-| J2-J3 | CAL51-CAL53 | 1.45 kOhm; nominal model 1.5 kOhm |
-| J3-J4 | CAL53-CAL55 | 130 kOhm |
+| J1-J2 | J4 49-CAL51 | 150 kOhm record; photo audit still available |
+| J2-J3 | CAL51-CAL53 | KiCad 1.45 kOhm; nominal model 1.5 kOhm; installed value not yet promoted here |
+| J3-J4 | CAL53-CAL55 | 130 kOhm record |
 | J4-J5 | CAL55-CAL57 | 0 Ohm routing link |
-| J5-J6 | CAL57-CAL59 | KiCad 25.5 Ohm; nominal model contains 24 kOhm; as-built value must be read from photograph/direct inspection |
-| J12-J11 | CAL58-CAL60 | 10 kOhm |
+| J5-J6 | CAL57-CAL59 | **24 kOhm as-built, photo marking `2402`; LTspice agrees; KiCad 25.5 Ohm is erroneous** |
+| J12-J11 | CAL58-CAL60 | 10 kOhm record |
 
 Additional internal-grid branches reach J16/CAL50, J15/CAL52,
 J14/CAL54, and J13/CAL56. Their functional simplification must follow the
