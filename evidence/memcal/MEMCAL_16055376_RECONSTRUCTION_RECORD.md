@@ -12,14 +12,20 @@ correspondence.
 
 The principal source artifacts are:
 
-1. `NetRes 16055376.asc` — LTspice schematic/model.
-2. `NetRes_16055376.kicad_pcb` — KiCad PCB reconstruction.
-3. `NetRes 16055375 and 16055376.ods` — historical comparison/measurement
-   workbook.
-4. The physical reverse-engineered MEMCAL and user-supplied close-up photograph
-   of the generic resistor/jumper board.
-5. Direct owner inspection establishing the 66-pin carrier orientation and
+1. The physical reverse-engineered MEMCAL and user-supplied close-up photograph
+   of the completed generic resistor/jumper board.
+2. Direct owner inspection establishing the 66-pin carrier orientation and
    carrier-to-J4 interleave.
+3. `NetRes 16055376.asc` — LTspice schematic/model.
+4. `NetRes_16055376.kicad_pcb` — KiCad PCB reconstruction.
+5. `NetRes 16055375 and 16055376.ods` — historical comparison/measurement
+   workbook.
+
+For the **as-built hand reconstruction**, the completed MEMCAL photograph and
+direct owner inspection are authoritative wherever a component marking, jumper,
+open position, or orientation is legible. KiCad, LTspice, and historical records
+are supporting evidence and must not override a clearly visible installed part.
+See `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md`.
 
 ## Original-network terminal count
 
@@ -86,7 +92,7 @@ The KiCad PCB is a 16-position generic grid. It uses populated resistors,
 zero-ohm links, and open positions to realize the required connectivity on a
 reusable board pattern.
 
-Notable populated values include:
+Notable populated values recorded by KiCad include:
 
 | KiCad ref | Value | Local role | Absolute relationship |
 |---|---:|---|---|
@@ -94,7 +100,7 @@ Notable populated values include:
 | R2 | 1.45 kOhm | J2-J3 | J4 51-J4 53 |
 | R3 | 130 kOhm | J3-J4 | J4 53-J4 55 |
 | R4 | 0 Ohm | J4-J5 routing link | J4 55-J4 57 |
-| R5 | 25.5 Ohm | J5-J6 | J4 57-J4 59; review against nominal model |
+| R5 | 25.5 Ohm | J5-J6 | J4 57-J4 59; review against physical board and nominal model |
 | R12 | 10 kOhm | J12-J11 | J4 58-J4 60 |
 | R15 | 0 Ohm | routing link from J1 | J4 49-side routing |
 | R17 | 0 Ohm | routing link from J3 | J4 53-side routing |
@@ -110,19 +116,28 @@ Notable populated values include:
 
 Numerous other grid positions are explicitly marked `Open`.
 
-## Interpretation of value differences
+## Photograph authority and value differences
 
-The KiCad board must **not** be interpreted as a component-for-component drawing
-of the inaccessible internal 16055376 package. Several fitted values are close
-to but not identical with the nominal LTspice model, including 1.45 kOhm versus
-1.5 kOhm, 5.0 kOhm versus 5.1 kOhm, and 7.4 kOhm versus 7.5 kOhm.
+The completed MEMCAL photograph is the controlling record of the **as-built**
+16055376 population wherever the relevant marking or placement is legible. The
+KiCad table above records the design/reconstruction file, not an authority that
+can override the finished physical board.
 
-One relationship deserves explicit review: the KiCad reconstruction record
-shows **25.5 Ohm** between local J5 and J6, while the nominal LTspice set contains
-a **24 kOhm** element. This document does not assume those are intended to be
-the same branch. Step 129 treats that as a targeted reconciliation question for
-SPICE topology, KiCad net topology, historical measurements, and the physical
-board rather than silently normalizing the values.
+Several KiCad values are close to but not identical with nominal LTspice values,
+including 1.45 kOhm versus 1.5 kOhm, 5.0 kOhm versus 5.1 kOhm, and 7.4 kOhm
+versus 7.5 kOhm. These remain comparison points until the installed components
+are checked against the photograph or direct inspection.
+
+One relationship deserves explicit review: KiCad records **25.5 Ohm** between
+local J5 and J6, while the nominal LTspice set contains a **24 kOhm** element.
+The next determination for the as-built value must come from the photograph or
+direct inspection of that physical location. The project must not choose KiCad
+or LTspice merely because one seems more plausible. Once the installed part is
+identified, that value becomes the as-built baseline and the conflicting source
+remains preserved as a discrepancy to explain.
+
+If the photograph is unclear at a particular component location, leave the
+value unresolved until direct inspection or targeted measurement resolves it.
 
 ## Zero-ohm and open positions
 
@@ -161,11 +176,11 @@ Current confidence is high for the following conclusions:
 - The generic KiCad reconstruction uses local positions J1-J16 as the terminal
   set.
 - The absolute package-terminal-to-carrier-to-J4 mapping is now established.
+- The completed MEMCAL photograph is authoritative for the as-built physical
+  population wherever legible.
 - The LTspice source preserves the nominal/equivalent resistor set.
-- The KiCad board implements terminal behavior using resistors plus routing
-  links and open positions.
-- SPICE and KiCad are complementary evidence and need not be literal
-  one-component-for-one-component representations.
+- KiCad and LTspice remain complementary evidence for design/topology, but they
+  do not override a clearly visible installed component.
 
 ## Remaining verification
 
@@ -176,7 +191,9 @@ inspection of the carrier numbering.
 Targeted measurements remain useful for blank destinations, unresolved J4
 62-64 identities, internal/common nodes, and any reconstructed resistor/jumper
 relationship that conflicts with the emerging theory of operation. The
-25.5-Ohm-versus-24-kOhm question is a particularly useful targeted audit item.
+25.5-Ohm-versus-24-kOhm question should first be addressed from the completed
+MEMCAL photograph or direct inspection, then measured only if needed.
 
 See `docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md` for the simplified
-functional view used in Step 129.
+functional view used in Step 129 and `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md`
+for the as-built evidence-priority rule.
