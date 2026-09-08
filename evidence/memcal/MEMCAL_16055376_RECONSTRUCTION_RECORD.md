@@ -100,7 +100,7 @@ Notable populated values recorded by KiCad include:
 | R2 | 1.45 kOhm | J2-J3 | J4 51-J4 53 |
 | R3 | 130 kOhm | J3-J4 | J4 53-J4 55 |
 | R4 | 0 Ohm | J4-J5 routing link | J4 55-J4 57 |
-| R5 | 25.5 Ohm | J5-J6 | J4 57-J4 59; review against physical board and nominal model |
+| R5 | 25.5 Ohm | J5-J6 | J4 57-J4 59; KiCad record conflicts with as-built photo |
 | R12 | 10 kOhm | J12-J11 | J4 58-J4 60 |
 | R15 | 0 Ohm | routing link from J1 | J4 49-side routing |
 | R17 | 0 Ohm | routing link from J3 | J4 53-side routing |
@@ -116,25 +116,30 @@ Notable populated values recorded by KiCad include:
 
 Numerous other grid positions are explicitly marked `Open`.
 
-## Photograph authority and value differences
+## Photograph authority and resolved J5-J6 value
 
 The completed MEMCAL photograph is the controlling record of the **as-built**
 16055376 population wherever the relevant marking or placement is legible. The
 KiCad table above records the design/reconstruction file, not an authority that
 can override the finished physical board.
 
-Several KiCad values are close to but not identical with nominal LTspice values,
-including 1.45 kOhm versus 1.5 kOhm, 5.0 kOhm versus 5.1 kOhm, and 7.4 kOhm
-versus 7.5 kOhm. These remain comparison points until the installed components
-are checked against the photograph or direct inspection.
+The formerly open J5-J6 discrepancy is now resolved from the close-up
+photograph. The installed component at that adjacent-chain position is clearly
+marked **`2402`**, the standard four-digit SMD code for **24,000 Ohm = 24 kOhm**.
+The surrounding photographed sequence is also consistent with the expected
+150 kOhm / 1.5 kOhm / 130 kOhm / zero-ohm-routing / 24 kOhm chain.
 
-One relationship deserves explicit review: KiCad records **25.5 Ohm** between
-local J5 and J6, while the nominal LTspice set contains a **24 kOhm** element.
-The next determination for the as-built value must come from the photograph or
-direct inspection of that physical location. The project must not choose KiCad
-or LTspice merely because one seems more plausible. Once the installed part is
-identified, that value becomes the as-built baseline and the conflicting source
-remains preserved as a discrepancy to explain.
+Therefore:
+
+- **As-built J5-J6 value: 24 kOhm — authoritative from photograph.**
+- LTspice nominal value: 24 kOhm — agrees with as-built photograph.
+- KiCad entry: 25.5 Ohm — retained as a reconstruction/design-record error and
+  must not be used as the physical value.
+
+Other small KiCad-vs-LTspice differences, including 1.45 kOhm versus 1.5 kOhm,
+5.0 kOhm versus 5.1 kOhm, and 7.4 kOhm versus 7.5 kOhm, remain comparison points
+until their installed markings are read from the photograph or confirmed by
+direct inspection.
 
 If the photograph is unclear at a particular component location, leave the
 value unresolved until direct inspection or targeted measurement resolves it.
@@ -178,7 +183,10 @@ Current confidence is high for the following conclusions:
 - The absolute package-terminal-to-carrier-to-J4 mapping is now established.
 - The completed MEMCAL photograph is authoritative for the as-built physical
   population wherever legible.
-- The LTspice source preserves the nominal/equivalent resistor set.
+- J5-J6 is physically populated with a 24 kOhm resistor marked `2402`.
+- The LTspice 24 kOhm value agrees with the as-built photograph at J5-J6.
+- The KiCad 25.5-Ohm entry is not the as-built value and is retained only as a
+  design/reconstruction-record discrepancy.
 - KiCad and LTspice remain complementary evidence for design/topology, but they
   do not override a clearly visible installed component.
 
@@ -189,10 +197,8 @@ to discover their absolute connector numbering is superseded by direct physical
 inspection of the carrier numbering.
 
 Targeted measurements remain useful for blank destinations, unresolved J4
-62-64 identities, internal/common nodes, and any reconstructed resistor/jumper
-relationship that conflicts with the emerging theory of operation. The
-25.5-Ohm-versus-24-kOhm question should first be addressed from the completed
-MEMCAL photograph or direct inspection, then measured only if needed.
+62-64 identities, internal/common nodes, and any other reconstructed resistor or
+jumper relationship that conflicts with the emerging theory of operation.
 
 See `docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md` for the simplified
 functional view used in Step 129 and `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md`
