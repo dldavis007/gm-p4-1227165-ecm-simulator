@@ -11,7 +11,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
 2. **Power supplies, reset, and retained power**
    - VIGN, VBATT, standby supply, reset controller, key-off boundary.
 3. **Processor, memory map, and custom peripherals**
-   - RAM, internal registers, external PROM, I/O windows, vectors.
+   - Integrated chapter: [`PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md`](PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md).
+   - Covers the external program window, vectors, U10 analog acquisition,
+     U9 processor-visible register window, U11/U12 external roles, MEMCAL
+     configuration, and the F0-F4 simulation boundary.
    - Use [`U11_U12_FUNCTIONAL_BOUNDARIES.md`](U11_U12_FUNCTIONAL_BOUNDARIES.md)
      for the evidence-bounded external roles of U11 and U12; do not substitute
      inferred internal transfer functions for the documented F4 boundaries.

@@ -34,6 +34,10 @@ assembled listing.
 - [Hardware/firmware cross-reference](HARDWARE_FIRMWARE_CROSS_REFERENCE.md)
   connects functions to assembly, RAM or registers, calibration, schematic
   nets, C modules, and tests.
+- [Processor, memory-map, and custom-peripheral architecture](PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md)
+  integrates the program window, vectors, U10 analog boundary, U9 register
+  window, U11/U12 custom-device roles, MEMCAL configuration, and F0-F4
+  simulation responsibilities without inventing undocumented device behavior.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)

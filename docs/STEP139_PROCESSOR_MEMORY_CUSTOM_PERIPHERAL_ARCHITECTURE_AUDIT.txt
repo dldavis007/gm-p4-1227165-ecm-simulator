@@ -1,0 +1,46 @@
+Step 139 — Processor, Memory-Map, and Custom-Peripheral Architecture Audit
+
+Objective
+---------
+Consolidate the processor-visible architecture established by prior firmware, hardware, MEMCAL, U9, U11 and U12 audits into one evidence-bounded theory-of-operation chapter without inventing undocumented custom-device or processor behavior.
+
+Evidence reviewed
+-----------------
+- authoritative `evidence/firmware/bua-hac.lst`
+- `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- `docs/reference/U9_REGISTER_WINDOW_MAP.md`
+- `docs/reference/U9_REGISTER_WINDOW_CLOSURE.md`
+- `docs/reference/U11_U12_FUNCTIONAL_BOUNDARIES.md`
+- MEMCAL architecture and functional-network records
+- Step 119 vector evidence and Steps 130-138 signal-chain/custom-device audits
+
+Findings
+--------
+1. The supplied firmware/program material occupies the externally visible `$8000-$FFFF` program window. The hardware exposes A0-A14, D0-D7, /ROMCS and /ROMOE. The historical BUA binary is 16 KiB; that image size is not promoted into a claim that the physical processor window is only 16 KiB.
+
+2. Eight emitted vector words at `$FFF0-$FFFE` and their established targets remain direct firmware evidence. Unsupplied `$6000` behavior and processor-specific electrical/reset consequences remain boundaries.
+
+3. U9 is the principal bus-visible custom timing peripheral. Step 137's classified `$3FC0-$3FFF` addresses remain the supported register set for this image. Step 138's closure rule is retained: all other locations in that window remain unclassified, not presumed unused/reserved/mirrored.
+
+4. U11 and U12 are hardware-visible custom-device boundaries, not fabricated processor register blocks. U11's MEMCAL/configuration/reference roles and U12's reference/control plus injector-driver roles are described only to the extent established by schematic/MEMCAL evidence.
+
+5. U10 remains the analog acquisition boundary. Listing-backed A/D selector/storage behavior is kept separate from physical sensor transfer curves and voltage models.
+
+6. The MEMCAL is architectural in two distinct ways: it supplies external program storage and it configures U11/U12 through the resistor-network CAL connections. CAL hardware nodes must not be conflated with PROM calibration bytes.
+
+7. The integrated data-flow model supports the existing F0-F4 separation: firmware-exact state and raw accesses in F0, processor-visible HAL events/samples in F2, optional plant/electrical assumptions in F3, and undocumented custom/external behavior in F4.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md`
+
+Updated:
+- `docs/reference/README.md`
+- `docs/reference/THEORY_OF_OPERATION_INDEX.md`
+
+No C source, behavioral baseline, calibration data, or regression output was changed.
+
+Closure
+-------
+Step 139 closes the architectural organization of the processor-visible program/memory/custom-device boundaries. It does not claim undocumented U9 internals, U11/U12 transfer functions, optional `$5800` ROM behavior, external `$6000` code, or physical reset/power/output consequences.
