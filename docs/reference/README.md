@@ -46,6 +46,10 @@ assembled listing.
   integrates the distributor-reference path, U9 timing state, RPM derivation,
   spark and dwell staging, EST/bypass feedback, knock retard, and explicit
   custom-device boundaries.
+- [Sensor acquisition and filtering](SENSOR_ACQUISITION_FILTERING_THEORY.md)
+  integrates U10 A/D channels, raw/processed state, acquisition/filter cadence,
+  MAF/reference-derived load, and non-A/D event boundaries without moving
+  plant/electrical assumptions into firmware-exact behavior.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
