@@ -1,0 +1,58 @@
+Step 140 — Interrupt and Scheduler Architecture Audit
+
+Objective
+---------
+Consolidate the established ordinary IRQ cadence, odd/even minor-loop structure, sixteen-way major dispatcher, common-service ordering, and event-driven hardware boundaries into theory-of-operation Chapter 5.
+
+Evidence reviewed
+-----------------
+- authoritative scheduler/listing evidence already cross-referenced in `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- `src/scheduler_serial.inc.h`
+- `tests/scheduler_regression.inc.h`
+- U9/U11/U12 architecture from Steps 136-139
+- vector/exception evidence from Step 119
+
+Findings
+--------
+1. Ordinary IRQ service is established at 6.25 ms.
+
+2. Exactly one alternating minor side is selected on each ordinary IRQ. The odd Air/Fuel and even Spark/O2/reference sides therefore each execute at 12.5-ms cadence.
+
+3. Common services are not modeled as independent timers. Established common work such as scheduler-facing IAC service and MAF work occurs at the ordinary 6.25-ms level before/around the minor split according to source ordering.
+
+4. The scheduler state's low nibble selects one of sixteen major segments. Regression evidence verifies each segment is selected once in sixteen IRQs. Therefore each major segment has a mechanically derived nominal 100-ms cadence.
+
+5. Distributor/reference timing is event-driven state supplied through the U12/U9 path and must remain separate from the periodic scheduler clock. Firmware consumption of `$3FFA`, `$3FC0`, `$3FC8` and RPM/dwell state does not prove U9's internal counter implementation.
+
+6. CAL42/U11 OSC and CAL56/U12 CYL remain separate from ordinary IRQ generation and distributor-reference timing unless direct evidence later joins them.
+
+7. Normal 160-baud output uses ordinary-IRQ scheduling plus hardware compare events; those compare events are not additional scheduler loops. 8192-baud SCI behavior remains separately event driven.
+
+8. The deterministic PC architecture should be hierarchical: 6.25-ms IRQ -> common work -> odd/even minor -> one major segment. External reference/VSS/serial/compare events update processor-visible state independently and are consumed by translated firmware in source order.
+
+Regression support
+------------------
+The existing scheduler regression explicitly verifies:
+- 16 IRQ calls -> 16 ordinary IRQ services;
+- IAC scheduler-facing service on every ordinary IRQ;
+- eight odd and eight even selections in 16 IRQs;
+- exactly one call to every major segment in 16 IRQs;
+- odd/even phase returns after 16 IRQs;
+- common MAF work remains 6.25-ms while the odd fuel chain remains 12.5-ms;
+- slow-O2 and connected reference/RPM/dwell work execute on the even cadence under their established conditions.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md`
+- `docs/STEP140_INTERRUPT_SCHEDULER_ARCHITECTURE_AUDIT.txt`
+
+Updated:
+- `docs/reference/README.md`
+- `docs/reference/THEORY_OF_OPERATION_INDEX.md`
+
+No C source, test source, calibration, or behavioral baseline was changed.
+
+Closure
+-------
+Step 140 closes the integrated scheduler-geometry description. Physical IRQ generation, undocumented U9 timing internals, unsupported OSC/timebase relationships, and electrical/event transformations remain explicit boundaries.

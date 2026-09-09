@@ -38,6 +38,10 @@ assembled listing.
   integrates the program window, vectors, U10 analog boundary, U9 register
   window, U11/U12 custom-device roles, MEMCAL configuration, and F0-F4
   simulation responsibilities without inventing undocumented device behavior.
+- [Interrupt and scheduler architecture](INTERRUPT_SCHEDULER_ARCHITECTURE.md)
+  consolidates the 6.25-ms ordinary IRQ, alternating 12.5-ms minor loops,
+  sixteen-way 100-ms major dispatch, common-service ordering, and the
+  separation between periodic scheduler time and engine/reference events.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)

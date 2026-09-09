@@ -39,7 +39,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      CAL29 analog ESC path separate from the CAL32/U12/U9 KNOCK path, and do
      not equate CAL56 directly with PROM bytes `LC009` or `LC225`.
 5. **Interrupt and scheduler architecture**
-   - 6.25-ms IRQ, odd/even minors, sixteen major segments, event interrupts.
+   - Integrated chapter: [`INTERRUPT_SCHEDULER_ARCHITECTURE.md`](INTERRUPT_SCHEDULER_ARCHITECTURE.md).
+   - Establishes the 6.25-ms ordinary IRQ, alternating 12.5-ms odd/even minor
+     paths, one-of-sixteen major dispatch (100-ms cadence per segment), common
+     service ordering, and separation of scheduler time from reference events.
 6. **Reference pulses, RPM, dwell, and spark**
    - Distributor reference geometry, counter capture, advance and knock.
    - Use [`IGNITION_INJECTION_SIGNAL_CHAIN.md`](IGNITION_INJECTION_SIGNAL_CHAIN.md)
