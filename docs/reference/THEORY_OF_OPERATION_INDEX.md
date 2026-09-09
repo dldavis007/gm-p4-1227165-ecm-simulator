@@ -58,7 +58,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      separate CAL29 analog monitor and CAL32/U12/U9 event paths, knock-retard
      arithmetic, recovery, spark subtraction, and Error 43.
 7. **Sensor acquisition and filtering**
-   - MAF, MAP, TPS, CTS, MAT, O2, VSS, battery and discrete inputs.
+   - Integrated chapter: [`SENSOR_ACQUISITION_FILTERING_THEORY.md`](SENSOR_ACQUISITION_FILTERING_THEORY.md).
+   - Integrates the U10 A/D transaction, channel-specific raw/processed state,
+     acquisition/filter cadence, MAF/reference-derived load, and separate
+     pulse/discrete-input boundaries while preserving F0-F4 layering.
    - Use [`ADC_SENSOR_ACQUISITION.md`](ADC_SENSOR_ACQUISITION.md) for the U10
      channel/pin map, normal selector schedule, factory-test sweep, and
      raw-versus-processed RAM boundaries.
