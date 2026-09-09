@@ -1,0 +1,53 @@
+Step 142 — Sensor Acquisition and Filtering Theory Audit
+
+Objective
+---------
+Integrate the established U10 A/D map, image-specific acquisition schedule, raw/processed state, sensor filtering/normalization, MAF/load path, and non-A/D event boundaries into theory-of-operation Chapter 7.
+
+Evidence reviewed
+-----------------
+- `docs/reference/ADC_SENSOR_ACQUISITION.md`
+- `docs/reference/MAP_LOAD_SIGNAL_CHAIN.md`
+- `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- `docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md`
+- `docs/reference/ESC_KNOCK_SIGNAL_CHAIN.md`
+- `docs/STEP133_ADC_SENSOR_ACQUISITION_AUDIT.txt`
+- existing translated C/HAL and regression references recorded by those audits
+
+Findings
+--------
+1. U10 AN0-AN10 remain MAP2, VOLT, O2, MAP, CTS, TPS, PUMPVOLT, DIAG, MAT, ESC and VMAF. Selector `$B0` remains unresolved.
+
+2. Normal supplied-image selectors remain `$10,$20,$40,$50,$60,$70,$80,$A0`. MAP2 `$00`, MAP `$30`, and ESC `$90` have no explicit normal acquisition in the retained image; factory test scans all `$00-$B0` slots.
+
+3. `$F1BE-$F1DF` defines the common 8-bit A/D transaction and temporary `$0064`. It does not establish analog reference accuracy or universal engineering-unit scaling.
+
+4. Raw and processed state are deliberately distinct. TPS learning/normalization, MAT complement, CTS table conversion, O2 filtering, voltage qualification, and MAF processing remain firmware transformations rather than HAL preprocessing.
+
+5. VMAF/AN10 remains the analog source for the supplied image's principal load path. `$D769-$D7A0` combines airflow `$00EA-$00EB` with reference period `$0095-$0096` to produce `$0063`; MAP/MAP2 are not inserted into this path.
+
+6. CAL61/U11 pin28 MAP configuration remains a separate custom-device boundary from U10 MAP conversion and from firmware load.
+
+7. U10 AN9 ESC remains a factory-observable analog path distinct from the CAL32/U12/U9 knock-event path consumed through `$3FCA`.
+
+8. Sensor acquisition cadence is distributed: TPS on the common 6.25-ms path, O2 slow filtering on the even minor, other analog inputs in startup/assigned major segments, and factory test in its own scan. The theory therefore preserves source-order sample/filter cadence.
+
+9. VSS and distributor reference are non-A/D pulse/event paths. They are not forced into the U10 model. VSS engineering-unit pulse calibration remains a HAL/plant boundary pending stronger signal-specific evidence.
+
+10. The preferred simulation layering remains physical sensor/plant F3 -> raw HAL F2 -> listing acquisition/processing F0 -> firmware consumers F0, with schematic/electrical/custom-device boundaries retained as F1/F4.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md`
+- `docs/STEP142_SENSOR_ACQUISITION_FILTERING_THEORY_AUDIT.txt`
+
+Index/reference links are updated separately as part of Step 142.
+
+Source and baseline impact
+--------------------------
+Documentation/theory only. No C source, test source, calibration, generated output, or frozen behavioral baseline changed.
+
+Closure
+-------
+Step 142 closes theory-of-operation Chapter 7 at the evidence-supported level. Selector `$B0`, image/variant use of MAP/MAP2/ESC, precise U10 electrical scaling, and detailed VSS/discrete-input electrical calibration remain explicit future-evidence items.
