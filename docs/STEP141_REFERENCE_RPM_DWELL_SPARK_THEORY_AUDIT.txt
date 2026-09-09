@@ -1,0 +1,52 @@
+Step 141 — Reference Pulses, RPM, Dwell, and Spark Theory Audit
+
+Objective
+---------
+Integrate the previously established distributor-reference, U12/U9, RPM, dwell, spark, EST/bypass, feedback, and knock evidence into theory-of-operation Chapter 6 without inventing custom-device internals.
+
+Evidence reviewed
+-----------------
+- `docs/reference/IGNITION_INJECTION_SIGNAL_CHAIN.md`
+- `docs/reference/OSC_CYL_REFERENCE_TIMING_PATHS.md`
+- `docs/reference/ESC_KNOCK_SIGNAL_CHAIN.md`
+- `docs/reference/U9_REGISTER_WINDOW_MAP.md`
+- `docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md`
+- `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- `tests/spark_reference_regression.inc.h`
+- listing-backed translated behavior cited by those records
+
+Findings
+--------
+1. Conditioned distributor activity reaches U12 pin 29 REF. U12's visible INJREF/IGNREF outputs reach U9 and U11. The exact U12 pulse transformation remains unresolved.
+
+2. Firmware directly consumes U9-window reference status and timing: `$3FFA` reference occurrence, `$3FC0` reference-period state, `$3FC8` spark/reference-period state, and related `$3FEC` timing state.
+
+3. `$CDE6-$CE41` normalizes reference period and derives RPM. `LC009=$00` selects the supplied eight-cylinder software normalization path. This PROM byte is not equated with the physical CAL56 voltage.
+
+4. CAL56 reaches U12 CYL and the firmware separately compares `$002F & $18` with `LC225=$00`. The end-to-end cylinder/fuel-mode consistency role is strong inference; the electrical/digital encoding remains unresolved.
+
+5. CAL42/U11 OSC remains separate from U9 reference counters and ordinary IRQ timing. No unsupported timebase relationship was introduced.
+
+6. The even 12.5-ms scheduler path consumes reference/RPM/dwell state, but distributor reference edges are engine events rather than scheduler events.
+
+7. Spark production combines listing-backed calibrated terms and mode corrections. `$D20C-$D267` converts the desired spark relationship into U9 timing quantities.
+
+8. The established spark/dwell register group is `$3FDC`, `$3FE4`, `$3FE6`, `$3FE8`, `$3FEC`, `$3FF6`, with `$3FFC` used for EST/bypass/control state. These are processor-visible semantics, not an internal U9 timer specification.
+
+9. U9 IGN and U12 IGN/EST/BYPASS/ESTLOOP form a visible command/feedback envelope. Error 42 provides firmware feedback-consistency behavior, but the exact electrical transfer and pin/register correspondence remain unresolved.
+
+10. Knock modifies the spark result through `$3FCA` delta consumption and accumulated retard `$00A5`; recovery and Error 43 remain distinct listing-backed paths. U9 pin 42 KNOCK -> `$3FCA` remains a strong inference.
+
+11. The correct simulation architecture keeps periodic scheduler time and engine-event time separate: raw reference events/state at F2, firmware-exact consumers at F0, optional engine dynamics at F3, undocumented U9/U12 transformations at F4.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md`
+- `docs/STEP141_REFERENCE_RPM_DWELL_SPARK_THEORY_AUDIT.txt`
+
+No C source, test source, calibration, or behavioral baseline was changed by the theory integration.
+
+Closure
+-------
+Step 141 closes theory-of-operation Chapter 6 at the evidence-supported system level. Physical phase/polarity, U9 counter topology/scaling, exact `$3FFC` electrical meanings, U12 REF transformations, and CAL34/CAL53 destinations remain explicit future-evidence items.
