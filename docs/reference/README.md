@@ -42,6 +42,10 @@ assembled listing.
   consolidates the 6.25-ms ordinary IRQ, alternating 12.5-ms minor loops,
   sixteen-way 100-ms major dispatch, common-service ordering, and the
   separation between periodic scheduler time and engine/reference events.
+- [Reference pulses, RPM, dwell, and spark](REFERENCE_RPM_DWELL_SPARK_THEORY.md)
+  integrates the distributor-reference path, U9 timing state, RPM derivation,
+  spark and dwell staging, EST/bypass feedback, knock retard, and explicit
+  custom-device boundaries.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
