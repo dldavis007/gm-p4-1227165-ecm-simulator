@@ -44,7 +44,10 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      paths, one-of-sixteen major dispatch (100-ms cadence per segment), common
      service ordering, and separation of scheduler time from reference events.
 6. **Reference pulses, RPM, dwell, and spark**
-   - Distributor reference geometry, counter capture, advance and knock.
+   - Integrated chapter: [`REFERENCE_RPM_DWELL_SPARK_THEORY.md`](REFERENCE_RPM_DWELL_SPARK_THEORY.md).
+   - Integrates distributor conditioning, U12/U9 reference state, RPM
+     derivation, spark terms, dwell/timing staging, EST/bypass feedback, knock
+     retard and the event-versus-scheduler timing boundary.
    - Use [`IGNITION_INJECTION_SIGNAL_CHAIN.md`](IGNITION_INJECTION_SIGNAL_CHAIN.md)
      for the U12-to-U9/U11 reference path, U9 register-window behavior,
      EST/feedback boundary, and injector command/driver boundary.
