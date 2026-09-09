@@ -45,9 +45,12 @@ assembled listing.
 - [U11/U12 functional boundaries](U11_U12_FUNCTIONAL_BOUNDARIES.md) consolidates
   the known external roles of both custom devices while keeping undocumented
   transfer functions, thresholds, phase, polarity and current control explicit.
-- [U9 register-window map](U9_REGISTER_WINDOW_MAP.md) organizes the established
-  `$3FC0-$3FFF` processor-visible reference, knock, injection, spark/dwell and
-  control semantics while keeping U9 pin-to-register mappings unresolved.
+- [U9 register-window map](U9_REGISTER_WINDOW_MAP.md) records the established
+  processor-visible semantics in `$3FC0-$3FFF` while separating them from
+  undocumented U9 pin-to-register mappings.
+- [U9 register-window closure](U9_REGISTER_WINDOW_CLOSURE.md) defines the
+  evidence-supported address set and keeps every remaining location explicitly
+  unclassified rather than guessing reserved or unused behavior.
 - [MAP and firmware-load signal chain](MAP_LOAD_SIGNAL_CHAIN.md) separates
   physical MAP/MAP2 and CAL61/U11 paths from the executable
   MAF/reference-period load producer.

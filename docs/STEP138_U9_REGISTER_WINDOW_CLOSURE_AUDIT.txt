@@ -1,0 +1,67 @@
+BUA / GM 1227165 STEP 138 - U9 REGISTER-WINDOW CLOSURE AUDIT
+=============================================================
+
+Purpose
+-------
+Step 138 closes the current evidence-supported U9 register-window classification
+without assigning semantics to addresses that the repository has not already
+established through executable firmware or factory-test use.
+
+Repository state and numbering
+------------------------------
+Remote main ended at Step 137 commit 3a44b79d. Step 138 is the next unused
+numbered audit.
+
+Files added
+-----------
+- docs/reference/U9_REGISTER_WINDOW_CLOSURE.md
+- docs/STEP138_U9_REGISTER_WINDOW_CLOSURE_AUDIT.txt
+
+Files updated
+-------------
+- docs/reference/README.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+
+Findings
+--------
+1. The currently established U9 processor-visible addresses remain:
+   $3FC0, $3FC8, $3FCA, $3FCE, $3FD0, $3FDC, $3FE4, $3FE6, $3FE8,
+   $3FEC, $3FF6, $3FFA and $3FFC.
+
+2. Their supported roles remain reference/counter state, knock-event state,
+   injector timing/command, spark/dwell scheduling, and aggregate/control
+   status as documented in Step 137.
+
+3. No additional address is assigned a role solely because it lies inside the
+   decoded $3FC0-$3FFF hardware window. Every other location remains
+   unclassified rather than being called unused, reserved, mirrored, read-only,
+   write-only, or variant-specific.
+
+4. The direct hardware pins IGN, INJS, INJA, INJREF, IGNREF, ESTLOOP and KNOCK
+   remain separate evidence from the direct firmware register semantics.
+   Pin-to-register correspondence remains an undocumented custom-device boundary
+   except for explicit strong inferences already recorded.
+
+5. This closure does not justify any C source or baseline change. Simulator
+   behavior should remain limited to listing-backed processor-visible semantics
+   and raw HAL stimuli/observations.
+
+Evidence discipline
+-------------------
+Step 138 is a closure of the current evidence set, not a claim that the entire
+physical U9 register specification has been recovered. An unclassified address
+may be hardware-implemented and simply unused by this calibration. Future
+verified listings, independent U9 documentation, or controlled pin/register
+measurements can reopen the map without invalidating this checkpoint.
+
+Source and baseline impact
+--------------------------
+Documentation only. No C source, tests, generated output, or frozen behavioral
+baseline changed.
+
+Conclusion
+----------
+The U9 window now has a bounded, evidence-supported register map suitable for
+theory-of-operation work. Known processor-visible semantics are documented;
+all remaining locations and internal pin/register transformations remain
+explicitly unresolved rather than guessed.
