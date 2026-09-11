@@ -54,6 +54,10 @@ assembled listing.
   integrates VMAF/airflow and load, crank/normal fueling, AFR/enrichment,
   O2/closed-loop and BLM correction, AE/DFCO, pulse-width production, injector
   service, and the U9/U11/U12 command/driver boundary.
+- [Idle-air control](IDLE_AIR_CONTROL_THEORY.md) integrates coolant/mode target
+  idle, the source-proven 50-ms regulator, fractional residual/quantization,
+  6.25-ms one-step motor service, throttle follower, A/C/fan anticipation,
+  startup positioning, and key-off close/reopen homing.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
