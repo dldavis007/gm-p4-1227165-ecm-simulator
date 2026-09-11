@@ -58,6 +58,10 @@ assembled listing.
   idle, the source-proven 50-ms regulator, fractional residual/quantization,
   6.25-ms one-step motor service, throttle follower, A/C/fan anticipation,
   startup positioning, and key-off close/reopen homing.
+- [Emissions and accessory controls](EMISSIONS_ACCESSORY_CONTROL_THEORY.md)
+  integrates secondary AIR, EGR, canister purge, cooling fan, A/C interaction,
+  calibrated hysteresis/qualification behavior, and the common raw output-
+  staging boundary without inventing driver or actuator polarity.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
