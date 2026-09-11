@@ -69,7 +69,13 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      U10 MAP/MAP2 conversion channels and CAL61/U11 configuration from the
      supplied firmware's MAF/reference-period-derived load at `$0063`.
 8. **Airflow, fuel, and injector operation**
-   - Load, AFR, startup, AE, DFCO, closed loop, BLM and batch service.
+   - Integrated chapter: [`AIRFLOW_FUEL_INJECTOR_THEORY.md`](AIRFLOW_FUEL_INJECTOR_THEORY.md).
+   - Integrates VMAF/airflow and load production, crank/normal fuel selection,
+     AFR/enrichment, O2/closed-loop correction, 16-cell BLM, AE/transient fuel,
+     DFCO, pulse-width shaping, injector-service gating, and the U9/U11/U12
+     custom-device boundary.
+   - Keep calculated fuel, corrected pulse width, permitted injector command,
+     U9 `$3FD0` command, and physical injector actuation as distinct stages.
    - Keep U11 `INJ`/`INJLIMP` and U12/U9 injector-driver transformations as
      custom-device boundaries unless direct electrical evidence closes them.
 9. **Idle-air control**
