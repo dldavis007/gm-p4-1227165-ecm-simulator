@@ -1,0 +1,60 @@
+Step 143 — Airflow, Fuel, and Injector Theory Audit
+
+Objective
+---------
+Integrate the established MAF/load, AFR, startup/cranking fuel, closed-loop, BLM, transient enrichment, DFCO, pulse-width, injector service, and U9/U11/U12 hardware-boundary evidence into theory-of-operation Chapter 8.
+
+Evidence reviewed
+-----------------
+- `docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md`
+- `docs/reference/MAP_LOAD_SIGNAL_CHAIN.md`
+- `docs/reference/IGNITION_INJECTION_SIGNAL_CHAIN.md`
+- `docs/reference/U9_REGISTER_WINDOW_MAP.md`
+- `docs/reference/U11_U12_FUNCTIONAL_BOUNDARIES.md`
+- `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- current `src/fuel_air.inc.h`
+- current `src/dfco_transient.inc.h`
+- current injector-service/scheduler integration recorded by the cross-reference
+- current fuel/air, DFCO, closed-loop, startup-fuel, scheduler, and factory-test regression inventory
+
+Findings
+--------
+1. The supplied image's ordinary fuel path begins with VMAF/U10 AN10, raw `$00ED`, processed airflow `$00EA-$00EB`, and load `$0063` produced from airflow and reference period `$0095-$0096`.
+
+2. MAP/MAP2 and CAL61/U11 MAP configuration remain separate from the executable principal load/fuel producer.
+
+3. Cranking/startup fuel and normal-running fuel are mode-selected firmware paths, not one universal pulse-width equation.
+
+4. Normal fuel preserves source-order AFR/enrichment selection, base pulse-width production, BLM/closed-loop correction, transient/AE addition, and final output shaping/gating.
+
+5. Fast O2 rich/lean state is produced before the closed-loop gate. Closed-loop pulse-width correction remains firmware state rather than a host-side controller.
+
+6. BLM cell selection at `$DA73-$DB35` uses RPM and whole airflow for this calibration (`LC017=0`), with a 4x4/16-cell layout, hysteresis, learning-delay state, bounds/reinitialization behavior, and PE handling. BLM is distinct from fast closed-loop correction.
+
+7. DFCO remains a qualified state machine that suppresses fuel through firmware behavior; it is not reduced to a host-side deceleration flag.
+
+8. Transient/acceleration enrichment is a firmware contribution applied before final injector output shaping and remains distinct from steady-state AFR selection.
+
+9. Batch injector service is gated through processor-visible status represented by `$00A0 bit6`; `$F9D2-$F9E4` writes synchronous pulse width to U9 `$3FD0`. Factory test independently exercises `$3FD0` and EFI-delay `$3FCE`.
+
+10. The hardware envelope U9 `INJS/INJA` -> U12 injector driver -> `INJOUT`/Q1 is direct schematic evidence. U11 `INJ` -> `INJLIMP` and U12 `~LIMP` support a limiting/control relationship, but internal algorithms, phase, polarity, bank meaning, and current control remain F4.
+
+11. Periodic fuel calculation and physical injector-event timing are intentionally separated. U9 event/status gating synchronizes injector service; a new calculated pulse width does not itself imply an immediate physical pulse.
+
+12. No new executable behavior was discovered that requires C or regression-baseline changes.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md`
+- `docs/STEP143_AIRFLOW_FUEL_INJECTOR_THEORY_AUDIT.txt`
+
+Index/reference links are updated separately as part of Step 143.
+
+Source and baseline impact
+--------------------------
+Documentation/theory only. No C source, test source, calibration, generated output, or frozen behavioral baseline changed.
+
+Closure
+-------
+Step 143 closes theory-of-operation Chapter 8 at the evidence-supported system level. Physical `$3FD0/$3FCE` units/phase, INJS-versus-INJA meaning, U11/U12 limiting behavior, driver polarity, and injector current waveform remain explicit future bench/documentation targets.
