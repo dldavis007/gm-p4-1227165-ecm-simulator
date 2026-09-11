@@ -1,0 +1,57 @@
+Step 144 — Idle-Air Control Theory Audit
+
+Objective
+---------
+Integrate the established commanded-idle, 50-ms regulator, 6.25-ms motor service, throttle-follower, A/C/fan anticipation, startup positioning, and key-off homing behavior into theory-of-operation Chapter 9.
+
+Evidence reviewed
+-----------------
+- current `src/ecm_core.inc.h` Step-36 through Step-64 IAC history and translated implementation
+- current `src/ac_control.inc.h`
+- current `src/ignition_shutdown.inc.h`
+- scheduler architecture and existing hardware/firmware cross-reference
+- existing closed-loop/IAC, A/C, scheduler, drive-cycle, startup, and shutdown regressions
+
+Findings
+--------
+1. Commanded idle speed is constructed from the coolant target-RPM table with exact interpolation plus mode-dependent additions, including +50 RPM Park/Neutral and the translated optional hot-spark addition.
+
+2. A/C/fan behavior in this calibration is primarily step-position anticipation/feed-forward rather than a simple RPM-target increase at the target-construction point.
+
+3. The normal closed-loop IAC regulator cadence is source-proven at 50 ms. This replaces earlier assumptions of a faster PID cadence.
+
+4. The motor executor remains a separate 6.25-ms service and consumes at most one requested physical step per service pass. Large packed movement requests therefore persist across multiple IRQs.
+
+5. The regulator is not a textbook continuously integrating PID. `$0103` is fractional/quantization residual state used in the small-output branch and is cleared by sufficiently large direct outputs; exact-zero and low-gain behavior follow calibration.
+
+6. Park/Neutral versus Drive deadbands/gains, Neutral-to-Drive PID inhibit, learned minimum position, and higher-response branches remain distinct listing-backed control states.
+
+7. The IAC motor command preserves packed direction/magnitude semantics, present-position bookkeeping, and software phase sequence `0,1,3,2`.
+
+8. Throttle-follower logic supplies a feed-forward trajectory contribution with translated slope, cap, P/N scaling, moving-drive addition, and decay behavior.
+
+9. A/C anticipation includes learned step demand, bounds, delay, P/N scaling, load application, and coordinated removal. External compressor torque remains a plant assumption.
+
+10. Fan anticipation is retained. Power-steering anticipation capability exists, but the relevant 9340 additions are zero in this calibration.
+
+11. Startup IAC positioning uses calibrated warm-park/start state rather than assuming the last running closed-loop position.
+
+12. Key-off homing is an explicit close-to-hard-stop/reset then reopen-to-park sequence. The live shutdown state machine uses calibrated park position `LC62F=144` and continues to rely on 6.25-ms one-step motor service while homing state is selected on the even branch.
+
+13. Physical airflow per step, motor current/polarity, mechanical displacement, and hard-stop force remain F3/F4 plant/electrical boundaries.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/IDLE_AIR_CONTROL_THEORY.md`
+- `docs/STEP144_IDLE_AIR_CONTROL_THEORY_AUDIT.txt`
+
+Index/reference links are updated separately as part of Step 144.
+
+Source and baseline impact
+--------------------------
+Documentation/theory only. No C source, test source, calibration, generated output, or frozen behavioral baseline changed.
+
+Closure
+-------
+Step 144 closes theory-of-operation Chapter 9 at the evidence-supported system level. Exact external driver polarity/current, airflow-per-step, mechanical hysteresis, and hard-stop physical behavior remain explicit future bench/documentation targets.
