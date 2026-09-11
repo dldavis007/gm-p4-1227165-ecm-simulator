@@ -79,7 +79,12 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Keep U11 `INJ`/`INJLIMP` and U12/U9 injector-driver transformations as
      custom-device boundaries unless direct electrical evidence closes them.
 9. **Idle-air control**
-   - PID cadence, motor service, A/C compensation, reset and park.
+   - Integrated chapter: [`IDLE_AIR_CONTROL_THEORY.md`](IDLE_AIR_CONTROL_THEORY.md).
+   - Integrates coolant/mode target idle, 50-ms feedback regulation, fractional
+     residual/quantization, 6.25-ms one-step motor service, throttle follower,
+     A/C/fan anticipation, startup positioning, and key-off close/reopen homing.
+   - Preserve the producer/executor distinction: regulator output can persist
+     across multiple IRQs while the motor consumes at most one step per service.
 10. **Emissions and accessory controls**
     - AIR, EGR, purge, fan and A/C.
 11. **Transmission and torque-converter clutch**
