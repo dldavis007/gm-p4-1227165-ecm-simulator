@@ -1,0 +1,53 @@
+Step 145 — Emissions and Accessory Control Theory Audit
+
+Objective
+---------
+Integrate the established secondary-air, EGR, canister-purge, cooling-fan, A/C/IAC interaction, and raw output-staging behavior into theory-of-operation Chapter 10 without inventing electrical polarity or actuator dynamics.
+
+Evidence reviewed
+-----------------
+- `src/air_control.inc.h`
+- `src/egr_control.inc.h`
+- `src/purge_control.inc.h`
+- `src/ac_control.inc.h`
+- `tests/egr_fan_regression.inc.h`
+- `docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md`
+- existing output-staging, A/C/IAC, AIR, purge, fan, major-loop, and Mode-4 regression references
+
+Findings
+--------
+1. Secondary-air management is a Major Segment-9 function and preserves raw request bits in `$003E`. The supplied `LC015=$04` calibration selects the source's two-air-valve configuration. Coolant, closed-loop history, RPM, PE, O2, load, VSS, and load-drop history all participate in the translated decision path.
+
+2. No valve electrical polarity is inferred from the software request bits. Segment-1 staging and external hardware remain separate boundaries.
+
+3. EGR is translated around `$DEE5-$DF49`. P/N normally inhibits, diagnostic mode can bypass that inhibit, MAT/TPS qualify, PE inhibits, RPM/load are capped for table use, and coolant multiplies the base duty.
+
+4. For this 9340 calibration, every reachable C23B EGR base-duty cell is 255. Thus ordinary RPM/load variation does not alter base duty in this image; coolant modulation remains active. This is calibration-specific rather than a universal P4 claim.
+
+5. CCP/purge is translated at `$E75D-$E816` with run-time, ALDL, coolant, DFCO, optional closed-loop, VSS, TPS, and airflow qualification. `$0114` is a minimum-request latch and `$0113` is the filtered command.
+
+6. In this calibration the C27C load-gain table is uniformly 128, so load does not change purge request even though the generic algorithm retains the load path. MAF/C272 remains active.
+
+7. Step-79 fan regression proves stateful fan behavior with A/C/request state, VSS, coolant hysteresis, prior fan state, and a 75-count hold interval in the exercised path. Raw threshold values are preserved without assigning unsupported physical units.
+
+8. Segment-5 A/C continuation `$E005-$E07B` preserves learned IAC anticipation, bounds, learning rate/time, and P/N gain. This supports anticipatory idle-load compensation rather than a simple post-sag correction.
+
+9. Fan and A/C effects on IAC remain software-state interactions. External fan thermal performance and compressor torque are F3 plant behavior.
+
+10. Segment-1 output staging remains the common hardware-facing boundary. AIR, purge, EGR, fan and other accessory requests become raw counts/register state without inventing external active-high/active-low semantics.
+
+Repository changes
+------------------
+Added:
+- `docs/reference/EMISSIONS_ACCESSORY_CONTROL_THEORY.md`
+- `docs/STEP145_EMISSIONS_ACCESSORY_CONTROL_THEORY_AUDIT.txt`
+
+Index/reference links are updated separately as part of Step 145.
+
+Source and baseline impact
+--------------------------
+Documentation/theory only. No C source, test source, calibration, generated output, or frozen behavioral baseline changed.
+
+Closure
+-------
+Step 145 closes theory-of-operation Chapter 10 at the evidence-supported system level. Final output polarity, connector/driver mapping details not yet explicitly cross-referenced, valve/relay dynamics, compressor load, fan thermal behavior, and physical engineering-unit calibration remain explicit future hardware/plant tasks.
