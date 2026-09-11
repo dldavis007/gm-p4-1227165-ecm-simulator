@@ -50,6 +50,10 @@ assembled listing.
   integrates U10 A/D channels, raw/processed state, acquisition/filter cadence,
   MAF/reference-derived load, and non-A/D event boundaries without moving
   plant/electrical assumptions into firmware-exact behavior.
+- [Airflow, fuel, and injector operation](AIRFLOW_FUEL_INJECTOR_THEORY.md)
+  integrates VMAF/airflow and load, crank/normal fueling, AFR/enrichment,
+  O2/closed-loop and BLM correction, AE/DFCO, pulse-width production, injector
+  service, and the U9/U11/U12 command/driver boundary.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
