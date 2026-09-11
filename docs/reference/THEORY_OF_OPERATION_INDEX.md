@@ -86,7 +86,12 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Preserve the producer/executor distinction: regulator output can persist
      across multiple IRQs while the motor consumes at most one step per service.
 10. **Emissions and accessory controls**
-    - AIR, EGR, purge, fan and A/C.
+    - Integrated chapter: [`EMISSIONS_ACCESSORY_CONTROL_THEORY.md`](EMISSIONS_ACCESSORY_CONTROL_THEORY.md).
+    - Integrates Major-Segment AIR, EGR, CCP/purge, cooling-fan and A/C control,
+      their calibrated qualification/hysteresis behavior, A/C/fan idle-load
+      anticipation, and the common raw Segment-1 output-staging boundary.
+    - Preserve the distinction between firmware request/state and physical
+      valve, relay, fan, compressor or driver polarity/dynamics.
 11. **Transmission and torque-converter clutch**
     - Selector state, TCC qualification, output boundary and brake power path.
 12. **Diagnostics and ALDL communication**
