@@ -42,8 +42,9 @@ test: $(TARGET)
 	grep -q "step-128 HAL-interface regression result: PASS (15/15)" $(OUTPUT)
 	grep -q "step-155 named-input HAL regression result: PASS (4/4)" $(OUTPUT)
 	grep -q "step-156 CTS/MAT HAL regression result: PASS (4/4)" $(OUTPUT)
+	grep -q "step-157 remaining-U10 HAL regression result: PASS (5/5)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156 HAL regressions pass."
+	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157 HAL regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt
