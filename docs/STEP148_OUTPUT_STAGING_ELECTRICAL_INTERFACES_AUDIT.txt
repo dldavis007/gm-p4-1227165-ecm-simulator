@@ -1,0 +1,106 @@
+STEP 148 - OUTPUT STAGING AND ELECTRICAL INTERFACES THEORY AUDIT
+================================================================
+
+Objective
+---------
+Close theory-of-operation Chapter 13 by integrating the listing-backed common
+output-staging block, U9/U11/U12 command boundaries, subsystem output requests,
+explicit raw HAL observers, schematic-connected paths, and unresolved physical
+driver/load behavior.
+
+Evidence reviewed
+-----------------
+- docs/STEP110_WHOLE_IMAGE_COVERAGE_AUDIT.txt
+- docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt
+- docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/U9_REGISTER_WINDOW_MAP.md
+- docs/reference/U11_U12_FUNCTIONAL_BOUNDARIES.md
+- current integrated subsystem theory chapters
+- src/output_handlers.inc.h
+- src/hal_interface.inc.h
+- tests/output_stage_regression.inc.h
+
+Result
+------
+Added docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md.
+
+The chapter establishes the output-side layering as:
+
+  F0 subsystem request
+      -> F0 raw MPU/I/O write
+      -> F1 proven schematic/net connection
+      -> F2 raw HAL observer
+      -> optional F3 electrical/plant interpretation
+
+Undocumented custom-device, driver, protection, waveform and load behavior
+remains F4.
+
+Key closure points
+------------------
+1. Major Segment 1 $EDA3-$EF03 remains the live common FULL-CORE/RAW-HAL
+   output-staging block established by Step 110.
+
+2. Direct writes to $3FCC, $3FD2, $3FD4, $3FD6, $3FD8 and $4004 remain raw
+   processor-visible facts. No unsupported active-high/active-low semantics are
+   assigned.
+
+3. The source-preserved Segment-1 behavior includes the two-pass >=171 battery
+   forced-off path, ordinary engine-off $D000 staging, field-diagnostic $DFFF,
+   normal AIR/AE/TCC/purge/fan/EGR selection, Mode-4 raw PWM overrides,
+   complement-before-scaling for normal purge/EGR, and source 16-bit wrap.
+
+4. tests/output_stage_regression.inc.h remains the regression proof for the
+   common output stage, including the frozen integrated signature FAADF8A6.
+
+5. Injector output remains a separate U9/U12 path: firmware command at
+   $3FD0/$3FCE -> U9 timing -> INJS/INJA -> U12 driver/current-control boundary
+   -> INJOUT/Q1. Phase, polarity, current regulation and physical injector
+   response are not invented.
+
+6. Spark/dwell output remains a U9/U12 command/feedback envelope using the
+   established U9 timing/control registers and visible IGN/ESTLOOP connections.
+   U9 internal timing and coil/driver electrical behavior remain bounded.
+
+7. IAC, TCC, AIR, EGR, purge/CCP, fan, A/C and diagnostic outputs are documented
+   as firmware request/raw-state producers first. Physical actuator state is a
+   separate F1-F4 question by signal.
+
+8. src/hal_interface.inc.h is now explicitly documented as the output contract:
+   generic MPU/I/O observers plus named injector, IAC and Segment-1 observers
+   expose software-visible quantities only and assign no voltage/current/load
+   semantics.
+
+Documentation updates
+---------------------
+- Added docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md.
+- Added this Step-148 audit.
+- Updated docs/reference/THEORY_OF_OPERATION_INDEX.md Chapter 13 to the
+  integrated chapter.
+- Updated docs/reference/README.md to link the chapter.
+- Updated docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md to point the
+  Segment-1 output-staging row to the integrated chapter and raw HAL contract.
+
+Code and regression impact
+--------------------------
+Documentation-only step. No C source, test, calibration, generated output or
+frozen behavioral baseline changed.
+
+Unresolved boundaries retained
+------------------------------
+- complete pin-by-pin decode of all Segment-1 MPU words;
+- output polarity not independently proven by schematic/driver topology;
+- U9/U11/U12 undocumented internal register-to-pin behavior;
+- injector current/phase/waveform and physical fuel delivery;
+- ignition driver/coil current and exact electrical waveform;
+- IAC motor/airflow mechanics;
+- TCC hydraulic consequence;
+- relay/solenoid/valve/fan/compressor/lamp dynamics;
+- plant assumptions as production electrical specifications.
+
+Conclusion
+----------
+Theory-of-operation Chapter 13 is now integrated. The repository has a single
+hardware-facing explanation of how translated subsystem state reaches raw
+processor-visible outputs while preserving the evidence boundary before
+external electrical and mechanical behavior.
