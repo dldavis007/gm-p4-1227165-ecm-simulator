@@ -71,6 +71,10 @@ assembled listing.
   integrates diagnostic qualification/history, service-lamp and flash-code
   behavior, normal 160-baud pulse-width-coded output, the 8192-baud SCI core,
   and Mode-4 lifecycle while preserving the external ALDL/transceiver boundary.
+- [Output staging and electrical interfaces](OUTPUT_STAGING_ELECTRICAL_INTERFACES.md)
+  integrates live Segment-1 raw MPU/I/O staging, injector/ignition custom-device
+  command paths, IAC/TCC/emissions/accessory output boundaries, and the explicit
+  raw HAL observer contract without inventing electrical polarity or load response.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
