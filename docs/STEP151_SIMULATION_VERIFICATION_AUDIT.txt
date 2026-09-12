@@ -1,0 +1,118 @@
+BUA / GM 1227165 STEP-151 SIMULATION / VERIFICATION AUDIT
+=========================================================
+
+Purpose
+-------
+Step 151 closes planned theory-of-operation Chapter 16 by consolidating the
+repository's verification strategy: focused regressions, scheduler/lifecycle
+integration tests, deterministic PC-only drive plants, frozen behavioral
+signatures, strict C89 build gates and the F0-F4 simulation-fidelity boundary.
+
+Evidence reviewed
+-----------------
+- simulation/dynamic_drive.inc.h
+- simulation/transmission_drive.inc.h
+- Makefile
+- main.c
+- docs/STEP104_BASELINE_FREEZE.txt
+- docs/STEP105_TRANSMISSION_AUDIT.txt
+- docs/STEP110_WHOLE_IMAGE_COVERAGE_AUDIT.txt
+- docs/STEP121_LIFECYCLE_INTEGRATION_AUDIT.txt
+- docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt
+- docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt
+- docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt
+- current integrated theory chapters and regression fragments
+
+Verification hierarchy
+----------------------
+The integrated chapter distinguishes:
+
+1. focused/unit-style regressions for exact helpers, tables, edge cases and
+   state-machine boundaries;
+2. scheduler/integration regressions proving source-order and live call-graph
+   placement;
+3. deterministic scenario/plant simulations that exercise multiple translated
+   subsystems through processor-facing inputs/events;
+4. frozen broad behavioral signatures that detect state changes beyond the
+   individually named assertions.
+
+Frozen signatures
+-----------------
+Step 104 normal-operation signature:        4BA6B7C6
+Step 105 transmission trace signature:      9732D09B
+Step 109 Segment-D signature:               F357A5F2
+Step 110 Segment-1 output signature:        FAADF8A6
+Step 111 ignition lifecycle signature:      16D17C9C
+
+The Step-104 signature is explicitly host-portable: bytes are hashed in a fixed
+order, independent of host structure padding/byte order and unsigned-long width,
+with multiplication reduced modulo 2^32.
+
+Historical replay isolation
+---------------------------
+Later live corrections are not forced back into frozen historical traces.
+Explicit PC-only replay switches preserve the old Step-104/105 comparison
+boundary for Segment D, Segment 1, ignition shutdown, Mode-4 lifecycle and the
+pre-Step-113 BLM initialization state where needed. These are regression tools,
+not ECM behavior.
+
+Plant boundary
+--------------
+simulation/dynamic_drive.inc.h is a behavioral integration profile, not a
+vehicle-dynamics claim. simulation/transmission_drive.inc.h derives Drive RPM
+from an explicit PC plant and labels gear ratios, shift thresholds, slip,
+smoothing and effective axle/tire behavior as simulation assumptions. A passing
+scenario therefore validates translated interaction under that stimulus but does
+not promote F3 constants to PROM or production-hardware facts.
+
+Timing boundary
+---------------
+Ordinary simulation uses the source-backed 6.25-ms IRQ entry, alternating
+12.5-ms minor paths and nominal 100-ms cadence per major segment. Reference and
+VSS pulse sources remain distinct from scheduler time. Host commands may create
+those pulses, but final firmware results are not precomputed outside the
+translated path.
+
+Build/regression gate
+---------------------
+The Makefile compiles only main.c using strict C89 flags and checks the frozen
+Step-104/105 signatures plus Step-106 through Step-121 regression result text,
+rejecting unexpected FAIL output. Later documentation-only theory steps make no
+new executable-baseline claim.
+
+Coverage language
+-----------------
+Step 151 retains the Step-122 distinction between whole-image behavioral closure
+and formal exhaustive coverage. No known reachable internally defined firmware
+area remained classified as unported at that checkpoint, but this is not a
+claim of instruction-by-instruction equivalence, formal branch/MC/DC coverage,
+or whole-machine/hardware equivalence.
+
+Files added
+-----------
+- docs/reference/SIMULATION_VERIFICATION_THEORY.md
+- docs/STEP151_SIMULATION_VERIFICATION_AUDIT.txt
+
+Living-reference integration
+----------------------------
+Step 151 updates the theory-of-operation index and reference README to mark
+Chapter 16 integrated. It also corrects the missing `.md` suffix in the existing
+U9 register-window-map link found while re-reading the current index.
+
+Code/test impact
+----------------
+Documentation only. No C source, tests, calibration, simulation constants,
+frozen signatures or behavioral baselines changed.
+
+Verification limitation
+-----------------------
+The GitHub connector session cannot execute the repository. This step therefore
+claims no new compile or runtime result. It documents previously established
+executed regression evidence and the current static test/build architecture.
+
+Conclusion
+----------
+All sixteen planned theory-of-operation chapters are now integrated. Future
+numbered work should be driven by new evidence, corrections, implementation or
+verification improvements rather than by recreating already-completed chapter
+integration.
