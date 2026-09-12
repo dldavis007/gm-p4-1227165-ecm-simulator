@@ -1,0 +1,97 @@
+STEP 147 — DIAGNOSTICS AND ALDL COMMUNICATION THEORY AUDIT
+==========================================================
+
+Objective
+---------
+Close theory-of-operation Chapter 12 by integrating diagnostic qualification,
+error logging/history, service-lamp/flash-code behavior, the normal 160-baud
+ALDL stream, the 8192-baud SCI protocol, and the Mode-4 lifecycle without
+inventing external transceiver or scan-tool behavior.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst as represented by the existing translated/audit
+  record; emitted listing remains authoritative.
+- src/diagnostic_qualification.inc.h
+- src/diagnostics.inc.h
+- src/diagnostic_flash.inc.h
+- src/scheduler_serial.inc.h
+- src/sci_8192.inc.h
+- src/mode4_lifecycle.inc.h
+- docs/STEP115_SCI_8192_AUDIT.txt
+- docs/STEP116_MODE4_LIFECYCLE_AUDIT.txt
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md
+
+Findings
+--------
+1. Diagnostic qualification, logging/history, lamp selection and flash-code
+   sequencing are separate firmware responsibilities and should remain separate
+   in the theory.
+
+2. Current subsystem failures are qualified at $E4F7-$E75C using listing-order
+   thresholds, timers and fixed-width state. The logger at $EFFE-$F10D masks,
+   debounces and promotes persistent current errors into retained bytes
+   $0005-$0009 and refreshes checksum $0018.
+
+3. The raw service-lamp helpers modify $3FFC exactly as translated. Physical
+   lamp-driver polarity remains outside F0.
+
+4. The field-service flash sequencer at $F10E-$F1BB starts a new sequence with
+   code 12, repeats each code three times, then scans masked stored-error bits
+   for subsequent codes.
+
+5. U10 AN7 DIAG / selector $70 is the processor-visible mode-selection input.
+   Firmware raw-count comparisons are F0; connector resistor/voltage meanings
+   remain electrical boundaries unless directly established.
+
+6. Normal 160-baud output is a source-backed pulse-width-coded stream tied to
+   the 6.25-ms IRQ and +11/+143 compare events. It is not modeled as a normal
+   UART byte waveform. The PC receiver observes only raw line transitions.
+
+7. Step 115 establishes one 8192-baud device ID $80 and Modes 0-4, including
+   length validation, modulo-256 receive checksum, two's-complement reply
+   checksum, Mode-1 table reads, Mode-2 sequential reads and Mode-3/4 source-
+   ordered payload sizing.
+
+8. Arbitrary ROM reads not represented by source-backed image data remain an
+   explicit address boundary rather than returning invented calibration bytes.
+
+9. Mode-4 reception and Mode-4 activation are distinct. SCI reception copies
+   mode/control state; a later scheduler pass establishes the Mode-4 state.
+
+10. On first Mode-4 entry, $0154 bits 6/5/4 respectively clear retained error
+    bytes and refresh their checksum, request the translated IAC reset/current-
+    position behavior, and reinitialize SAM/BLM state. Prior-Mode-4 state
+    prevents repeating these one-shot actions.
+
+11. The one-second timeout path preserves the emitted >30 condition. Equality
+    at 30 does not force Mode 0; clearing $0151 occurs only after the counter is
+    greater than 30, and exit completes on the following scheduler pass.
+
+12. Physical SCI baud generation, ALDL line voltage/polarity, transceiver
+    behavior, collisions, wakeup electrical details and interrupt latency stay
+    F3/F4.
+
+Repository changes
+------------------
+Added:
+- docs/reference/DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md
+- docs/STEP147_DIAGNOSTICS_ALDL_COMMUNICATION_THEORY_AUDIT.txt
+
+Updated as part of Step 147:
+- docs/reference/README.md
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+
+Source and baseline impact
+--------------------------
+Documentation/theory only. No C source, test source, calibration, generated
+output or frozen behavioral baseline changed.
+
+Closure
+-------
+Step 147 closes theory-of-operation Chapter 12 at the evidence-supported level.
+External ALDL transceiver electrical behavior, untranslated low-speed
+factory/diagnostic branches, arbitrary unrepresented ROM reads and scan-tool
+presentation remain explicit boundaries rather than inferred behavior.
