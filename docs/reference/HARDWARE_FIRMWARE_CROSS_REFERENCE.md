@@ -25,6 +25,7 @@ software write can be F0 while its external electrical consequence remains F4.
 | Batch injection | Service gate `$F67B-$F768`; pulse write `$F9D2-$F9E4`; factory register exercise `$FE4F-$FE9F` | sampled `$00A0` bit 6; `$3FD0` synchronous PW; `$3FCE` EFI delay | U9 `INJS/INJA` -> U12 driver; U12 `INJOUT` -> Q1; U11 `INJ` -> `INJLIMP`; sense/limit loops | `src/injector_service.inc.h`, `src/ecm_core.inc.h`, `src/factory_test_execution.inc.h` | fuel/spark, startup-fuel and factory-test regressions | F0 command/service; F1 connections; F2/F3 plant; F4 phase, polarity and current control |
 | IAC control and motor | 50-ms producer plus 6.25-ms service; `$D370-$D3DB` key-off homing | IAC target/position/phase RAM | `IACA`, `IACB`, `IACEN`, stepper mechanics | `src/ecm_core.inc.h`, `src/ac_control.inc.h`, `src/ignition_shutdown.inc.h` | IAC/A-C, closed-loop/IAC and shutdown regressions | F0 software; F1 connection; F2/F3 motor/engine plant |
 | Segment 1 output staging | `$EDA3-$EF03`; see `OUTPUT_STAGING_ELECTRICAL_INTERFACES.md` | `$3FCC`, `$3FD2`, `$3FD4`, `$3FD6`, `$3FD8`, `$4004` | Output drivers and physical polarity | `src/output_handlers.inc.h`, `src/major_loop.inc.h`, raw observers in `src/hal_interface.inc.h` | `tests/output_stage_regression.inc.h` | F0 raw writes; F1 where schematic-proven; F2 raw HAL observations; F3/F4 polarity/load |
+| Explicit C-port HAL / target migration | Existing listing-backed inputs, outputs and scheduler entries; see `C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md` | low RAM `<$0200`; U9 `$3FC0-$3FFF`; I/O `$4000-$400F`; `$5000`; named `$3FD0/$002C/$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004` | Target timer, A/D, capture, output, serial, retained-memory and power wrappers | `src/hal_interface.inc.h`, one-translation-unit `main.c`; target wrappers not yet selected | Step-128 HAL regression plus historical PC regression suite; Step-150 architecture audit | Preserve F0/F1; replace PC F2 with target mechanisms; keep F3 PC-only; leave F4 unresolved |
 | Vehicle speed | Major Segment 2 `$E07F` | VSS/status RAM | `VSS` conditioned input | `src/major_loop.inc.h`, `src/scheduler_serial.inc.h` | Scheduler and transmission regressions | F0 software; F1 connection; F2/F3 pulse calibration |
 | TCC and transmission | Segment E and common output staging; see `TRANSMISSION_TCC_THEORY.md` and Step 105 audit | Selector/TCC state and translated calibration/state | External brake series-power boundary and TCC driver | `src/ecm_core.inc.h`, `src/major_loop.inc.h`, `src/output_handlers.inc.h`; optional `simulation/transmission_drive.inc.h` | `tests/tcc_transmission_regression.inc.h` | F0 qualification/raw staging; F1 brake/driver connection where proven; F2 selector/VSS stimulus; F3 ratios/slip/vehicle plant; F4 external driver/hydraulic clutch |
 | Coolant processing | Segment 6 and listing-resolved exits | Coolant variables and tables | CTS analog conditioning | `src/coolant_control.inc.h` | Coolant and listing-coolant regressions | F0 software; F1 connection; F2/F3/F4 analog transfer |
@@ -58,7 +59,9 @@ CCP and serial/register state. Any external active-high/active-low interpretatio
 must remain separate until directly supported by the 1227165 hardware path.
 
 See `docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt` for the complete classification
-and prioritized backlog.
+and prioritized backlog. See `C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md` and the
+Step-150 audit for the corresponding target-port architecture and incremental
+migration sequence.
 
 ## Cross-reference rules
 
