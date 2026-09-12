@@ -3,9 +3,13 @@ static void run_step156_cts_mat_hal_test(void)
 {
     unsigned int passed=0u;
     unsigned int total=4u;
+    bua_u8 saved_cts;
+    bua_u8 saved_mat;
 #define STEP156_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
 
     printf("\nStep-156 CTS/MAT raw input HAL regression:\n");
+    saved_cts=sim_cts_adc;
+    saved_mat=sim_mat_adc;
 
     STEP156_CHECK(hw_adc(0x40u)==120u,
                   "CTS raw backing preserves the historical default selector value 120");
@@ -22,6 +26,12 @@ static void run_step156_cts_mat_hal_test(void)
 
     printf("  step-156 CTS/MAT HAL regression result: %s (%u/%u)\n",
            (passed==total)?"PASS":"FAIL",passed,total);
+
+    /* This HAL regression is invoked before the frozen dynamic-drive baselines.
+     * Restore the raw stimuli so the test itself cannot perturb later behavior.
+     */
+    sim_cts_adc=saved_cts;
+    sim_mat_adc=saved_mat;
 #undef STEP156_CHECK
 }
 
