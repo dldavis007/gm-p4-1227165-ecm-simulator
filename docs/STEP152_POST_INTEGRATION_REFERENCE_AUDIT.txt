@@ -1,0 +1,57 @@
+Step 152 — Post-Integration Reference-Set Audit
+
+Objective
+---------
+Audit the completed sixteen-part theory-of-operation structure after Step 151, verify that the integrated reference set is navigable and evidence-bounded, and identify any organizational gaps without inventing new firmware or hardware conclusions.
+
+Repository baseline
+-------------------
+Audit started from main commit 7605d709d838f13a2eec7eab14b94aa24f5c0617 (Step 151 link simulation verification chapter).
+
+Evidence reviewed
+-----------------
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+- docs/reference/README.md
+- docs/reference/EVIDENCE_REGISTER.md
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- the integrated theory chapters created in Steps 139-151
+- docs/reference/MEMCAL_ARCHITECTURE.md and the supporting MEMCAL functional/signal-chain references
+- docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md for reset, retained-memory, key-off and exceptional-mode boundaries
+- docs/reference/SIMULATION_VERIFICATION_THEORY.md for regression/fidelity closure
+- repository tree and Step 139-151 change inventory
+
+Findings
+--------
+1. Steps 139-151 added thirteen dedicated integrated theory documents covering planned chapters 3 and 5-16. Chapter 4 is represented by the pre-existing MEMCAL architecture/functional-network reference set. Chapters 1 and 2 are represented by existing foundational documents rather than by separately named chapter files.
+
+2. The Step-151 statement that the sixteen-part set is closed is therefore organizationally valid, but the index was asymmetric: chapters 1 and 2 had only prose scope bullets while later chapters named their controlling reference documents. This could make those two chapters appear unfinished to a reader even though their evidence is present elsewhere.
+
+3. Chapter 1 is controlled by docs/reference/README.md, docs/reference/EVIDENCE_REGISTER.md, docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md and this theory index. These establish target scope, evidence order, status/confidence vocabulary, source provenance rules and the F0-F4 fidelity vocabulary.
+
+4. Chapter 2 spans both hardware and firmware boundaries. Hardware power/reset/keep-alive evidence belongs in the hardware/evidence references and cross-reference; executable reset, retained-memory validation/recovery, key-off, SWI and restart behavior is integrated in STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md. The physical reset controller, rail timing and keep-alive consequences remain F4 where not directly established.
+
+5. Chapter 4 is intentionally a reference set rather than one newly generated Step-139+ chapter. MEMCAL_ARCHITECTURE.md supplies the 66-contact carrier/J4 and EPROM architecture; MEMCAL_FUNCTIONAL_NETWORKS.md and MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md supply functional electrical and firmware-facing traces. Photograph/direct physical evidence remains authoritative for the as-built reconstruction where legible.
+
+6. The evidence hierarchy remains coherent across the integrated set: emitted listing behavior is authoritative for firmware; direct physical/schematic evidence controls hardware connectivity; simulation assumptions remain F3; undocumented custom/external behavior remains F4. No audit finding justifies collapsing those layers.
+
+7. The post-integration set preserves the major unresolved boundaries rather than hiding them: U9/U11/U12 internals, optional $5800 ROM, external $6000 code, exact ALDL electrical behavior, physical reset/keep-alive effects, unresolved MEMCAL destinations/encodings, exact transmission hydraulics and formal exhaustive path coverage.
+
+8. Step 151 correctly distinguishes deterministic behavioral regression from physical truth. Frozen signatures are broad change detectors, not evidence that every simulated or hashed state is factory-accurate.
+
+9. The Step 139-151 comparison is documentation/reference work: it added the integrated theory and audit documents and updated the navigation/cross-reference material. This post-integration audit does not introduce a behavioral baseline change.
+
+10. No new Chapter 17 is warranted. Future numbered work should be evidence-, correction-, implementation- or verification-driven. The most useful immediate maintenance action is to make chapters 1, 2 and 4 explicit in the index so all sixteen entries point to their controlling reference material.
+
+Repository changes
+------------------
+Added:
+- docs/STEP152_POST_INTEGRATION_REFERENCE_AUDIT.txt
+
+Updated:
+- docs/reference/THEORY_OF_OPERATION_INDEX.md
+
+No C source, test, calibration, simulation constant, frozen signature or behavioral baseline is changed by Step 152.
+
+Closure
+-------
+The integrated theory-of-operation reference set is structurally closed after Step 151, with Step 152 clarifying the three chapters that are represented by foundational/multi-document reference sets rather than newly named Step-139+ chapter files. Remaining open items are evidence or implementation questions, not missing chapter placeholders.
