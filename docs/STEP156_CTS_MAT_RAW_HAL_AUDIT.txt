@@ -74,6 +74,8 @@ Updated tests/hal_interface_regression.inc.h:
 - verifies historical MAT default 0
 - verifies a CTS setter value reaches hw_adc($40)
 - verifies a MAT setter value reaches hw_adc($80) before firmware complementing
+- saves and restores the CTS/MAT raw stimuli after the test so the regression
+  cannot alter later frozen drive-cycle baselines
 
 Updated Makefile:
 
@@ -108,13 +110,28 @@ sensor models. Those remain F3/F4 unless independently established.
 
 Verification
 ------------
-The repository strict-C89 GitHub Actions workflow remains the execution gate.
-The Step-156 Makefile requirement ensures the new 4/4 regression cannot be
-silently disconnected without causing CI to fail.
+The first complete Step-156 CI attempts exposed a regression-test isolation
+error rather than a translated ECM behavior change: the new test changed the
+raw CTS/MAT stimulus bytes and left those test values active before the frozen
+Step-104 dynamic-drive baseline executed. As a result the Step-104 signature
+gate correctly rejected the run.
 
-No frozen Step-104/105/109/110/111 signature was intentionally changed, and no
-calibration, scheduler cadence, translated control algorithm, or plant constant
-was changed by Step 156.
+Commit:
+  b3c2f7607415ad42cbe53d0d3b8d35d99913ce24
+  Step 156 restore CTS MAT regression stimuli
+
+corrected the test by saving and restoring sim_cts_adc and sim_mat_adc around
+the Step-156 checks. The subsequent strict-C89 GitHub Actions run completed
+successfully. That successful run verifies the existing frozen signature gates,
+Steps 106-121 regressions, Step-128/155 HAL regressions, and the new Step-156
+CTS/MAT regression under the repository's normal make clean test command.
+
+The failed pre-correction CI runs are retained as useful evidence that the
+frozen behavioral signature detected the unintended test-state leak; no frozen
+signature was changed to make the new code pass.
+
+No calibration, scheduler cadence, translated control algorithm, or plant
+constant was changed by Step 156.
 
 Conclusion
 ----------
@@ -124,5 +141,7 @@ MAF/TPS/O2/DIAG inputs while preserving the source-backed acquisition boundary:
   external/plant assumption -> raw HAL byte -> hw_adc selector -> translated
   firmware processing -> processed state
 
-This closes the specific Step-155 limitation without moving CTS or MAT firmware
-behavior into the HAL.
+The Step-156 regression is isolated from later simulation state, and repository-
+hosted strict-C89 CI confirms that the historical behavioral baselines remain
+intact. This closes the specific Step-155 limitation without moving CTS or MAT
+firmware behavior into the HAL.
