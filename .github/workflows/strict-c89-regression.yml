@@ -1,0 +1,32 @@
+name: Strict C89 regression
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show compiler version
+        run: gcc --version
+
+      - name: Strict C89 build and regression gate
+        run: make clean test
+
+      - name: Upload regression output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bua-regression-output
+          path: build/bua_step121_output.txt
+          if-no-files-found: ignore
