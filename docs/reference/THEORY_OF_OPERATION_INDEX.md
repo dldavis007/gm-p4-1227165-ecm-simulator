@@ -110,7 +110,9 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
       transceiver voltage, polarity, collisions, physical baud timing and scan-
       tool presentation.
 13. **Output staging and electrical interfaces**
-    - Raw MPU/I/O writes, driver polarity, protected outputs and HAL contract.
+    - Integrated chapter: [`OUTPUT_STAGING_ELECTRICAL_INTERFACES.md`](OUTPUT_STAGING_ELECTRICAL_INTERFACES.md).
+    - Integrates live Segment-1 `$EDA3-$EF03` raw staging, `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`, injector and ignition U9/U11/U12 boundaries, IAC/TCC/emissions/accessory outputs, protected-driver limits, and the explicit raw HAL observer contract.
+    - Preserve the sequence F0 firmware request/write -> F1 proven connection -> F2 raw HAL observation -> optional F3 plant/electrical interpretation, with undocumented custom-device/driver behavior retained as F4.
 14. **Startup, shutdown, and exceptional modes**
     - Boot validation, factory test, SWI/reset vectors and optional ROM.
 15. **C port architecture and embedded migration**
