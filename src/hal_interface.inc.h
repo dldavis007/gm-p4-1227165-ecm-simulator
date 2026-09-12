@@ -2,6 +2,7 @@
  * Step 128: explicit processor-visible HAL boundary.
  * Step 155: named raw setters for additional already-backed ECM inputs.
  * Step 156: raw CTS/MAT backing plus named U10-facing setters.
+ * Step 157: complete named raw setters for the remaining known U10 channels.
  *
  * This layer intentionally exposes raw ECM-facing stimuli and observations.
  * It does not convert engineering units other than the two already-existing
@@ -22,20 +23,44 @@ static void bua_hal_set_o2_adc(bua_u8 raw)
     sim_o2_adc=raw;
 }
 
+/* Historical low-RAM injection retained for existing tests. This writes the
+ * processor-visible $007E state directly; it is not the raw U10 AN1/VOLT
+ * boundary. Step 157 adds bua_hal_set_volt_adc() for that raw selector input.
+ */
 static void bua_hal_set_battery_adc(bua_u8 raw)
 {
     BATTERY_AD=raw;
 }
 
-/* Steps 155/156 name raw U10-facing simulator bytes that already correspond
- * to evidence-supported selector inputs. These setters deliberately do not
- * inject processed CTS, TPS, MAT, airflow/load, or diagnostic mode state;
- * firmware still performs the established selector/storage/conversion work
- * after hw_adc() sees the raw byte.
+/* Steps 155-157 name raw U10-facing simulator bytes that correspond to the
+ * schematic/listing-supported selector inputs. These setters deliberately do
+ * not inject processed temperature, throttle, airflow/load, voltage diagnostic,
+ * or knock state. Firmware still performs the established selector/storage/
+ * conversion work after hw_adc() sees the raw byte.
+ *
+ * MAP2 ($00), MAP ($30), and ESC ($90) are retained as raw conversion resources
+ * because factory test proves those selector positions. The supplied normal
+ * image does not explicitly request those three channels, so these setters do
+ * not imply a normal-operation consumer.
  */
+static void bua_hal_set_map2_adc(bua_u8 raw)
+{
+    sim_map2_adc=raw;
+}
+
+static void bua_hal_set_volt_adc(bua_u8 raw)
+{
+    sim_volt_adc=raw;
+}
+
 static void bua_hal_set_maf_adc(bua_u8 raw)
 {
     sim_maf_adc=raw;
+}
+
+static void bua_hal_set_map_adc(bua_u8 raw)
+{
+    sim_map_adc=raw;
 }
 
 static void bua_hal_set_cts_adc(bua_u8 raw)
@@ -48,6 +73,11 @@ static void bua_hal_set_tps_adc(bua_u8 raw)
     sim_tps_adc=raw;
 }
 
+static void bua_hal_set_pumpvolt_adc(bua_u8 raw)
+{
+    sim_pumpvolt_adc=raw;
+}
+
 static void bua_hal_set_mat_adc(bua_u8 raw)
 {
     sim_mat_adc=raw;
@@ -56,6 +86,11 @@ static void bua_hal_set_mat_adc(bua_u8 raw)
 static void bua_hal_set_diag_adc(bua_u8 raw)
 {
     sim_diag_adc=raw;
+}
+
+static void bua_hal_set_esc_adc(bua_u8 raw)
+{
+    sim_esc_adc=raw;
 }
 
 /* $3FCA is the processor-visible U9 counter whose changes are consumed as the
