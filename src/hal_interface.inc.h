@@ -1,6 +1,7 @@
 /*
  * Step 128: explicit processor-visible HAL boundary.
  * Step 155: named raw setters for additional already-backed ECM inputs.
+ * Step 156: raw CTS/MAT backing plus named U10-facing setters.
  *
  * This layer intentionally exposes raw ECM-facing stimuli and observations.
  * It does not convert engineering units other than the two already-existing
@@ -26,19 +27,30 @@ static void bua_hal_set_battery_adc(bua_u8 raw)
     BATTERY_AD=raw;
 }
 
-/* Step 155 names the raw U10-facing simulator bytes that already exist in the
- * translated harness. These setters deliberately do not inject processed TPS,
- * airflow/load, or diagnostic mode state; firmware still performs the
- * established selector/storage/normalization work after hw_adc() sees them.
+/* Steps 155/156 name raw U10-facing simulator bytes that already correspond
+ * to evidence-supported selector inputs. These setters deliberately do not
+ * inject processed CTS, TPS, MAT, airflow/load, or diagnostic mode state;
+ * firmware still performs the established selector/storage/conversion work
+ * after hw_adc() sees the raw byte.
  */
 static void bua_hal_set_maf_adc(bua_u8 raw)
 {
     sim_maf_adc=raw;
 }
 
+static void bua_hal_set_cts_adc(bua_u8 raw)
+{
+    sim_cts_adc=raw;
+}
+
 static void bua_hal_set_tps_adc(bua_u8 raw)
 {
     sim_tps_adc=raw;
+}
+
+static void bua_hal_set_mat_adc(bua_u8 raw)
+{
+    sim_mat_adc=raw;
 }
 
 static void bua_hal_set_diag_adc(bua_u8 raw)
