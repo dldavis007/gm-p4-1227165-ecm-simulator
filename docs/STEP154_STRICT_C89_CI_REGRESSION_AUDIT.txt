@@ -1,0 +1,105 @@
+BUA / GM 1227165 STEP 154 - STRICT C89 CI REGRESSION AUDIT
+==========================================================
+
+Purpose
+-------
+Step 154 turns the repository's existing local strict-C89 regression command
+into an automated GitHub Actions verification boundary. It also closes a small
+gap in the Makefile gate by explicitly requiring the Step-128 HAL regression
+result that was already wired into the executable harness.
+
+Baseline
+--------
+Step 154 began from main commit:
+  03bdc839017e667feed4a496e04fe6ca44435feb
+  Step 153 clarify foundational chapter navigation
+
+Evidence reviewed
+-----------------
+- Makefile
+- main.c
+- docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt
+- tests/hal_interface_regression.inc.h
+- repository .github/workflows path (no workflow existed before Step 154)
+
+Findings
+--------
+1. The Makefile already supplied the correct portable verification command:
+
+     make clean test
+
+   It compiles main.c with:
+
+     gcc -std=c89 -Wall -Wextra -pedantic
+
+   and checks the frozen Step-104/105 signatures plus the Step-106 through
+   Step-121 regression result strings. It also rejects emitted FAIL lines.
+
+2. Step 128 had already added a 15-check HAL regression and wired it through
+   tests/diagnostic_integration_regression.inc.h, so main.c did not require
+   reordering. The regression prints:
+
+     step-128 HAL-interface regression result: PASS (15/15)
+
+3. The prior Makefile's generic FAIL scan would detect an ordinary Step-128
+   failure, but it did not positively require that the Step-128 regression had
+   actually executed. Step 154 therefore adds an explicit grep for the 15/15
+   Step-128 result. This makes accidental removal/disconnection of that test a
+   gate failure rather than a silent omission.
+
+4. No .github/workflows directory existed on main before this step. Therefore
+   the repository had no automatic GitHub-hosted execution of the strict-C89
+   regression gate; prior documentation correctly avoided claiming connector-
+   executed builds.
+
+Changes
+-------
+Updated:
+- Makefile
+  - explicitly requires Step-128 HAL PASS (15/15)
+  - updates the success summary to include Step 128
+
+Added:
+- .github/workflows/strict-c89-regression.yml
+  - runs on pushes to main
+  - runs on pull requests
+  - supports manual workflow_dispatch
+  - uses ubuntu-latest and actions/checkout@v4
+  - records gcc --version
+  - executes make clean test
+  - uploads build/bua_step121_output.txt on failure when available
+  - grants only contents: read
+  - uses a 10-minute job timeout
+
+Behavioral boundary
+-------------------
+This step changes verification infrastructure, not ECM behavior. It does not
+change C algorithms, include ordering, calibration, simulator constants,
+translated RAM/register behavior, plant assumptions, or frozen signatures.
+
+Verification status
+-------------------
+Immediately after the workflow file was committed, the GitHub Actions runs API
+returned zero runs for main. Therefore this audit does NOT claim that GitHub CI
+has already executed successfully. The workflow is committed and eligible to
+run; its first observed completed run will provide the first repository-hosted
+strict-C89 execution evidence.
+
+This distinction is intentional: workflow presence is direct repository
+evidence, while a successful run must be observed before it is recorded as
+runtime verification.
+
+Commits made before this audit
+------------------------------
+- 886226acd37e5d1a6b470f7bc31891042790bcf9
+  Step 154 gate Step-128 HAL regression
+- a5c8826ad3836cba8571e6f70124c2bdb94e55ac
+  Step 154 add strict C89 regression CI
+
+Conclusion
+----------
+Step 154 establishes a reproducible repository-hosted verification path and
+makes the existing Step-128 HAL test a positive Makefile requirement. The next
+verification action is to observe the first workflow run and, if it fails,
+use the build/regression output to correct the failure without changing frozen
+behavior merely to satisfy CI.
