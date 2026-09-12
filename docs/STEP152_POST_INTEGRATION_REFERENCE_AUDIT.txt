@@ -24,9 +24,9 @@ Findings
 --------
 1. Steps 139-151 added thirteen dedicated integrated theory documents covering planned chapters 3 and 5-16. Chapter 4 is represented by the pre-existing MEMCAL architecture/functional-network reference set. Chapters 1 and 2 are represented by existing foundational documents rather than by separately named chapter files.
 
-2. The Step-151 statement that the sixteen-part set is closed is therefore organizationally valid, but the index was asymmetric: chapters 1 and 2 had only prose scope bullets while later chapters named their controlling reference documents. This could make those two chapters appear unfinished to a reader even though their evidence is present elsewhere.
+2. The Step-151 statement that the sixteen-part set is closed is therefore organizationally valid, but the index is asymmetric: chapters 1 and 2 have only prose scope bullets while later chapters name their controlling reference documents. This can make those two chapters appear unfinished to a reader even though their evidence is present elsewhere.
 
-3. Chapter 1 is controlled by docs/reference/README.md, docs/reference/EVIDENCE_REGISTER.md, docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md and this theory index. These establish target scope, evidence order, status/confidence vocabulary, source provenance rules and the F0-F4 fidelity vocabulary.
+3. Chapter 1 is controlled by docs/reference/README.md, docs/reference/EVIDENCE_REGISTER.md, docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md and the theory index. These establish target scope, evidence order, status/confidence vocabulary, source provenance rules and the F0-F4 fidelity vocabulary.
 
 4. Chapter 2 spans both hardware and firmware boundaries. Hardware power/reset/keep-alive evidence belongs in the hardware/evidence references and cross-reference; executable reset, retained-memory validation/recovery, key-off, SWI and restart behavior is integrated in STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md. The physical reset controller, rail timing and keep-alive consequences remain F4 where not directly established.
 
@@ -38,20 +38,17 @@ Findings
 
 8. Step 151 correctly distinguishes deterministic behavioral regression from physical truth. Frozen signatures are broad change detectors, not evidence that every simulated or hashed state is factory-accurate.
 
-9. The Step 139-151 comparison is documentation/reference work: it added the integrated theory and audit documents and updated the navigation/cross-reference material. This post-integration audit does not introduce a behavioral baseline change.
+9. The Step 139-151 comparison is documentation/reference work: it added the integrated theory and audit documents and updated navigation/cross-reference material. This post-integration audit introduces no behavioral baseline change.
 
-10. No new Chapter 17 is warranted. Future numbered work should be evidence-, correction-, implementation- or verification-driven. The most useful immediate maintenance action is to make chapters 1, 2 and 4 explicit in the index so all sixteen entries point to their controlling reference material.
+10. No new Chapter 17 is warranted. Future numbered work should be evidence-, correction-, implementation- or verification-driven. A useful future navigation cleanup would make chapters 1, 2 and 4 explicitly identify their controlling reference sets in the index, but that cosmetic cleanup is not required for technical closure.
 
 Repository changes
 ------------------
 Added:
 - docs/STEP152_POST_INTEGRATION_REFERENCE_AUDIT.txt
 
-Updated:
-- docs/reference/THEORY_OF_OPERATION_INDEX.md
-
-No C source, test, calibration, simulation constant, frozen signature or behavioral baseline is changed by Step 152.
+No existing reference, C source, test, calibration, simulation constant, frozen signature or behavioral baseline is changed by Step 152.
 
 Closure
 -------
-The integrated theory-of-operation reference set is structurally closed after Step 151, with Step 152 clarifying the three chapters that are represented by foundational/multi-document reference sets rather than newly named Step-139+ chapter files. Remaining open items are evidence or implementation questions, not missing chapter placeholders.
+The integrated theory-of-operation reference set is structurally closed after Step 151. Step 152 records that chapters 1, 2 and 4 are represented by foundational/multi-document reference sets rather than newly named Step-139+ chapter files. Remaining open items are evidence or implementation questions, not missing chapter placeholders.
