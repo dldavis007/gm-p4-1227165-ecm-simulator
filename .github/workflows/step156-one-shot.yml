@@ -1,0 +1,44 @@
+name: Step 156 one-shot raw ADC patch
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Step 156 stage raw CTS MAT backing patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add raw CTS and MAT ADC backing variables
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/ecm_core.inc.h')
+          s = p.read_text()
+          old_vars = '''static bua_u8 sim_maf_adc = 128u;\nstatic bua_u8 sim_o2_adc = 128u;\nstatic bua_u8 sim_tps_adc = 35u;\nstatic bua_u8 sim_diag_adc = 200u;'''
+          new_vars = '''static bua_u8 sim_maf_adc = 128u;\nstatic bua_u8 sim_o2_adc = 128u;\nstatic bua_u8 sim_cts_adc = 120u;\nstatic bua_u8 sim_tps_adc = 35u;\nstatic bua_u8 sim_mat_adc = 0u;\nstatic bua_u8 sim_diag_adc = 200u;'''
+          old_adc = '''        case 0x10u: return 128u;\n        case 0x20u: return sim_o2_adc;\n        case 0x40u: return 120u;\n        case 0x50u: return sim_tps_adc;\n        case 0x70u: return sim_diag_adc;\n        case 0xA0u: return sim_maf_adc;\n        default:    return 0u;'''
+          new_adc = '''        case 0x10u: return 128u;\n        case 0x20u: return sim_o2_adc;\n        case 0x40u: return sim_cts_adc;\n        case 0x50u: return sim_tps_adc;\n        case 0x70u: return sim_diag_adc;\n        case 0x80u: return sim_mat_adc;\n        case 0xA0u: return sim_maf_adc;\n        default:    return 0u;'''
+          if s.count(old_vars) != 1:
+              raise SystemExit('expected simulator variable block not found exactly once')
+          if s.count(old_adc) != 1:
+              raise SystemExit('expected hw_adc switch block not found exactly once')
+          s = s.replace(old_vars, new_vars, 1).replace(old_adc, new_adc, 1)
+          p.write_text(s)
+          PY
+
+      - name: Remove one-shot workflow and commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/step156-one-shot.yml
+          git add src/ecm_core.inc.h
+          git commit -m "Step 156 add raw CTS MAT ADC backing"
+          git push
