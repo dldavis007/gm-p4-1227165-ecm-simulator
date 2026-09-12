@@ -1,0 +1,83 @@
+STEP 146 - TRANSMISSION AND TORQUE-CONVERTER-CLUTCH THEORY AUDIT
+================================================================
+
+Objective
+---------
+Close theory-of-operation Chapter 11 by integrating the existing listing-backed
+transmission/TCC translation, scheduler/output architecture, hardware boundary,
+C implementation, regression coverage and optional PC transmission plant.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst as represented by the existing translated/audit
+  record; emitted listing remains authoritative.
+- docs/STEP105_TRANSMISSION_AUDIT.txt
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md
+- src/ecm_core.inc.h
+- src/major_loop.inc.h
+- src/output_handlers.inc.h
+- simulation/transmission_drive.inc.h
+- tests/tcc_transmission_regression.inc.h
+- existing hardware/schematic evidence inventory
+
+Result
+------
+Added docs/reference/TRANSMISSION_TCC_THEORY.md.
+
+The chapter records the evidence-supported architecture as:
+
+  F3 transmission/vehicle plant
+      -> F2 firmware-visible selector/VSS stimuli
+      -> F0 Segment-E TCC qualification/state
+      -> F0 common raw output staging
+      -> F4 external driver / brake-series-power / hydraulic clutch boundary
+
+The chapter preserves these distinctions:
+- selector/TCC state is firmware behavior; it is not by itself a complete
+  physical transmission-switch model;
+- VSS production is separate from the Segment-E TCC consumer;
+- a firmware TCC request is distinct from raw ECM output and from actual clutch
+  engagement;
+- the external brake path can interrupt/release the physical TCC power path and
+  must not be collapsed into a convenient firmware bit without evidence;
+- transmission ratios, converter slip and vehicle dynamics in
+  simulation/transmission_drive.inc.h are F3 test-plant assumptions, not PROM
+  calibration or production-transmission facts;
+- external driver polarity, hydraulic delay and clutch mechanics remain F4
+  unless direct evidence closes them.
+
+Documentation updates
+---------------------
+- Added docs/reference/TRANSMISSION_TCC_THEORY.md.
+- Updated docs/reference/README.md to link the integrated chapter.
+- Updated docs/reference/THEORY_OF_OPERATION_INDEX.md Chapter 11 from a planned
+  placeholder to the integrated chapter and its evidence boundaries.
+- Updated docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md TCC/transmission
+  row to point to the integrated theory chapter and make F0/F1/F2/F3/F4
+  layering explicit.
+
+Code and regression impact
+--------------------------
+Documentation-only step. No C source, calibration, test, generated output or
+frozen behavioral baseline changed.
+
+Existing tests/tcc_transmission_regression.inc.h remains the regression proof
+for the currently translated behavior. No new behavioral claim was introduced
+that requires changing the baseline.
+
+Unresolved boundaries retained
+------------------------------
+- exact external selector-switch electrical encoding where not directly proven;
+- external TCC driver polarity where not closed by schematic evidence;
+- exact brake-contact polarity/voltage throughout the physical series path;
+- hydraulic apply/release delay and converter clutch capacity;
+- real production gear ratios/slip curves inferred only from the PC plant;
+- unexercised or variant-specific transmission behavior.
+
+Conclusion
+----------
+Theory-of-operation Chapter 11 is now integrated at the same evidence-bounded
+level as the preceding chapters. The repository can describe how the supplied
+firmware qualifies and stages TCC control while keeping physical transmission
+and clutch behavior outside the firmware-exact layer.

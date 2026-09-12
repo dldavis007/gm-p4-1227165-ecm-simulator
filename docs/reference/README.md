@@ -62,6 +62,11 @@ assembled listing.
   integrates secondary AIR, EGR, canister purge, cooling fan, A/C interaction,
   calibrated hysteresis/qualification behavior, and the common raw output-
   staging boundary without inventing driver or actuator polarity.
+- [Transmission and torque-converter clutch](TRANSMISSION_TCC_THEORY.md)
+  integrates selector/transmission state, TCC qualification, VSS interaction,
+  raw output staging, the external brake series-power boundary, and the
+  optional transmission drive plant while keeping F0 firmware behavior
+  separate from F3/F4 vehicle, electrical, hydraulic and clutch assumptions.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
@@ -108,5 +113,3 @@ For each new finding:
 3. Assign an evidence status defined in `EVIDENCE_REGISTER.md`.
 4. Add or update the applicable cross-reference row.
 5. Link the corresponding C implementation and regression when present.
-6. If behavior changes, rerun the strict C89 build and all regressions and
-   document the intentional baseline change.

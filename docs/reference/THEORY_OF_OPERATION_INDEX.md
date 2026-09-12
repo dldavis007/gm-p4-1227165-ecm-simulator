@@ -93,7 +93,14 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
     - Preserve the distinction between firmware request/state and physical
       valve, relay, fan, compressor or driver polarity/dynamics.
 11. **Transmission and torque-converter clutch**
-    - Selector state, TCC qualification, output boundary and brake power path.
+    - Integrated chapter: [`TRANSMISSION_TCC_THEORY.md`](TRANSMISSION_TCC_THEORY.md).
+    - Integrates selector/transmission state, Segment-E TCC qualification,
+      vehicle-speed interaction, common raw output staging and the external
+      brake series-power boundary.
+    - Keep firmware request, raw ECM output and actual powered/hydraulic clutch
+      state distinct. Ratios, converter slip and vehicle dynamics in the PC
+      drive model remain F3 assumptions; unresolved driver/hydraulic behavior
+      remains F4.
 12. **Diagnostics and ALDL communication**
     - Fault qualification, flash codes, 160 baud, 8192 baud and Mode 4.
 13. **Output staging and electrical interfaces**
