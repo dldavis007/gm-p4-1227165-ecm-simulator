@@ -114,7 +114,14 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
     - Integrates live Segment-1 `$EDA3-$EF03` raw staging, `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`, injector and ignition U9/U11/U12 boundaries, IAC/TCC/emissions/accessory outputs, protected-driver limits, and the explicit raw HAL observer contract.
     - Preserve the sequence F0 firmware request/write -> F1 proven connection -> F2 raw HAL observation -> optional F3 plant/electrical interpretation, with undocumented custom-device/driver behavior retained as F4.
 14. **Startup, shutdown, and exceptional modes**
-    - Boot validation, factory test, SWI/reset vectors and optional ROM.
+    - Integrated chapter: [`STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md`](STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md).
+    - Integrates the source-ordered `$C800-$C9F3` power-on path, retained-memory
+      checksum/recovery, normal startup, factory-test selection/execution,
+      ordinary-to-key-off transition, LF447 BLM commit, IAC close/reopen-to-park,
+      terminal `$D6EA` SWI boundary, literal `$FFF0-$FFFE` vector table and
+      end-to-end restart composition.
+    - Preserve the distinction between F0 reset/SWI requests and F4 processor,
+      keep-alive, power-rail and optional `$5800`/external `$6000` consequences.
 15. **C port architecture and embedded migration**
     - C89 rules, exact-width/wrap behavior, modular include structure and HALs.
 16. **Simulation and verification**
