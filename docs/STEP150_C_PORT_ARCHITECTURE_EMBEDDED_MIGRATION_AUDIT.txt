@@ -1,0 +1,105 @@
+BUA / GM 1227165 STEP-150 C PORT ARCHITECTURE / EMBEDDED MIGRATION AUDIT
+======================================================================
+
+Purpose
+-------
+Step 150 integrates the current C-port architecture and defines an evidence-
+preserving path from the C89 PC harness to a future embedded target. This is a
+documentation-only theory step. It does not select a target MCU, change
+translated algorithms, or claim that the original ECM was implemented in C.
+
+Repository architecture
+-----------------------
+The active project intentionally remains one C translation unit. main.c includes
+`.inc.h` implementation fragments from src/, simulation/ and tests/ in a fixed
+order. The fragments are not independent public headers or separately compiled
+objects. This preserves the frozen historical static linkage, declaration order
+and simple strict-C89/OnlineGDB build model.
+
+The repository Makefile confirms the build contract:
+
+  gcc -std=c89 -Wall -Wextra -pedantic main.c
+
+and gates historical Step-104/105 signatures plus Step-106 through Step-121
+regression results.
+
+Behavioral portability rules
+-----------------------------
+Embedded migration must preserve behavioral widths rather than assume host C
+integer behavior. The chapter calls out 8/16-bit wraparound, signed/unsigned
+comparisons, big-endian RAM/MPU word helpers, integer promotions, shifts and
+explicit saturation/carry behavior as migration-sensitive areas.
+
+Scheduler boundary
+------------------
+The existing source-backed timing model remains authoritative: ordinary 6.25-ms
+IRQ service, alternating 12.5-ms odd/even paths and one-of-sixteen major
+selection. A future hardware timer may replace the PC invocation mechanism, but
+not silently reorder the translated work. Reference, VSS, injector and ignition
+events remain separate event/HAL boundaries rather than host-precomputed control
+results.
+
+F0-F4 migration boundary
+------------------------
+Step 150 carries the Step-127 fidelity classes into the target-port plan:
+
+  F0 listing-backed firmware behavior: preserve in the translated core
+  F1 proven hardware connection: preserve as a board/interface requirement
+  F2 processor-visible HAL state: replace PC mechanism with target acquisition/output
+  F3 plant/engineering-unit assumptions: keep out of target firmware authority
+  F4 unresolved custom/electrical behavior: leave unresolved until evidence closes it
+
+HAL seam
+--------
+Step 128's src/hal_interface.inc.h remains the explicit raw boundary. Existing
+named setters/observers expose established processor-facing O2, battery, VSS,
+reference-RPM, bounded RAM, U9 MPU, parallel-I/O, injector-command, IAC and raw
+Segment-1 state without assigning physical voltage polarity, current, waveform,
+force or hydraulic behavior.
+
+Target-specific responsibilities
+--------------------------------
+The chapter assigns timer/vector syntax, A/D setup, capture inputs, physical
+output drivers, serial/transceiver setup, watchdog/COP mechanics, retained
+memory and physical power/reset/keep-alive handling to target-specific wrappers.
+Listing-backed raw writes and state remain in the portable F0 core.
+
+Startup/reset distinction
+-------------------------
+ecm_reset() remains a deterministic PC regression fixture. The source-ordered
+Step-120 $C800-$C9F3 dispatcher and Step-121 lifecycle composition remain the
+correct live firmware authority. A target port must enter that source-backed
+boundary rather than substituting the regression fixture for physical power-on.
+
+Recommended migration order
+---------------------------
+The chapter defines an incremental sequence: freeze PC baselines; compile the
+unchanged core on the target; verify widths/endian/arithmetic; replace scheduler
+trigger; migrate F2 inputs one at a time; migrate raw outputs one at a time;
+keep F3 plants PC-only; validate startup/retained state separately; and retain
+the PC build as the behavioral reference throughout migration.
+
+Evidence limits
+---------------
+No replacement MCU/compiler/board is selected. U9/U11/U12 internal behavior,
+ALDL electrical characteristics, injector-driver current control, TCC
+hydraulics, power-hold circuitry and optional external ROM remain unresolved or
+target-dependent boundaries. No convenient implementation is promoted to ECM
+fact.
+
+Files added
+-----------
+- docs/reference/C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md
+- docs/STEP150_C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION_AUDIT.txt
+
+Living-reference integration
+----------------------------
+Step 150 also updates the theory-of-operation index, reference README and
+hardware/firmware cross-reference to point Chapter 15 and the explicit HAL seam
+to this integrated architecture chapter.
+
+Verification
+------------
+Documentation only. No C source, tests, calibration or behavioral baselines are
+changed. The GitHub connector does not provide a shell, so no new runtime result
+is claimed by this step.
