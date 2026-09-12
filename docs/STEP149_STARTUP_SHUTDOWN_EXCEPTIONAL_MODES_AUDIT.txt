@@ -1,0 +1,146 @@
+STEP 149 - STARTUP, SHUTDOWN, AND EXCEPTIONAL MODES THEORY AUDIT
+===============================================================
+
+Objective
+---------
+Close theory-of-operation Chapter 14 by integrating the existing listing-backed
+power-on/reset path, retained-memory validation/recovery, normal startup,
+factory-test selection/execution, ignition-off shutdown, IAC homing, vector/SWI
+boundaries, and optional external-ROM behavior into one lifecycle chapter.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst through the existing source-backed audits
+- docs/STEP111_IGNITION_SHUTDOWN_AUDIT.txt
+- docs/STEP112_RESET_STARTUP_AUDIT.txt
+- docs/STEP113_RETAINED_MEMORY_AUDIT.txt
+- docs/STEP114_NORMAL_STARTUP_AUDIT.txt
+- docs/STEP117_FACTORY_TEST_CONTROL_AUDIT.txt
+- docs/STEP118_FACTORY_TEST_EXECUTION_AUDIT.txt
+- docs/STEP119_VECTOR_BOUNDARY_AUDIT.txt
+- docs/STEP120_POWER_ON_INTEGRATION_AUDIT.txt
+- docs/STEP121_LIFECYCLE_INTEGRATION_AUDIT.txt
+- docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md
+- docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md
+- docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md
+- src/ignition_shutdown.inc.h
+- src/factory_test_control.inc.h
+- src/factory_test_execution.inc.h
+- src/vector_boundaries.inc.h
+
+Result
+------
+Added docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md.
+
+The chapter records the integrated lifecycle as:
+
+  external reset/power event (F4/F2)
+      -> emitted $C800-$C9F3 startup (F0)
+      -> ordinary scheduler/control (F0)
+      -> $D6D1-$D769 key-off shutdown (F0)
+      -> $D6EA SWI endpoint (F0)
+      -> physical keep-alive/power/reset consequence (F4)
+
+A later acknowledged reset re-enters through the emitted $C800 path; the host
+does not pre-clear RAM in place of the firmware.
+
+Key closure points
+------------------
+1. Step 120 remains the live authority for the source-ordered power-on path,
+   distinct from deterministic PC fixture ecm_reset().
+
+2. Startup order is preserved from $C800 through $C9F3, including early MPU/I/O
+   initialization, exact volatile-RAM clearing, factory-test selection before
+   retained-data recovery, optional $5800 probe, retained-memory validation,
+   startup SWI boundary, normal subsystem initialization and scheduler handoff.
+
+3. LF3A7 at $F3A7 initializes a 16-bit checksum to one and adds exactly retained
+   error bytes $0005-$0009. Invalid retained state clears $002D down through
+   $0001 but not $0000, recomputes the checksum, invokes LF434, initializes IAC
+   position 144 and stores $40 at $003D.
+
+4. LF434 stores $8000 in both SAM words and $80 in all 16 BLM cells. Historical
+   replay values are not promoted to current ECM behavior.
+
+5. Normal startup $C93B-$C9F3 remains source ordered and hands off to the
+   scheduler; startup is not treated as equivalent to engine-running state.
+
+6. Factory-test selection follows emitted unsigned comparisons. The factory
+   path is isolated from normal initialization and diverts the IRQ through the
+   Step-117/118 control/execution path.
+
+7. Factory-test execution preserves raw FMD/A-D/PWM/IAC/fuel/spark behavior and
+   exact wrap/equality behavior while leaving FMD/SPI electrical timing, output
+   polarity and physical actuator consequences outside F0.
+
+8. Ignition-off shutdown preserves the housekeeping timer, mode cleanup,
+   LF447 retained-BLM commit, nonterminal $D727-$D769 tail and terminal LC012
+   $0385 comparison before the $D6EA SWI boundary.
+
+9. IAC shutdown homing remains a producer/executor system: the even 12.5-ms
+   path closes to zero then reopens to calibrated park 144 while the 6.25-ms
+   motor service consumes steps. The above-park +127 edge case is preserved.
+
+10. The emitted vector words at $FFF0-$FFFE are recorded literally:
+      $FFF0->$6000, $FFF2->$C9F4, $FFF4->$F27B, $FFF6->$6000,
+      $FFF8/$FFFA/$FFFC/$FFFE->$C800.
+    No comment-derived exception names or CPU reset semantics are fabricated.
+
+11. Exact modeled SWI sites include $CDCD, $D6EA, $FD03 and $FDB3, with the
+    startup $C938 SWI boundary also retained. The repository does not invent a
+    vector-slot assignment where the listing does not prove it.
+
+12. The optional $5800 HUD/expansion region and $6000 vector destinations remain
+    external/absent-code boundaries rather than guessed implementations.
+
+13. Step 121 already proves composition across reset request, $C800 startup,
+    ordinary operation, ignition-off shutdown, BLM commit, IAC homing,
+    software-powerdown, reset acknowledgement, valid-retained restart,
+    corrupted-retained recovery and factory-path isolation.
+
+Documentation updates
+---------------------
+- Added docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md.
+- Added this Step-149 audit.
+- Updated docs/reference/THEORY_OF_OPERATION_INDEX.md Chapter 14 to link the
+  integrated chapter and its evidence boundaries.
+- Updated docs/reference/README.md to link the chapter.
+- Updated docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md so power-on,
+  shutdown, factory-test and vector rows point to the integrated lifecycle
+  chapter while retaining their original fidelity classifications.
+
+Code and regression impact
+--------------------------
+Documentation-only step. No C source, test, calibration, generated output or
+frozen behavioral baseline changed.
+
+Existing regression proof remains authoritative:
+- Step 111 shutdown/lifecycle regression
+- Step 112 reset/startup regression
+- Step 113 retained-memory regression
+- Step 114 normal-startup regression
+- Steps 117/118 factory-test regressions
+- Step 119 vector/exception-boundary regression
+- Step 120 unified power-on-dispatch regression
+- Step 121 end-to-end lifecycle integration regression
+
+Unresolved boundaries retained
+------------------------------
+- physical ignition/battery/keep-alive rail behavior;
+- CPU reset/COP/clock-fail/SWI exception mechanics;
+- comment-derived vector names not proven by the emitted table;
+- external code at $6000;
+- optional ROM code at $5800;
+- FMD/SPI electrical timing and undocumented mode semantics;
+- exact factory A/D electrical transfer;
+- physical effects of factory raw output writes;
+- IAC mechanical response beyond firmware command/bookkeeping;
+- host initialization as a substitute for source-ordered firmware startup.
+
+Conclusion
+----------
+Theory-of-operation Chapter 14 is now integrated. The repository has one
+source-ordered lifecycle explanation spanning reset request, power-on, retained
+state, normal startup, factory mode, ordinary operation, shutdown, software
+powerdown, exceptional entries and restart without filling hardware/absent-ROM
+boundaries with convenient assumptions.
