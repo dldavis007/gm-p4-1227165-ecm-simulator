@@ -1,4 +1,53 @@
 /* Step 128 regression for the explicit raw HAL boundary. */
+static void run_step157_remaining_u10_hal_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=5u;
+    bua_u8 saved_map2;
+    bua_u8 saved_volt;
+    bua_u8 saved_map;
+    bua_u8 saved_pumpvolt;
+    bua_u8 saved_esc;
+#define STEP157_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-157 remaining known U10 raw input HAL regression:\n");
+    saved_map2=sim_map2_adc;
+    saved_volt=sim_volt_adc;
+    saved_map=sim_map_adc;
+    saved_pumpvolt=sim_pumpvolt_adc;
+    saved_esc=sim_esc_adc;
+
+    bua_hal_set_map2_adc(0x11u);
+    STEP157_CHECK(hw_adc(0x00u)==0x11u,
+                  "MAP2 setter reaches raw U10/AN0 selector $00 without inventing a normal consumer");
+
+    bua_hal_set_volt_adc(0x22u);
+    STEP157_CHECK(hw_adc(0x10u)==0x22u,
+                  "VOLT setter reaches raw U10/AN1 selector $10 before firmware stores $007E");
+
+    bua_hal_set_map_adc(0x33u);
+    STEP157_CHECK(hw_adc(0x30u)==0x33u,
+                  "MAP setter reaches raw U10/AN3 selector $30 without redefining the MAF load path");
+
+    bua_hal_set_pumpvolt_adc(0x44u);
+    STEP157_CHECK(hw_adc(0x60u)==0x44u,
+                  "PUMPVOLT setter reaches distinct raw U10/AN6 selector $60");
+
+    bua_hal_set_esc_adc(0x55u);
+    STEP157_CHECK(hw_adc(0x90u)==0x55u,
+                  "ESC setter reaches raw U10/AN9 selector $90 without replacing U9 knock events");
+
+    printf("  step-157 remaining-U10 HAL regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    sim_map2_adc=saved_map2;
+    sim_volt_adc=saved_volt;
+    sim_map_adc=saved_map;
+    sim_pumpvolt_adc=saved_pumpvolt;
+    sim_esc_adc=saved_esc;
+#undef STEP157_CHECK
+}
+
 static void run_step156_cts_mat_hal_test(void)
 {
     unsigned int passed=0u;
@@ -33,6 +82,8 @@ static void run_step156_cts_mat_hal_test(void)
     sim_cts_adc=saved_cts;
     sim_mat_adc=saved_mat;
 #undef STEP156_CHECK
+
+    run_step157_remaining_u10_hal_test();
 }
 
 static void run_step155_named_input_hal_test(void)
