@@ -113,3 +113,5 @@ For each new finding:
 3. Assign an evidence status defined in `EVIDENCE_REGISTER.md`.
 4. Add or update the applicable cross-reference row.
 5. Link the corresponding C implementation and regression when present.
+6. If behavior changes, rerun the strict C89 build and all regressions and
+   document the intentional baseline change.
