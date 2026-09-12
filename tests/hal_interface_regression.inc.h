@@ -1,4 +1,34 @@
 /* Step 128 regression for the explicit raw HAL boundary. */
+static void run_step155_named_input_hal_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=4u;
+#define STEP155_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-155 named raw input HAL regression:\n");
+    ecm_reset();
+
+    bua_hal_set_maf_adc(0x5Au);
+    STEP155_CHECK(hw_adc(0xA0u)==0x5Au,
+                  "MAF setter reaches the existing raw U10/VMAF selector source");
+
+    bua_hal_set_tps_adc(0x46u);
+    STEP155_CHECK(hw_adc(0x50u)==0x46u,
+                  "TPS setter reaches the existing raw U10/TPS selector source");
+
+    bua_hal_set_diag_adc(0xC3u);
+    STEP155_CHECK(hw_adc(0x70u)==0xC3u,
+                  "DIAG setter reaches the existing raw U10/DIAG selector source");
+
+    bua_hal_set_u9_knock_counter(0x1234u);
+    STEP155_CHECK(bua_hal_get_mpu16be(0x3FCAu)==0x1234u,
+                  "knock-counter setter reaches raw U9 $3FCA without assigning edge semantics");
+
+    printf("  step-155 named-input HAL regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+#undef STEP155_CHECK
+}
+
 static void run_step128_hal_interface_test(void)
 {
     unsigned int passed=0u;
@@ -68,4 +98,6 @@ static void run_step128_hal_interface_test(void)
     printf("  step-128 HAL-interface regression result: %s (%u/%u)\n",
            (passed==total)?"PASS":"FAIL",passed,total);
 #undef STEP128_CHECK
+
+    run_step155_named_input_hal_test();
 }
