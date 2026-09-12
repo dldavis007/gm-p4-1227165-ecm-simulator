@@ -1,0 +1,172 @@
+BUA / GM 1227165 STEP 157 - COMPLETE KNOWN U10 RAW HAL AUDIT
+================================================================
+
+Purpose
+-------
+Step 157 completes the explicit raw HAL surface for every U10 analog channel
+whose schematic identity is currently established, while preserving the
+supplied-image distinction between normal-operation channels and channels only
+observed in factory-test conversion.
+
+Baseline
+--------
+Step 157 began from main commit:
+  fc5d92aa891d93f85f1d078be09f422e64485603
+  Step 156 record final CI verification
+
+Evidence reviewed
+-----------------
+- src/ecm_core.inc.h
+- src/hal_interface.inc.h
+- tests/hal_interface_regression.inc.h
+- Makefile
+- docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md
+
+Established U10 selector map
+----------------------------
+The integrated sensor evidence establishes these known U10 channels:
+
+  $00  AN0   MAP2
+  $10  AN1   VOLT
+  $20  AN2   O2
+  $30  AN3   MAP
+  $40  AN4   CTS
+  $50  AN5   TPS
+  $60  AN6   PUMPVOLT
+  $70  AN7   DIAG
+  $80  AN8   MAT
+  $90  AN9   ESC
+  $A0  AN10  VMAF
+
+Selector $B0 remains unresolved because the retained schematic establishes only
+AN0 through AN10. Step 157 deliberately does not assign a name or setter to $B0.
+
+Prior implementation state
+--------------------------
+Before Step 157, hw_adc() already had mutable raw backing for O2, CTS, TPS,
+DIAG, MAT, and VMAF. The remaining known selectors behaved as follows:
+
+  $00 MAP2      -> default 0
+  $10 VOLT      -> literal 128
+  $30 MAP       -> default 0
+  $60 PUMPVOLT  -> default 0
+  $90 ESC       -> default 0
+
+Those defaults made the harness deterministic but prevented explicit raw HAL
+stimulus of the remaining known U10 channels.
+
+Changes
+-------
+Updated src/ecm_core.inc.h:
+
+- added sim_map2_adc, default 0
+- added sim_volt_adc, default 128
+- added sim_map_adc, default 0
+- added sim_pumpvolt_adc, default 0
+- added sim_esc_adc, default 0
+- changed hw_adc() so selectors $00/$10/$30/$60/$90 read those backing bytes
+
+The default values exactly preserve the previous selector behavior.
+
+Updated src/hal_interface.inc.h with:
+
+- bua_hal_set_map2_adc(raw)
+- bua_hal_set_volt_adc(raw)
+- bua_hal_set_map_adc(raw)
+- bua_hal_set_pumpvolt_adc(raw)
+- bua_hal_set_esc_adc(raw)
+
+MAP2, MAP, and ESC are exposed only as raw conversion resources. The supplied
+normal image still has no explicit normal request for $00, $30, or $90; their
+setters do not imply that such a normal-operation consumer exists.
+
+VOLT versus historical battery setter
+-------------------------------------
+The older bua_hal_set_battery_adc(raw) writes processor-visible RAM $007E
+directly and is retained for compatibility with existing regressions. It is not
+the same boundary as raw U10 AN1/VOLT.
+
+Step 157 therefore adds bua_hal_set_volt_adc(raw) for the raw $10 selector
+boundary rather than silently redefining the historical setter.
+
+PUMPVOLT remains distinct from VOLT, matching both the schematic channel split
+and the listing-backed $60 -> $007F acquisition path.
+
+ESC versus knock events
+-----------------------
+The AN9/ESC setter exposes only raw U10 selector $90. It does not replace or
+reinterpret the separately established normal knock-event path through
+CAL32/KNOCK# -> U12 -> U9 -> processor-visible $3FCA deltas.
+
+Regression
+----------
+Updated tests/hal_interface_regression.inc.h with a Step-157 5-check regression
+that verifies raw setter-to-selector reachability for:
+
+- MAP2 $00
+- VOLT $10
+- MAP $30
+- PUMPVOLT $60
+- ESC $90
+
+The regression saves and restores all five raw backing values so it cannot
+contaminate later frozen dynamic-drive signatures.
+
+Updated Makefile to positively require:
+
+  step-157 remaining-U10 HAL regression result: PASS (5/5)
+
+Verification
+------------
+Strict-C89 GitHub Actions run 34715573332 executed commit:
+  c9c33ee3e93cdce48c8b4f386bc93da81e8d75ef
+  Step 157 gate remaining U10 HAL regression
+
+Result:
+  success
+
+This verifies the new 5/5 gate together with the existing frozen signatures and
+regression suite on the repository-hosted Ubuntu/GCC environment.
+
+Implementation note
+-------------------
+src/ecm_core.inc.h is large enough that normal whole-file connector replacement
+is impractical. As in Step 156, a temporary assertion-checked one-shot GitHub
+Actions workflow made two exact source substitutions and removed itself in the
+same generated commit.
+
+The resulting source commit is:
+  c19ddf1aae198962365ce5d9f4105b811dd80a89
+  Step 157 add remaining known U10 raw ADC backing
+
+No temporary Step-157 workflow remains in the resulting tree.
+
+Boundary after Step 157
+-----------------------
+Every currently identified U10 AN0-AN10 channel now has a named raw simulator
+backing/setter path. That statement concerns the conversion boundary only; it
+does not claim every channel participates in normal operation in this PROM.
+
+The supported model remains:
+
+  physical sensor/plant assumption (F3)
+      -> raw U10-facing HAL byte (F2)
+      -> listing-backed selector/acquisition/processing (F0)
+      -> processed firmware state and consumers (F0)
+
+Unresolved electrical/custom-device behavior remains outside this boundary.
+
+Remaining evidence needs
+------------------------
+- identify selector $B0 from authoritative U10 information or controlled test
+- determine whether MAP2/MAP/ESC normal acquisition appears in other PROMs
+- measure U10 analog/reference transfer if electrical-accuracy simulation is
+  eventually required
+- continue expanding discrete/event inputs at their actual processor-visible
+  boundaries rather than forcing them into the U10 A/D model
+
+Conclusion
+----------
+Step 157 closes the known U10 raw-input HAL coverage gap without changing the
+supplied-image normal sensor topology, without turning MAP into the load source,
+and without collapsing ESC analog observation into the U9 knock-event path.
