@@ -1,0 +1,133 @@
+BUA / GM 1227165 STEP 155 - NAMED RAW INPUT HAL AUDIT
+=====================================================
+
+Purpose
+-------
+Step 155 begins the post-Step-128 expansion of the explicit hardware-abstraction
+layer (HAL) by replacing generic/raw test pokes with named setters only where
+an existing processor-facing simulator source or register is already established.
+The goal is to improve the migration/test seam without inventing sensor transfer
+functions, engineering-unit conversions, or undocumented custom-device behavior.
+
+Baseline
+--------
+Step 155 began from main commit:
+  2848c252cb3091c7791ce8cec269bc601955060a
+  Step 154 document strict C89 CI regression gate
+
+Evidence reviewed
+-----------------
+- src/hal_interface.inc.h
+- src/ecm_core.inc.h
+- tests/hal_interface_regression.inc.h
+- docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md
+- docs/reference/U9_REGISTER_WINDOW_MAP.md
+- docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt
+- Makefile and the Step-154 strict-C89 GitHub Actions gate
+
+Established raw sources
+-----------------------
+The current PC core already contains three explicit raw U10-facing simulator
+bytes used by hw_adc():
+
+- sim_maf_adc -> selector $A0 -> U10 AN10 VMAF
+- sim_tps_adc -> selector $50 -> U10 AN5 TPS
+- sim_diag_adc -> selector $70 -> U10 AN7 DIAG
+
+The listing-backed sensor chapter establishes that these are raw acquisition
+boundaries. Firmware performs the downstream storage, normalization, threshold,
+transient, airflow and load behavior. Step 155 therefore adds named setters for
+these existing bytes rather than setting processed RAM state.
+
+Named setters added
+-------------------
+- bua_hal_set_maf_adc(raw)
+- bua_hal_set_tps_adc(raw)
+- bua_hal_set_diag_adc(raw)
+
+These setters write only the pre-existing raw simulator stimulus bytes. They do
+not introduce volts, percent throttle, airflow, or diagnostic-mode abstractions.
+
+Knock boundary
+--------------
+The U9 register audit establishes $3FCA as the processor-visible counter whose
+changes are consumed as the knock-event quantity by the supplied firmware. The
+hardware path U12 KNOCK -> U9 pin 42 is direct, while the internal U9 mapping
+from that pin to $3FCA remains a strong inference/custom-device boundary.
+
+Step 155 therefore adds:
+
+- bua_hal_set_u9_knock_counter(raw)
+
+This writes the raw 16-bit $3FCA register state. The name intentionally says
+"counter" rather than "knock event". It does not claim that one physical edge,
+one combustion event, or one U12 transition produces exactly one counter count.
+
+CTS and MAT status
+------------------
+The evidence supports the raw channels:
+
+- CTS: selector $40 / U10 AN4
+- MAT: selector $80 / U10 AN8
+
+However, the current PC hw_adc() implementation does not yet back those selectors
+with named mutable raw stimulus bytes: CTS currently returns the literal 120 and
+MAT currently falls through the default zero return. Adding HAL setters that
+write processed COOLANT/MAT RAM would bypass the listing-backed conversion and
+would violate the F2 -> F0 boundary.
+
+Therefore Step 155 deliberately does NOT add pretend CTS/MAT setters. The next
+implementation step should first replace those hw_adc() constants/defaults with
+raw backing bytes while preserving their existing default values and all frozen
+behavior; only then should named CTS/MAT HAL setters be added and regression-
+checked.
+
+Regression
+----------
+A new Step-155 regression performs four checks:
+
+1. MAF setter is visible through hw_adc($A0).
+2. TPS setter is visible through hw_adc($50).
+3. DIAG setter is visible through hw_adc($70).
+4. U9 knock-counter setter is observable at raw $3FCA.
+
+The Step-128 15/15 regression remains unchanged and is still run first. The
+Step-155 test is invoked from the same HAL regression fragment without reordering
+main.c.
+
+The Makefile now positively requires:
+
+  step-155 named-input HAL regression result: PASS (4/4)
+
+so the GitHub Actions strict-C89 workflow will fail if this new boundary test is
+removed, disconnected, or fails.
+
+Behavioral boundary
+-------------------
+Step 155 does not change normal ECM algorithms, scheduler cadence, calibration,
+MAF/TPS/DIAG default stimuli, U9 internal behavior, plant assumptions, or frozen
+Step-104/105/109/110/111 signatures. It adds named access to already-existing
+raw sources/register state.
+
+Files changed
+-------------
+Updated:
+- src/hal_interface.inc.h
+- tests/hal_interface_regression.inc.h
+- Makefile
+
+Added:
+- docs/STEP155_NAMED_RAW_INPUT_HAL_AUDIT.txt
+
+Verification status
+-------------------
+The changes are committed and wired into the Step-154 GitHub Actions gate. A
+completed successful workflow run for the final Step-155 commit is required
+before claiming repository-hosted runtime verification.
+
+Conclusion
+----------
+Step 155 moves MAF, TPS, DIAG, and the raw U9 knock counter onto explicit named
+HAL entry points without crossing the evidence boundary. CTS and MAT remain the
+next small implementation gap because their hw_adc() raw sources are currently
+hardcoded rather than backed by mutable raw stimulus bytes.
