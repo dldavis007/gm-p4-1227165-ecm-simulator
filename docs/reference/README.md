@@ -84,6 +84,10 @@ assembled listing.
   defines the single-translation-unit C89 portability contract, address/state
   model, scheduler/event boundary, F0-F4 migration responsibilities, explicit
   raw HAL seam and an incremental regression-preserving target-port sequence.
+- [Simulation and verification](SIMULATION_VERIFICATION_THEORY.md) documents
+  focused regressions, scheduler/lifecycle integration, deterministic PC-only
+  plant scenarios, frozen behavioral signatures, strict-C89 build gates and the
+  distinction between regression evidence and physical-hardware fidelity.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
@@ -113,8 +117,8 @@ assembled listing.
 - [ESC and knock signal chain](ESC_KNOCK_SIGNAL_CHAIN.md) keeps CAL29/U10 AN9
   separate from CAL32/U12/U9 event counting and follows the listing-backed
   retard, recovery, spark, and Error-43 behavior.
-- [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the planned
-  chapter structure for the eventual complete ECM description.
+- [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the integrated
+  sixteen-chapter structure for the current ECM description.
 
 The historical `docs/STEPxxx_*.txt` files remain checkpoint records. They
 should not be rewritten into a single latest-state narrative. New evidence
