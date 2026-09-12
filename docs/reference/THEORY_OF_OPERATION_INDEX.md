@@ -102,7 +102,13 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
       drive model remain F3 assumptions; unresolved driver/hydraulic behavior
       remains F4.
 12. **Diagnostics and ALDL communication**
-    - Fault qualification, flash codes, 160 baud, 8192 baud and Mode 4.
+    - Integrated chapter: [`DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md`](DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md).
+    - Integrates listing-backed fault qualification/history, service-lamp and
+      flash-code sequencing, the 160-baud pulse-width-coded display stream,
+      8192-baud SCI device `$80` Modes 0-4, and scheduler-facing Mode-4 lifecycle.
+    - Preserve the boundary between firmware protocol/state and external ALDL
+      transceiver voltage, polarity, collisions, physical baud timing and scan-
+      tool presentation.
 13. **Output staging and electrical interfaces**
     - Raw MPU/I/O writes, driver polarity, protected outputs and HAL contract.
 14. **Startup, shutdown, and exceptional modes**
