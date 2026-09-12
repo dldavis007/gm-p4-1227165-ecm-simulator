@@ -80,6 +80,10 @@ assembled listing.
   validation/recovery, normal startup, factory-test execution, key-off/IAC
   shutdown, SWI/vector boundaries, restart composition, and the absent `$5800`
   optional-ROM boundary without inventing physical reset or keep-alive behavior.
+- [C port architecture and embedded migration](C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md)
+  defines the single-translation-unit C89 portability contract, address/state
+  model, scheduler/event boundary, F0-F4 migration responsibilities, explicit
+  raw HAL seam and an incremental regression-preserving target-port sequence.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
