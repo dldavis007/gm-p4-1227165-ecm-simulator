@@ -18,7 +18,7 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`U11_U12_FUNCTIONAL_BOUNDARIES.md`](U11_U12_FUNCTIONAL_BOUNDARIES.md)
      for the evidence-bounded external roles of U11 and U12; do not substitute
      inferred internal transfer functions for the documented F4 boundaries.
-   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP) and
+   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP.md) and
      [`U9_REGISTER_WINDOW_CLOSURE.md`](U9_REGISTER_WINDOW_CLOSURE.md) for the
      evidence-supported `$3FC0-$3FFF` processor-visible map. Addresses without
      established semantics remain unclassified, not assumed unused or reserved.
@@ -133,7 +133,16 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
     - Migrate incrementally against the frozen PC regression reference rather
       than combining algorithm refactoring with hardware replacement.
 16. **Simulation and verification**
-    - Unit/regression distinctions, frozen signatures, drive plants and timing.
+    - Integrated chapter: [`SIMULATION_VERIFICATION_THEORY.md`](SIMULATION_VERIFICATION_THEORY.md).
+    - Distinguishes focused/unit-style regression from scheduler/lifecycle
+      integration and deterministic F3 plant scenarios, while documenting the
+      frozen Step-104/105/109/110/111 signatures and strict-C89 Makefile gate.
+    - Treat signatures as broad change detectors, not proof of physical truth;
+      preserve explicit assertions, source-order integration checks and F0-F4
+      boundaries when behavior or target hardware changes.
+    - Step-151 closes the planned sixteen-chapter theory set. Future numbered
+      work should be driven by new evidence, corrections, implementation or
+      verification improvements rather than recreating integrated chapters.
 
 ## Chapter acceptance criteria
 
