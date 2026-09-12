@@ -78,8 +78,10 @@ Documentation updates
 - Updated docs/reference/THEORY_OF_OPERATION_INDEX.md Chapter 13 to the
   integrated chapter.
 - Updated docs/reference/README.md to link the chapter.
-- Updated docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md to point the
-  Segment-1 output-staging row to the integrated chapter and raw HAL contract.
+- The existing docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md Segment-1
+  row already records $EDA3-$EF03, the raw output addresses, implementation,
+  regression and F0/F1/F3/F4 boundary, so no duplicate cross-reference rewrite
+  was needed in this documentation-only step.
 
 Code and regression impact
 --------------------------
