@@ -67,6 +67,10 @@ assembled listing.
   raw output staging, the external brake series-power boundary, and the
   optional transmission drive plant while keeping F0 firmware behavior
   separate from F3/F4 vehicle, electrical, hydraulic and clutch assumptions.
+- [Diagnostics and ALDL communication](DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md)
+  integrates diagnostic qualification/history, service-lamp and flash-code
+  behavior, normal 160-baud pulse-width-coded output, the 8192-baud SCI core,
+  and Mode-4 lifecycle while preserving the external ALDL/transceiver boundary.
 - [MEMCAL architecture](MEMCAL_ARCHITECTURE.md) records the established physical
   carrier/J4 mapping while separating it from unresolved electrical behavior.
 - [MEMCAL motherboard/firmware paths](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
