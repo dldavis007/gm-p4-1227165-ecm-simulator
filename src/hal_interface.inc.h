@@ -1,5 +1,6 @@
 /*
  * Step 128: explicit processor-visible HAL boundary.
+ * Step 155: named raw setters for additional already-backed ECM inputs.
  *
  * This layer intentionally exposes raw ECM-facing stimuli and observations.
  * It does not convert engineering units other than the two already-existing
@@ -23,6 +24,37 @@ static void bua_hal_set_o2_adc(bua_u8 raw)
 static void bua_hal_set_battery_adc(bua_u8 raw)
 {
     BATTERY_AD=raw;
+}
+
+/* Step 155 names the raw U10-facing simulator bytes that already exist in the
+ * translated harness. These setters deliberately do not inject processed TPS,
+ * airflow/load, or diagnostic mode state; firmware still performs the
+ * established selector/storage/normalization work after hw_adc() sees them.
+ */
+static void bua_hal_set_maf_adc(bua_u8 raw)
+{
+    sim_maf_adc=raw;
+}
+
+static void bua_hal_set_tps_adc(bua_u8 raw)
+{
+    sim_tps_adc=raw;
+}
+
+static void bua_hal_set_diag_adc(bua_u8 raw)
+{
+    sim_diag_adc=raw;
+}
+
+/* $3FCA is the processor-visible U9 counter whose changes are consumed as the
+ * knock-event quantity by the listing-backed firmware. This setter exposes the
+ * raw register state only. It does NOT claim that one external KNOCK edge maps
+ * one-for-one to one counter increment, because that U9 transformation remains
+ * an unresolved custom-device boundary.
+ */
+static void bua_hal_set_u9_knock_counter(bua_u16 raw)
+{
+    mpu16be_set(0x3FCAu,raw);
 }
 
 /* These delegate to the existing phase/timing sources. The MPH/RPM values are
