@@ -7,9 +7,13 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
 ## Planned chapters
 
 1. **System overview and evidence method**
-   - ECM 1227165 scope, PROM material, terminology, confidence language.
+   - Foundational reference set: [`README.md`](README.md), [`EVIDENCE_REGISTER.md`](EVIDENCE_REGISTER.md), [`HARDWARE_FIRMWARE_CROSS_REFERENCE.md`](HARDWARE_FIRMWARE_CROSS_REFERENCE.md), and this index.
+   - Establishes ECM 1227165 scope, PROM/source provenance, terminology, evidence order, confidence/status language, and the F0-F4 fidelity vocabulary used by the integrated chapters.
+   - Preserve the distinction between executable/listing evidence, direct physical or schematic evidence, simulation assumptions, and unresolved external/custom-device behavior.
 2. **Power supplies, reset, and retained power**
-   - VIGN, VBATT, standby supply, reset controller, key-off boundary.
+   - Controlling reference set: [`STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md`](STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md), [`HARDWARE_FIRMWARE_CROSS_REFERENCE.md`](HARDWARE_FIRMWARE_CROSS_REFERENCE.md), and [`EVIDENCE_REGISTER.md`](EVIDENCE_REGISTER.md).
+   - Firmware coverage includes reset entry, retained-memory validation/recovery, normal startup, key-off transition, SWI termination, and restart composition.
+   - Physical VIGN/VBATT rails, standby/keep-alive supply, reset-controller behavior, rail timing, and undocumented processor consequences remain hardware/F4 boundaries unless direct evidence establishes them.
 3. **Processor, memory map, and custom peripherals**
    - Integrated chapter: [`PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md`](PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md).
    - Covers the external program window, vectors, U10 analog acquisition,
@@ -23,21 +27,15 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
      evidence-supported `$3FC0-$3FFF` processor-visible map. Addresses without
      established semantics remain unclassified, not assumed unused or reserved.
 4. **MEMCAL construction and calibration hardware**
-   - EPROM, both resistor networks, J4/CAL connections, model variations.
-   - Use [`MEMCAL_ARCHITECTURE.md`](MEMCAL_ARCHITECTURE.md) for the physical
-     carrier and absolute J4 mapping.
-   - Use [`MEMCAL_FUNCTIONAL_NETWORKS.md`](MEMCAL_FUNCTIONAL_NETWORKS.md) to
-     collapse the generic zero-ohm-jumper grid into electrically meaningful
-     resistor nodes tied to CAL and motherboard destinations.
+   - Controlling reference set: [`MEMCAL_ARCHITECTURE.md`](MEMCAL_ARCHITECTURE.md), [`MEMCAL_FUNCTIONAL_NETWORKS.md`](MEMCAL_FUNCTIONAL_NETWORKS.md), [`MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md`](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md), and [`MEMCAL_EVIDENCE_HIERARCHY.md`](MEMCAL_EVIDENCE_HIERARCHY.md).
+   - Covers the EPROM, 66-contact carrier/J4 mapping, both resistor networks, CAL/motherboard paths, model variations, and the evidence hierarchy for the reconstructed hardware.
+   - Photograph/direct physical evidence remains authoritative for the as-built reconstruction where legible; KiCad, LTspice, measurements, and historical notes remain supporting evidence and discrepancies are preserved rather than silently normalized.
    - Validate the reconstruction bidirectionally: physical/KiCad/LTspice
      evidence -> CAL destination -> theory of operation, and theory of
      operation -> expected CAL electrical role -> reconstructed network.
    - Current high-value anchors include CAL42/U11-18 `OSC`, CAL56/U12-11
      `CYL`, CAL61/U11-28 `MAP`, CAL59/VIGN, and the CAL45/CAL46 common node.
-   - Use [`MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md`](MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md)
-     for the evidence-classified end-to-end traces. In particular, keep the
-     CAL29 analog ESC path separate from the CAL32/U12/U9 KNOCK path, and do
-     not equate CAL56 directly with PROM bytes `LC009` or `LC225`.
+   - In particular, keep the CAL29 analog ESC path separate from the CAL32/U12/U9 KNOCK path, and do not equate CAL56 directly with PROM bytes `LC009` or `LC225`.
 5. **Interrupt and scheduler architecture**
    - Integrated chapter: [`INTERRUPT_SCHEDULER_ARCHITECTURE.md`](INTERRUPT_SCHEDULER_ARCHITECTURE.md).
    - Establishes the 6.25-ms ordinary IRQ, alternating 12.5-ms odd/even minor
