@@ -1,4 +1,30 @@
 /* Step 128 regression for the explicit raw HAL boundary. */
+static void run_step156_cts_mat_hal_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=4u;
+#define STEP156_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-156 CTS/MAT raw input HAL regression:\n");
+
+    STEP156_CHECK(hw_adc(0x40u)==120u,
+                  "CTS raw backing preserves the historical default selector value 120");
+    STEP156_CHECK(hw_adc(0x80u)==0u,
+                  "MAT raw backing preserves the historical default selector value 0");
+
+    bua_hal_set_cts_adc(0x6Du);
+    STEP156_CHECK(hw_adc(0x40u)==0x6Du,
+                  "CTS setter reaches raw U10/CTS selector $40 without bypassing conversion");
+
+    bua_hal_set_mat_adc(0x93u);
+    STEP156_CHECK(hw_adc(0x80u)==0x93u,
+                  "MAT setter reaches raw U10/MAT selector $80 before firmware complementing");
+
+    printf("  step-156 CTS/MAT HAL regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+#undef STEP156_CHECK
+}
+
 static void run_step155_named_input_hal_test(void)
 {
     unsigned int passed=0u;
@@ -27,6 +53,8 @@ static void run_step155_named_input_hal_test(void)
     printf("  step-155 named-input HAL regression result: %s (%u/%u)\n",
            (passed==total)?"PASS":"FAIL",passed,total);
 #undef STEP155_CHECK
+
+    run_step156_cts_mat_hal_test();
 }
 
 static void run_step128_hal_interface_test(void)
