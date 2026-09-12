@@ -18,7 +18,7 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
    - Use [`U11_U12_FUNCTIONAL_BOUNDARIES.md`](U11_U12_FUNCTIONAL_BOUNDARIES.md)
      for the evidence-bounded external roles of U11 and U12; do not substitute
      inferred internal transfer functions for the documented F4 boundaries.
-   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP.md) and
+   - Use [`U9_REGISTER_WINDOW_MAP.md`](U9_REGISTER_WINDOW_MAP) and
      [`U9_REGISTER_WINDOW_CLOSURE.md`](U9_REGISTER_WINDOW_CLOSURE.md) for the
      evidence-supported `$3FC0-$3FFF` processor-visible map. Addresses without
      established semantics remain unclassified, not assumed unused or reserved.
@@ -123,7 +123,15 @@ regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
     - Preserve the distinction between F0 reset/SWI requests and F4 processor,
       keep-alive, power-rail and optional `$5800`/external `$6000` consequences.
 15. **C port architecture and embedded migration**
-    - C89 rules, exact-width/wrap behavior, modular include structure and HALs.
+    - Integrated chapter: [`C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md`](C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md).
+    - Defines the strict-C89/single-translation-unit contract, exact-width and
+      endian-sensitive behavior, memory/register model, scheduler/event seam,
+      F0-F4 migration responsibilities and Step-128 raw HAL boundary.
+    - Keep target timer/vector/A-D/capture/output/serial/power mechanics outside
+      the portable F0 core; keep PC plant assumptions F3 and unresolved custom-
+      device/electrical behavior F4.
+    - Migrate incrementally against the frozen PC regression reference rather
+      than combining algorithm refactoring with hardware replacement.
 16. **Simulation and verification**
     - Unit/regression distinctions, frozen signatures, drive plants and timing.
 
