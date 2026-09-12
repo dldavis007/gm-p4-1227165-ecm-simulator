@@ -1,0 +1,128 @@
+BUA / GM 1227165 STEP 156 - CTS/MAT RAW HAL EXPANSION AUDIT
+===========================================================
+
+Purpose
+-------
+Step 156 removes the remaining hardcoded/default-only CTS and MAT raw A/D
+sources from the PC harness and gives both channels explicit raw backing bytes
+and named HAL setters while preserving the existing default behavior and the
+firmware's own downstream processing.
+
+Baseline
+--------
+Step 156 began from main commit:
+  d4814196f8f4a93770b4654ce9692e1aec62d929
+  Step 155 document named raw input HAL expansion
+
+Evidence reviewed
+-----------------
+- src/ecm_core.inc.h
+- src/hal_interface.inc.h
+- tests/hal_interface_regression.inc.h
+- Makefile
+- docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md
+
+Established sensor boundary
+---------------------------
+The integrated sensor-acquisition evidence identifies:
+
+- CTS on U10 AN4, selected by raw selector $40.
+- MAT on U10 AN8, selected by raw selector $80.
+- CTS firmware processing performs its table/conversion path after acquisition.
+- MAT firmware processing deliberately complements the raw sample before storing
+  its principal intermediate at $012B and producing processed MAT at $0060.
+
+Therefore the HAL boundary should supply the raw U10-facing byte, not a
+pre-converted coolant temperature or already-complemented MAT value.
+
+Prior implementation state
+--------------------------
+Before Step 156, hw_adc() returned:
+
+  selector $40 (CTS) -> literal 120
+  selector $80 (MAT) -> default switch result 0
+
+These values made the historical simulation deterministic, but neither channel
+could be varied through the explicit HAL without bypassing the established
+acquisition/processing path.
+
+Changes
+-------
+Updated src/ecm_core.inc.h:
+
+- added sim_cts_adc with initial value 120
+- added sim_mat_adc with initial value 0
+- changed selector $40 to return sim_cts_adc
+- added explicit selector $80 returning sim_mat_adc
+
+The initial values exactly preserve the old behavior before any HAL stimulus is
+applied.
+
+Updated src/hal_interface.inc.h:
+
+- added bua_hal_set_cts_adc(raw)
+- added bua_hal_set_mat_adc(raw)
+
+Both setters expose raw U10-facing values only. They do not perform engineering-
+unit conversion, coolant table lookup, MAT complementing, filtering, diagnostic
+qualification, or plant/electrical modeling.
+
+Updated tests/hal_interface_regression.inc.h:
+
+- added Step-156 4-check regression
+- verifies historical CTS default 120
+- verifies historical MAT default 0
+- verifies a CTS setter value reaches hw_adc($40)
+- verifies a MAT setter value reaches hw_adc($80) before firmware complementing
+
+Updated Makefile:
+
+- positively requires:
+    step-156 CTS/MAT HAL regression result: PASS (4/4)
+
+Implementation note
+-------------------
+src/ecm_core.inc.h is large enough that the repository connector's normal
+whole-file replacement path is impractical. A temporary one-shot GitHub Actions
+workflow made two exact, assertion-checked replacements in that file, committed
+the result, and removed itself in the same generated commit. The resulting
+repository contains the core change but does not retain the temporary workflow.
+
+The generated core commit is:
+  8bc711a47723db8bddb7f3055873da1359095a59
+  Step 156 add raw CTS MAT ADC backing
+
+Its diff directly shows only the two new backing variables, the CTS literal-to-
+variable substitution, the explicit MAT selector case, and removal of the
+one-shot workflow.
+
+Behavioral boundary
+-------------------
+Step 156 does not change the default deterministic ECM simulation behavior.
+Before a test or future target HAL supplies a new raw value, CTS still reads 120
+and MAT still reads 0 at the U10-facing boundary.
+
+This step does not add thermistor transfer functions, volts-per-count models,
+MAT electrical polarity assumptions, U10 analog accuracy, or engineering-unit
+sensor models. Those remain F3/F4 unless independently established.
+
+Verification
+------------
+The repository strict-C89 GitHub Actions workflow remains the execution gate.
+The Step-156 Makefile requirement ensures the new 4/4 regression cannot be
+silently disconnected without causing CI to fail.
+
+No frozen Step-104/105/109/110/111 signature was intentionally changed, and no
+calibration, scheduler cadence, translated control algorithm, or plant constant
+was changed by Step 156.
+
+Conclusion
+----------
+CTS and MAT now have the same explicit raw HAL shape as the previously exposed
+MAF/TPS/O2/DIAG inputs while preserving the source-backed acquisition boundary:
+
+  external/plant assumption -> raw HAL byte -> hw_adc selector -> translated
+  firmware processing -> processed state
+
+This closes the specific Step-155 limitation without moving CTS or MAT firmware
+behavior into the HAL.
