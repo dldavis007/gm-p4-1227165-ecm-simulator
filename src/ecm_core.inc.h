@@ -539,12 +539,17 @@ static bua_u8 sim_legacy_mode4_lifecycle_freeze = 0u;
 static bua_u8 sim_soft_powerdown_latched = 0u;
 static bua_u8 sim_iac_motor_on = 1u;
 static bua_u8 sim_timer8;
-static bua_u8 sim_maf_adc = 128u;
+static bua_u8 sim_map2_adc = 0u;
+static bua_u8 sim_volt_adc = 128u;
 static bua_u8 sim_o2_adc = 128u;
+static bua_u8 sim_map_adc = 0u;
 static bua_u8 sim_cts_adc = 120u;
 static bua_u8 sim_tps_adc = 35u;
-static bua_u8 sim_mat_adc = 0u;
+static bua_u8 sim_pumpvolt_adc = 0u;
 static bua_u8 sim_diag_adc = 200u;
+static bua_u8 sim_mat_adc = 0u;
+static bua_u8 sim_esc_adc = 0u;
+static bua_u8 sim_maf_adc = 128u;
 /* PC-only VSS signal generator.  Capture register emulates P4 L3FC2. */
 static bua_u32 sim_vss_abs_ticks;
 static bua_u32 sim_vss_next_edge;
@@ -1302,12 +1307,16 @@ static void mpu16be_set(bua_u16 a, bua_u16 v)
 static bua_u8 hw_adc(bua_u8 channel)
 {
     switch (channel & 0xF0u) {
-        case 0x10u: return 128u;
+        case 0x00u: return sim_map2_adc;
+        case 0x10u: return sim_volt_adc;
         case 0x20u: return sim_o2_adc;
+        case 0x30u: return sim_map_adc;
         case 0x40u: return sim_cts_adc;
         case 0x50u: return sim_tps_adc;
+        case 0x60u: return sim_pumpvolt_adc;
         case 0x70u: return sim_diag_adc;
         case 0x80u: return sim_mat_adc;
+        case 0x90u: return sim_esc_adc;
         case 0xA0u: return sim_maf_adc;
         default:    return 0u;
     }
