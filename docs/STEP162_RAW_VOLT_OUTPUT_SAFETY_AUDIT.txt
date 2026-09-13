@@ -1,0 +1,95 @@
+BUA / GM 1227165 STEP 162 - RAW VOLT OUTPUT SAFETY AUDIT
+======================================================
+
+Purpose
+-------
+Step 162 proves a complete raw input-to-output safety path. Raw U10 AN1/VOLT is
+acquired by ordinary Segment E, then consumed by the listing's two-pass
+overvoltage qualification in Segment 1. The regression observes only established
+raw MPU and parallel-I/O outputs through the Step-128 HAL boundary.
+
+Baseline
+--------
+Step 162 began from verified remote main commit:
+
+  01654bc9c95216d9c6ff59166c922d39d9d99faa
+  Step 161 freeze raw HAL output lifecycle
+
+GitHub Strict C89 regression run 34755076023 completed successfully for that
+exact commit.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $F5DF-$F644
+- evidence/firmware/bua-hac.lst $EDA3-$EDF9
+- src/major_loop.inc.h
+- src/hal_interface.inc.h
+- tests/battery_regression.inc.h
+- tests/output_stage_regression.inc.h
+- docs/STEP157_COMPLETE_U10_RAW_HAL_AUDIT.txt
+- docs/STEP161_RAW_HAL_OUTPUT_LIFECYCLE_AUDIT.txt
+
+Source sequence
+---------------
+Segment E acquires U10 selector $10 and stores the raw result in $007E. Segment
+1 later compares $007E with literal 171 at $EDA3-$EDA7.
+
+For a value below 171, $EDBA clears $0035 bit 6 and output staging proceeds
+normally. At 171 or above, the first Segment-1 pass sets $003E bit 4 and, because
+$0035 bit 6 was clear, sets that qualification bit without forcing outputs off.
+
+On the next consecutive high-voltage Segment-1 pass, $0035 bit 6 is already set.
+The source sets $004F bit 6 and selects the common $D000 output path. That path
+writes $D000 to $3FD2, $3FD6, $3FD8, $3FCC, and $3FD4, then clears parallel-I/O
+$4004 bit 1.
+
+When raw VOLT returns below 171, the next Segment-1 pass clears $0035 bit 6 and
+normal output staging resumes. The executable does not clear $003E bit 4 or
+$004F bit 6 in this block, so Step 162 verifies that those flags remain latched
+rather than inventing recovery behavior.
+
+Regression stimulus and result
+------------------------------
+The regression starts through the real power-on composition, establishes an
+engine-running state with known active AIR, acceleration-enrichment, TCC, purge,
+EGR, and fan requests, and drives these four output stages through ordinary
+Segment-E and Segment-1 scheduler dispatch:
+
+1. raw VOLT 170, below threshold;
+2. first raw VOLT 171 Segment-1 pass;
+3. second consecutive raw VOLT 171 Segment-1 pass;
+4. raw VOLT recovery to 170.
+
+Ten checks prove:
+
+- Segment E acquires raw values 170 and 171 at the expected boundary;
+- below-threshold active raw outputs are present;
+- the first high pass sets qualification and burnoff-disable state but does not
+  prematurely force outputs off;
+- the second high pass latches the error and forced-off state;
+- all five PWM counters become $D000 and the fan bit clears;
+- recovery clears qualification and restores the known active output pattern;
+- the source-latched burnoff-disable and error bits remain set.
+
+The FNV-1a signature covers all five raw counters plus $0035, $003E, $004F, and
+$4004 at each of the four stages:
+
+  Step-162 raw-VOLT output-safety signature: DB86F332
+  step-162 raw-VOLT output-safety regression result: PASS (10/10)
+
+The test saves and restores memory, statistics, lifecycle/vector/power/startup
+traces, output-stage state, raw VOLT, and the software-powerdown latch.
+
+Evidence boundary
+-----------------
+The literal 171 is a raw firmware comparison. Although the source comment calls
+it 17.1 VDC, Step 162 does not add a physical voltage conversion, divider model,
+tolerance, transient response, output polarity, relay state, or load behavior.
+All observed output values remain processor-visible F0/F2 quantities.
+
+Conclusion
+----------
+Step 162 connects the named raw VOLT HAL input to an independently frozen raw
+output safety consequence through the ordinary scheduler. It proves the exact
+two-pass threshold behavior and recovery sequence without promoting comments or
+unverified electrical behavior above the executable listing.

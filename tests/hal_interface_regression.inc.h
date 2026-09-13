@@ -1,4 +1,4 @@
-/* Steps 158-161 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
+/* Steps 158-162 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -18,6 +18,149 @@ static bua_u8 step161_all_pwm_outputs_equal(bua_u16 value)
                     bua_hal_get_mpu16be(0x3FD4u)==value &&
                     bua_hal_get_mpu16be(0x3FD6u)==value &&
                     bua_hal_get_mpu16be(0x3FD8u)==value);
+}
+
+static bua_u8 step162_active_outputs_match(void)
+{
+    return (bua_u8)(bua_hal_get_mpu16be(0x3FCCu)==0xDFFFu &&
+                    bua_hal_get_mpu16be(0x3FD2u)==0xD003u &&
+                    bua_hal_get_mpu16be(0x3FD4u)==0xDFFFu &&
+                    bua_hal_get_mpu16be(0x3FD6u)==0xDFFFu &&
+                    bua_hal_get_mpu16be(0x3FD8u)==0xD3FFu &&
+                    (bua_hal_get_output_4004()&0x02u)!=0u);
+}
+
+static void run_step162_raw_volt_output_safety_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=10u;
+    unsigned int i;
+    static const bua_u16 addresses[5]={
+        0x3FCCu,0x3FD2u,0x3FD4u,0x3FD6u,0x3FD8u
+    };
+    bua_u16 stage_outputs[4][5];
+    bua_u8 stage35[4];
+    bua_u8 stage3e[4];
+    bua_u8 stage4f[4];
+    bua_u8 stage4004[4];
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    BuaOutputStage91 saved_outputs=step91_outputs;
+    bua_u8 saved_volt=sim_volt_adc;
+    bua_u8 saved_powerdown=sim_soft_powerdown_latched;
+    BuaPowerOnInput120 in;
+    bua_u8 outcome;
+    bua_u32 signature;
+#define STEP162_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-162 raw-VOLT output-safety regression:\n");
+    ecm_reset();
+    bua_lifecycle_reset_trace_step121();
+    bua_power_valid_retained_step120();
+    in=bua_power_input_step120();
+    outcome=bua_lifecycle_power_cycle_step121(0xFFFEu,in);
+    RAM8(0x0034u)=0x88u;
+    RAM8(0x003Eu)=0x06u;
+    RAM8(0x0037u)=0x20u;
+    RAM8(0x0113u)=0u;
+    RAM8(0x0112u)=255u;
+    RAM8(0x00F4u)=255u;
+
+    bua_hal_set_volt_adc(170u);
+    MINOR_COUNT=0x0Du;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK(outcome==POWER120_OUTCOME_NORMAL && RAM8(0x007Eu)==170u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)==0u,
+                  "ordinary Segment E acquires raw VOLT 170 below the overvoltage threshold");
+    MINOR_COUNT=0u;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK(step162_active_outputs_match()!=0u &&
+                  step91_outputs.forced_off==0u,
+                  "below-threshold Segment 1 emits the configured active raw outputs");
+    for(i=0u;i<5u;++i)
+        stage_outputs[0][i]=bua_hal_get_mpu16be(addresses[i]);
+    stage35[0]=RAM8(0x0035u); stage3e[0]=RAM8(0x003Eu);
+    stage4f[0]=RAM8(0x004Fu); stage4004[0]=bua_hal_get_output_4004();
+
+    bua_hal_set_volt_adc(171u);
+    MINOR_COUNT=0x0Du;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK(RAM8(0x007Eu)==171u,
+                  "ordinary Segment E acquires the exact raw VOLT 171 threshold");
+    MINOR_COUNT=0u;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK((RAM8(0x0035u)&0x40u)!=0u &&
+                  (RAM8(0x003Eu)&0x10u)!=0u &&
+                  (RAM8(0x004Fu)&0x40u)==0u &&
+                  step91_outputs.forced_off==0u,
+                  "first high-VOLT Segment 1 arms the source two-pass qualification");
+    STEP162_CHECK(step162_active_outputs_match()!=0u,
+                  "first high-VOLT pass does not prematurely force the raw outputs off");
+    for(i=0u;i<5u;++i)
+        stage_outputs[1][i]=bua_hal_get_mpu16be(addresses[i]);
+    stage35[1]=RAM8(0x0035u); stage3e[1]=RAM8(0x003Eu);
+    stage4f[1]=RAM8(0x004Fu); stage4004[1]=bua_hal_get_output_4004();
+
+    MINOR_COUNT=0u;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK((RAM8(0x004Fu)&0x40u)!=0u &&
+                  step91_outputs.forced_off!=0u,
+                  "second consecutive high-VOLT Segment 1 latches the error and forced-off state");
+    STEP162_CHECK(step161_all_pwm_outputs_equal(0xD000u)!=0u,
+                  "qualified overvoltage writes $D000 to all five raw PWM outputs");
+    STEP162_CHECK((bua_hal_get_output_4004()&0x02u)==0u,
+                  "qualified overvoltage clears the raw fan-output bit");
+    for(i=0u;i<5u;++i)
+        stage_outputs[2][i]=bua_hal_get_mpu16be(addresses[i]);
+    stage35[2]=RAM8(0x0035u); stage3e[2]=RAM8(0x003Eu);
+    stage4f[2]=RAM8(0x004Fu); stage4004[2]=bua_hal_get_output_4004();
+
+    bua_hal_set_volt_adc(170u);
+    MINOR_COUNT=0x0Du;
+    bua_lifecycle_irq_step121();
+    MINOR_COUNT=0u;
+    bua_lifecycle_irq_step121();
+    STEP162_CHECK((RAM8(0x0035u)&0x40u)==0u &&
+                  step91_outputs.forced_off==0u &&
+                  step162_active_outputs_match()!=0u,
+                  "raw VOLT recovery clears qualification and restores ordinary output staging");
+    STEP162_CHECK((RAM8(0x003Eu)&0x10u)!=0u &&
+                  (RAM8(0x004Fu)&0x40u)!=0u,
+                  "source-latched burnoff-disable and error bits survive voltage recovery");
+    for(i=0u;i<5u;++i)
+        stage_outputs[3][i]=bua_hal_get_mpu16be(addresses[i]);
+    stage35[3]=RAM8(0x0035u); stage3e[3]=RAM8(0x003Eu);
+    stage4f[3]=RAM8(0x004Fu); stage4004[3]=bua_hal_get_output_4004();
+
+    signature=2166136261ul;
+    for(i=0u;i<4u;++i) {
+        unsigned int j;
+        for(j=0u;j<5u;++j)
+            signature=step160_hash_word(signature,stage_outputs[i][j]);
+        signature=step160_hash_byte(signature,stage35[i]);
+        signature=step160_hash_byte(signature,stage3e[i]);
+        signature=step160_hash_byte(signature,stage4f[i]);
+        signature=step160_hash_byte(signature,stage4004[i]);
+    }
+    printf("  Step-162 raw-VOLT output-safety signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-162 raw-VOLT output-safety regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    step91_outputs=saved_outputs;
+    sim_volt_adc=saved_volt;
+    sim_soft_powerdown_latched=saved_powerdown;
+#undef STEP162_CHECK
 }
 
 static void run_step161_raw_hal_output_lifecycle_test(void)
@@ -146,6 +289,8 @@ static void run_step161_raw_hal_output_lifecycle_test(void)
     sim_soft_powerdown_latched=saved_powerdown;
     sim_iac_motor_on=saved_iac_motor;
 #undef STEP161_CHECK
+
+    run_step162_raw_volt_output_safety_test();
 }
 
 static void run_step160_raw_hal_full_lifecycle_test(void)
