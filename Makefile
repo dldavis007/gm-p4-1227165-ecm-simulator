@@ -51,8 +51,10 @@ test: $(TARGET)
 	grep -q "step-161 raw-HAL output lifecycle regression result: PASS (9/9)" $(OUTPUT)
 	grep -q "Step-162 raw-VOLT output-safety signature: DB86F332" $(OUTPUT)
 	grep -q "step-162 raw-VOLT output-safety regression result: PASS (10/10)" $(OUTPUT)
+	grep -q "Step-163 raw-HAL power-on signature: 040E3A8B" $(OUTPUT)
+	grep -q "step-163 raw-HAL power-on regression result: PASS (10/10)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162 HAL regressions pass."
+	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162/163 HAL regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt

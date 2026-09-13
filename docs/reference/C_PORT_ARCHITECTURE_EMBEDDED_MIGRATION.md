@@ -77,6 +77,8 @@ Embedded migration should preserve F0 and F1, replace PC F2 mechanisms with targ
 
 Step 128 established `src/hal_interface.inc.h` as the explicit raw processor-facing seam. Steps 155-157 expanded that seam to all known U10 AN0-AN10 channels while leaving selector `$B0` unresolved. Step 158 adds the two raw normal-operation FMD/SPI reply bytes consumed by the listing-backed `$002E/$002F -> $0037` refresh. The seam also retains the VSS and reference-RPM pulse-source helpers. A bounded low-RAM setter exists for tests where the processor-visible byte is established but the external transfer remains unresolved.
 
+Step 163 adds a power-on composition entry that replaces only the duplicate startup VOLT, PUMPVOLT, DIAG and FMD-byte-1 fields with those named raw HAL values. Reset-vector choice, ROM/checksum results, entry Error-51 state and the absent-HUD boundary remain explicit non-ADC inputs.
+
 Output observers expose low RAM, U9 MPU state, `$4000` I/O state, `$5000`, synchronous injector command `$3FD0`, IAC position bookkeeping and the established Segment-1 raw outputs `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`.
 
 These accessors deliberately do not assign voltage polarity, driver current, waveform shape, actuator force or hydraulic behavior. That is the correct migration seam: target drivers can consume or produce established raw state without contaminating the translated algorithm with board-specific implementation.

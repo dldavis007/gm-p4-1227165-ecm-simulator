@@ -1,0 +1,104 @@
+BUA / GM 1227165 STEP 163 - RAW HAL POWER-ON COMPOSITION AUDIT
+============================================================
+
+Purpose
+-------
+Step 163 removes duplicate startup stimulus for four already-established raw
+hardware inputs. A thin lifecycle entry now sources VOLT, PUMPVOLT, DIAG, and
+normal FMD byte 1 from their named HAL backing before entering the existing
+Step-121 reset-vector and Step-120 source-ordered power-on composition.
+
+Baseline
+--------
+Step 163 began from verified remote main commit:
+
+  77e0d0efc02d8ff99ae0f689b7fa8142e03356e5
+  Step 162 prove raw VOLT output safety path
+
+GitHub Strict C89 regression run 34778005526 completed successfully for that
+exact commit.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $C800-$C9F3
+- evidence/firmware/bua-hac.lst $F5DF-$F644
+- src/power_on_dispatch.inc.h
+- src/lifecycle_integration.inc.h
+- src/hal_interface.inc.h
+- tests/power_on_dispatch_regression.inc.h
+- docs/STEP120_POWER_ON_INTEGRATION_AUDIT.txt
+- docs/STEP157_COMPLETE_U10_RAW_HAL_AUDIT.txt
+- docs/STEP158_NORMAL_FMD_RAW_HAL_AUDIT.txt
+
+Composition change
+------------------
+The existing BuaPowerOnInput120 structure intentionally contains both hardware
+and non-hardware startup decisions. Before Step 163, callers had to repeat raw
+ADC/FMD values in that structure even after the simulator gained named HAL
+setters for the same processor-facing resources.
+
+The new bua_lifecycle_power_cycle_from_hal_step163() entry copies exactly four
+values into a caller-supplied BuaPowerOnInput120 value:
+
+  battery_adc       <- U10 selector $10 / raw VOLT
+  pump_adc          <- U10 selector $60 / raw PUMPVOLT
+  diagnostic_adc    <- U10 selector $70 / raw DIAG
+  initial_fmd_byte1 <- normal raw FMD byte 1
+
+It then delegates without further change to bua_lifecycle_power_cycle_step121().
+The Step-120 dispatcher remains the sole owner of startup order and threshold
+decisions.
+
+Boundaries deliberately retained
+--------------------------------
+The wrapper does not replace these BuaPowerOnInput120 fields:
+
+- reset-vector address;
+- entry Error-51 state;
+- socket/ROM checksum-valid result;
+- whole-ROM checksum supplied to factory test;
+- optional HUD presence.
+
+Those are vector, ROM, absent-device, or other explicit evidence boundaries,
+not U10/FMD raw inputs. Step 163 therefore avoids treating them as invented
+analog channels or ordinary discrete switches.
+
+Regression coverage
+-------------------
+The Step-163 regression contains ten checks. It proves:
+
+- raw powered values select normal startup even when the duplicate structure
+  fields are deliberately poisoned with factory-selecting values;
+- normal startup receives raw VOLT and FMD byte 1;
+- reset-vector acknowledgment and scheduler handoff are unchanged;
+- raw low VOLT plus PUMPVOLT and DIAG thresholds select factory boot;
+- factory boot receives the HAL values while whole-ROM checksum remains an
+  independent explicit input;
+- unsigned boundary behavior is exact for VOLT 99/100, PUMPVOLT 159/160, and
+  DIAG 39/40/99/100;
+- the raw-HAL wrapper cannot bypass reset-vector validation.
+
+The FNV-1a signature covers all eight normal/factory threshold outcomes plus
+the final raw inputs and lifecycle outcome:
+
+  Step-163 raw-HAL power-on signature: 040E3A8B
+  step-163 raw-HAL power-on regression result: PASS (10/10)
+
+The test saves and restores memory, statistics, lifecycle/vector/power/startup
+state, factory traces and inputs, startup evaluation, raw HAL inputs, FMD state,
+and the software-powerdown latch.
+
+Evidence boundary
+-----------------
+Step 163 is composition at the PC/HAL boundary. It does not claim that the
+external analog channels are sampled by U10 in this exact order during physical
+reset, and it adds no voltage conversion, resistor tolerance, line polarity,
+SPI timing, ROM content, or optional-device behavior. It simply ensures that
+one established raw source feeds each already-translated startup decision.
+
+Conclusion
+----------
+Normal and factory power-on can now be driven through the same named raw VOLT,
+PUMPVOLT, DIAG, and FMD inputs used elsewhere in the simulator. Duplicate raw
+startup values no longer need to be maintained by HAL-aware callers, while all
+non-ADC evidence boundaries remain explicit.

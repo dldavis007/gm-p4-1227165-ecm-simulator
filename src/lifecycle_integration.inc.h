@@ -31,6 +31,20 @@ static bua_u8 bua_lifecycle_power_cycle_step121(bua_u16 vector_address,
     return outcome;
 }
 
+/* Step 163: source the four established processor-facing startup values from
+ * the named raw HAL backing. ROM/checksum, HUD, entry-error and vector choices
+ * remain explicit inputs because they are separate evidence boundaries. */
+static bua_u8 bua_lifecycle_power_cycle_from_hal_step163(
+                                                bua_u16 vector_address,
+                                                BuaPowerOnInput120 in)
+{
+    in.battery_adc=hw_adc(0x10u);
+    in.pump_adc=hw_adc(0x60u);
+    in.diagnostic_adc=hw_adc(0x70u);
+    in.initial_fmd_byte1=sim_normal_fmd_byte1;
+    return bua_lifecycle_power_cycle_step121(vector_address,in);
+}
+
 static void bua_lifecycle_irq_step121(void)
 {
     bua_u32 before;

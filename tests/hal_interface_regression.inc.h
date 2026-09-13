@@ -1,4 +1,4 @@
-/* Steps 158-162 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
+/* Steps 158-163 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -28,6 +28,140 @@ static bua_u8 step162_active_outputs_match(void)
                     bua_hal_get_mpu16be(0x3FD6u)==0xDFFFu &&
                     bua_hal_get_mpu16be(0x3FD8u)==0xD3FFu &&
                     (bua_hal_get_output_4004()&0x02u)!=0u);
+}
+
+static bua_u8 step163_power_from_raw_hal(bua_u8 battery,bua_u8 pump,
+                                          bua_u8 diagnostic,bua_u8 fmd1,
+                                          bua_u16 vector_address,
+                                          BuaPowerOnInput120 in)
+{
+    ecm_reset();
+    bua_power_valid_retained_step120();
+    bua_hal_set_volt_adc(battery);
+    bua_hal_set_pumpvolt_adc(pump);
+    bua_hal_set_diag_adc(diagnostic);
+    bua_hal_set_normal_fmd_byte1(fmd1);
+    return bua_lifecycle_power_cycle_from_hal_step163(vector_address,in);
+}
+
+static void run_step163_raw_hal_power_on_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=10u;
+    bua_u8 outcomes[8];
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    BuaStartupResult112 saved_startup_result=bua_startup_last112;
+    BuaFactoryTrace117 saved_factory117=bua_factory_trace117;
+    BuaFactoryTrace118 saved_factory118=bua_factory_trace118;
+    bua_u8 saved_volt=sim_volt_adc;
+    bua_u8 saved_pump=sim_pumpvolt_adc;
+    bua_u8 saved_diag=sim_diag_adc;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_powerdown=sim_soft_powerdown_latched;
+    bua_u8 saved_startup_fmd=sim_startup_fmd_status;
+    bua_u8 saved_factory_battery=sim_factory_battery_adc117;
+    bua_u8 saved_factory_diag=sim_factory_diagnostic_adc117;
+    bua_u8 saved_factory_fmd1=sim_factory_fmd_byte1_117;
+    bua_u8 saved_factory_fmd2=sim_factory_fmd_byte2_117;
+    bua_u8 saved_factory_swi=sim_factory_swi_reason117;
+    BuaPowerOnInput120 in;
+    bua_u32 signature;
+    unsigned int i;
+#define STEP163_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-163 raw-HAL power-on composition regression:\n");
+    in=bua_power_input_step120();
+    in.battery_adc=0u;
+    in.pump_adc=255u;
+    in.diagnostic_adc=50u;
+    in.initial_fmd_byte1=0u;
+    outcomes[0]=step163_power_from_raw_hal(128u,0u,200u,0x7Eu,0xFFFEu,in);
+    STEP163_CHECK(outcomes[0]==POWER120_OUTCOME_NORMAL &&
+                  bua_power_on_trace120.normal_handoffs==1ul,
+                  "raw powered inputs select normal startup despite poisoned duplicate input fields");
+    STEP163_CHECK(RAM8(0x007Eu)==128u && RAM8(0x0049u)==0x7Eu,
+                  "normal startup receives raw VOLT and FMD byte 1 from named HAL backing");
+    STEP163_CHECK(bua_startup_trace114.scheduler_handoff!=0u &&
+                  bua_lifecycle_trace121.power_cycle_acknowledgements==1ul,
+                  "raw-HAL composition retains the established reset-vector lifecycle handoff");
+
+    in=bua_power_input_step120();
+    in.whole_rom_checksum=0x1234u;
+    outcomes[1]=step163_power_from_raw_hal(99u,160u,40u,0xA5u,0xFFF8u,in);
+    STEP163_CHECK(outcomes[1]==POWER120_OUTCOME_FACTORY &&
+                  bua_power_on_trace120.factory_handoffs==1ul,
+                  "raw low VOLT plus threshold PUMPVOLT and DIAG select factory boot");
+    STEP163_CHECK(ram16be_get(0x0173u)==0x1234u &&
+                  sim_factory_battery_adc117==99u &&
+                  sim_factory_diagnostic_adc117==40u &&
+                  sim_factory_fmd_byte1_117==0xA5u,
+                  "factory boot receives HAL bytes while the explicit ROM checksum remains separate");
+
+    in=bua_power_input_step120();
+    outcomes[2]=step163_power_from_raw_hal(100u,160u,40u,0u,0xFFFEu,in);
+    STEP163_CHECK(outcomes[2]==POWER120_OUTCOME_NORMAL,
+                  "raw VOLT equality 100 excludes factory selection");
+    outcomes[3]=step163_power_from_raw_hal(99u,159u,40u,0u,0xFFFEu,in);
+    STEP163_CHECK(outcomes[3]==POWER120_OUTCOME_NORMAL,
+                  "raw PUMPVOLT 159 remains below the factory threshold");
+
+    outcomes[4]=step163_power_from_raw_hal(99u,160u,39u,0u,0xFFFEu,in);
+    outcomes[5]=step163_power_from_raw_hal(99u,160u,40u,0u,0xFFFEu,in);
+    STEP163_CHECK(outcomes[4]==POWER120_OUTCOME_NORMAL &&
+                  outcomes[5]==POWER120_OUTCOME_FACTORY,
+                  "raw DIAG lower boundary changes factory selection exactly at 40");
+    outcomes[6]=step163_power_from_raw_hal(99u,160u,99u,0u,0xFFFEu,in);
+    outcomes[7]=step163_power_from_raw_hal(99u,160u,100u,0u,0xFFFEu,in);
+    STEP163_CHECK(outcomes[6]==POWER120_OUTCOME_FACTORY &&
+                  outcomes[7]==POWER120_OUTCOME_NORMAL,
+                  "raw DIAG upper boundary includes 99 and excludes 100");
+    STEP163_CHECK(step163_power_from_raw_hal(99u,160u,40u,0u,0xFFF2u,in)==
+                  POWER120_OUTCOME_INVALID,
+                  "raw-HAL sourcing cannot bypass the established reset-vector boundary");
+
+    signature=2166136261ul;
+    for(i=0u;i<8u;++i)
+        signature=step160_hash_byte(signature,outcomes[i]);
+    signature=step160_hash_byte(signature,sim_volt_adc);
+    signature=step160_hash_byte(signature,sim_pumpvolt_adc);
+    signature=step160_hash_byte(signature,sim_diag_adc);
+    signature=step160_hash_byte(signature,sim_normal_fmd_byte1);
+    signature=step160_hash_byte(signature,bua_lifecycle_trace121.last_power_on_outcome);
+    printf("  Step-163 raw-HAL power-on signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-163 raw-HAL power-on regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    bua_startup_last112=saved_startup_result;
+    bua_factory_trace117=saved_factory117;
+    bua_factory_trace118=saved_factory118;
+    sim_volt_adc=saved_volt;
+    sim_pumpvolt_adc=saved_pump;
+    sim_diag_adc=saved_diag;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_soft_powerdown_latched=saved_powerdown;
+    sim_startup_fmd_status=saved_startup_fmd;
+    sim_factory_battery_adc117=saved_factory_battery;
+    sim_factory_diagnostic_adc117=saved_factory_diag;
+    sim_factory_fmd_byte1_117=saved_factory_fmd1;
+    sim_factory_fmd_byte2_117=saved_factory_fmd2;
+    sim_factory_swi_reason117=saved_factory_swi;
+#undef STEP163_CHECK
 }
 
 static void run_step162_raw_volt_output_safety_test(void)
@@ -161,6 +295,8 @@ static void run_step162_raw_volt_output_safety_test(void)
     sim_volt_adc=saved_volt;
     sim_soft_powerdown_latched=saved_powerdown;
 #undef STEP162_CHECK
+
+    run_step163_raw_hal_power_on_test();
 }
 
 static void run_step161_raw_hal_output_lifecycle_test(void)
