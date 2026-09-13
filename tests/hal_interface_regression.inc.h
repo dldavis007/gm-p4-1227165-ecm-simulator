@@ -1,4 +1,4 @@
-/* Step 158 regression for the normal-operation FMD/SPI raw boundary. */
+/* Steps 158-161 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -9,6 +9,143 @@ static bua_u32 step160_hash_word(bua_u32 hash,bua_u16 value)
 {
     hash=step160_hash_byte(hash,(bua_u8)(value>>8));
     return step160_hash_byte(hash,(bua_u8)value);
+}
+
+static bua_u8 step161_all_pwm_outputs_equal(bua_u16 value)
+{
+    return (bua_u8)(bua_hal_get_mpu16be(0x3FCCu)==value &&
+                    bua_hal_get_mpu16be(0x3FD2u)==value &&
+                    bua_hal_get_mpu16be(0x3FD4u)==value &&
+                    bua_hal_get_mpu16be(0x3FD6u)==value &&
+                    bua_hal_get_mpu16be(0x3FD8u)==value);
+}
+
+static void run_step161_raw_hal_output_lifecycle_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=9u;
+    unsigned int guard=0u;
+    unsigned int i;
+    static const bua_u16 addresses[5]={
+        0x3FCCu,0x3FD2u,0x3FD4u,0x3FD6u,0x3FD8u
+    };
+    bua_u16 shutdown_outputs[5];
+    bua_u8 shutdown_io;
+    bua_u16 shutdown_injector;
+    bua_u8 shutdown_iac;
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    BuaOutputStage91 saved_outputs=step91_outputs;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_volt=sim_volt_adc;
+    bua_u8 saved_powerdown=sim_soft_powerdown_latched;
+    bua_u8 saved_iac_motor=sim_iac_motor_on;
+    BuaPowerOnInput120 in;
+    bua_u8 outcome;
+    bua_u32 blocked_before;
+    bua_u32 signature;
+#define STEP161_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-161 raw-HAL output lifecycle regression:\n");
+    ecm_reset();
+    bua_lifecycle_reset_trace_step121();
+    bua_power_valid_retained_step120();
+    in=bua_power_input_step120();
+    in.initial_fmd_byte1=0x7Eu;
+    outcome=bua_lifecycle_power_cycle_step121(0xFFFEu,in);
+    STEP161_CHECK(outcome==POWER120_OUTCOME_NORMAL &&
+                  step161_all_pwm_outputs_equal(0u)!=0u &&
+                  bua_hal_get_injector_pw_counts()==0u,
+                  "source-ordered power-on clears the raw MPU output window");
+    STEP161_CHECK(bua_hal_get_output_4004()==0x98u,
+                  "normal power-on leaves the parallel-I/O control byte at the established $98");
+
+    bua_hal_set_normal_fmd_byte1(0x7Eu);
+    bua_hal_set_normal_fmd_byte2(0x18u);
+    bua_hal_set_volt_adc(128u);
+    MINOR_COUNT=0x0Du;
+    bua_lifecycle_irq_step121();
+    RAM8(0x0034u)|=STEP111_ENGINE_RUNNING_BIT;
+    RAM8(0x000Au)=160u;
+    RAM8(0x000Cu)=110u;
+    RAM8(0x002Cu)=50u;
+    RAM8(0x00F3u)=0x80u;
+    bua_hal_set_volt_adc(20u);
+    MINOR_COUNT=0x1Du;
+    bua_lifecycle_irq_step121();
+    while(sim_soft_powerdown_latched==0u && guard<2500u) {
+        bua_lifecycle_irq_step121();
+        ++guard;
+    }
+    STEP161_CHECK(sim_soft_powerdown_latched!=0u && guard<2500u,
+                  "raw key-off reaches powerdown before output-boundary inspection");
+    STEP161_CHECK(step161_all_pwm_outputs_equal(0xD000u)!=0u,
+                  "last engine-off Segment 1 leaves all five raw PWM counters at $D000");
+    STEP161_CHECK(bua_hal_get_output_4004()==0x98u,
+                  "engine-off output staging clears fan bit 1 without disturbing control bits");
+    STEP161_CHECK(bua_hal_get_injector_pw_counts()==0u &&
+                  bua_hal_get_iac_position()==STEP111_IAC_PARK_POSITION,
+                  "injector command is zero and IAC bookkeeping is parked at shutdown");
+
+    for(i=0u;i<5u;++i)
+        shutdown_outputs[i]=bua_hal_get_mpu16be(addresses[i]);
+    shutdown_io=bua_hal_get_output_4004();
+    shutdown_injector=bua_hal_get_injector_pw_counts();
+    shutdown_iac=bua_hal_get_iac_position();
+    blocked_before=bua_lifecycle_trace121.blocked_irq_requests;
+    bua_lifecycle_irq_step121();
+    STEP161_CHECK(bua_lifecycle_trace121.blocked_irq_requests==blocked_before+1ul &&
+                  step161_all_pwm_outputs_equal(shutdown_outputs[0])!=0u &&
+                  bua_hal_get_output_4004()==shutdown_io &&
+                  bua_hal_get_injector_pw_counts()==shutdown_injector &&
+                  bua_hal_get_iac_position()==shutdown_iac,
+                  "latched powerdown blocks IRQ-driven changes at every observed raw output");
+
+    bua_hal_set_volt_adc(128u);
+    outcome=bua_lifecycle_power_cycle_step121(0xFFF8u,in);
+    STEP161_CHECK(outcome==POWER120_OUTCOME_NORMAL &&
+                  step161_all_pwm_outputs_equal(0u)!=0u &&
+                  bua_hal_get_injector_pw_counts()==0u,
+                  "acknowledged restart source-clears the raw MPU output window again");
+    STEP161_CHECK(bua_hal_get_output_4004()==0x98u,
+                  "retained restart re-establishes the same parallel-I/O control byte");
+
+    signature=2166136261ul;
+    signature=step160_hash_word(signature,(bua_u16)guard);
+    for(i=0u;i<5u;++i)
+        signature=step160_hash_word(signature,shutdown_outputs[i]);
+    signature=step160_hash_byte(signature,shutdown_io);
+    signature=step160_hash_word(signature,shutdown_injector);
+    signature=step160_hash_byte(signature,shutdown_iac);
+    for(i=0u;i<5u;++i)
+        signature=step160_hash_word(signature,bua_hal_get_mpu16be(addresses[i]));
+    signature=step160_hash_byte(signature,bua_hal_get_output_4004());
+    signature=step160_hash_word(signature,bua_hal_get_injector_pw_counts());
+    printf("  Step-161 raw-HAL output lifecycle signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-161 raw-HAL output lifecycle regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    step91_outputs=saved_outputs;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_volt_adc=saved_volt;
+    sim_soft_powerdown_latched=saved_powerdown;
+    sim_iac_motor_on=saved_iac_motor;
+#undef STEP161_CHECK
 }
 
 static void run_step160_raw_hal_full_lifecycle_test(void)
@@ -136,6 +273,8 @@ static void run_step160_raw_hal_full_lifecycle_test(void)
     sim_normal_fmd_enabled=saved_fmd_enabled;
     sim_volt_adc=saved_volt;
 #undef STEP160_CHECK
+
+    run_step161_raw_hal_output_lifecycle_test();
 }
 
 static void run_step159_raw_hal_lifecycle_test(void)

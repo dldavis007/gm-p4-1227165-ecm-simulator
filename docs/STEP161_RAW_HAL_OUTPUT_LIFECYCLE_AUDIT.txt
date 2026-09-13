@@ -1,0 +1,102 @@
+BUA / GM 1227165 STEP 161 - RAW HAL OUTPUT LIFECYCLE AUDIT
+=========================================================
+
+Purpose
+-------
+Step 161 closes the output side of the full raw-HAL lifecycle established by
+Step 160. It proves the processor-visible output state after source-ordered
+power-on, natural raw-VOLT key-off, IAC homing, the $D6EA software-powerdown
+boundary, a blocked post-powerdown IRQ, and retained restart.
+
+Baseline
+--------
+Step 161 began from verified remote main commit:
+
+  3031027502f94330580b6fa18c083f108b3b5be2
+  Step 160 close full raw HAL lifecycle
+
+GitHub Strict C89 regression run 34754593359 completed successfully for that
+exact commit.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $C800-$C85D
+- evidence/firmware/bua-hac.lst $D6D1-$D6EB
+- evidence/firmware/bua-hac.lst $EDA3-$EDF9
+- src/power_on_dispatch.inc.h
+- src/major_loop.inc.h
+- src/hal_interface.inc.h
+- docs/STEP148_OUTPUT_STAGING_ELECTRICAL_INTERFACES_AUDIT.txt
+- docs/STEP160_FULL_RAW_HAL_LIFECYCLE_AUDIT.txt
+
+Established output behavior
+---------------------------
+The executable power-on path clears the mapped MPU word window from $3FC0 up to
+but not including $3FFA. Therefore the observed $3FCC, $3FD0, $3FD2, $3FD4,
+$3FD6, and $3FD8 outputs are zero at the normal scheduler handoff. The startup
+parallel-I/O sequence leaves $4004 at $98.
+
+During natural key-off, the shutdown path clears the engine-running bit. The
+next Segment-1 output passes take the listing's engine-off branch at
+$EDBD-$EDF9. With field diagnostic mode clear, the firmware writes $D000 to all
+five common PWM counters:
+
+  $3FCC  AIR/ARC raw counter
+  $3FD2  EGR raw counter
+  $3FD4  acceleration-enrichment raw counter
+  $3FD6  TCC raw counter
+  $3FD8  canister-purge raw counter
+
+That same branch clears only bit 1 in $4004. The remaining established control
+bits therefore stay at their startup state, producing $98. The separate raw
+injector command at $3FD0 remains zero, and IAC position bookkeeping completes
+at the calibrated park value 144 established in Step 160.
+
+After $D6EA latches software powerdown, an attempted IRQ must not modify any of
+those observed outputs. A host reset acknowledgement then re-enters $C800 and
+source-clears the MPU output window before returning to normal startup, while
+$4004 is re-established at $98.
+
+Regression contract
+-------------------
+The Step-161 regression contains nine checks covering:
+
+1. initial MPU output-window clear, including the injector command;
+2. initial $4004 startup value;
+3. natural key-off arrival at software powerdown;
+4. all five common PWM counters at engine-off $D000;
+5. fan bit clear with $4004 control bits preserved;
+6. zero injector command and IAC parked at 144;
+7. complete observed-output stability across a blocked IRQ;
+8. MPU output-window clear after retained restart;
+9. restored $4004 startup value after retained restart.
+
+Its FNV-1a signature covers shutdown duration, all five terminal PWM values,
+$4004, injector command, IAC position, and the corresponding post-reset raw
+output state:
+
+  Step-161 raw-HAL output lifecycle signature: B22B98ED
+  step-161 raw-HAL output lifecycle regression result: PASS (9/9)
+
+The test saves and restores memory, statistics, lifecycle/vector/power/startup
+traces, output-stage state, FMD and VOLT inputs, the software-powerdown latch,
+and the IAC motor flag so later frozen scenarios cannot be contaminated.
+
+Evidence boundary
+-----------------
+These are raw processor-visible register values. Step 161 does not assign
+external active-high/active-low polarity, voltage, current, relay state,
+solenoid motion, fan motion, injector flow, or other physical consequences.
+Those remain the F1-F4 hardware and plant boundaries documented by Step 148.
+
+Verification
+------------
+The Makefile positively requires both the Step-161 signature and 9/9 result in
+addition to every earlier required regression and frozen signature.
+
+Conclusion
+----------
+Steps 160 and 161 now form a paired input/output lifecycle acceptance contract:
+raw VOLT and FMD drive a complete key-off and retained restart, while the raw
+MPU and parallel-I/O output windows reach and preserve their listing-established
+shutdown and restart states.

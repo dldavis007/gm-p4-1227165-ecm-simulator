@@ -200,6 +200,8 @@ compilers from treating them as separate C source files.
 - Step-159 raw-HAL lifecycle integration regression: 8/8
 - Step-160 full raw-HAL lifecycle integration regression: 13/13
 - Step-160 full raw-HAL lifecycle signature: `2E92563C`
+- Step-161 raw-HAL output lifecycle regression: 9/9
+- Step-161 raw-HAL output lifecycle signature: `B22B98ED`
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -236,8 +238,9 @@ normal-operation FMD/SPI raw-input boundary and
 `docs/STEP159_RAW_HAL_LIFECYCLE_INTEGRATION_AUDIT.txt` for its integration with
 the raw VOLT ignition path. See
 `docs/STEP160_FULL_RAW_HAL_LIFECYCLE_AUDIT.txt` for the full key-off, IAC homing,
-powerdown, and retained-restart acceptance cycle. Earlier audits remain
-checkpoints.
+powerdown, and retained-restart acceptance cycle, and
+`docs/STEP161_RAW_HAL_OUTPUT_LIFECYCLE_AUDIT.txt` for the corresponding raw
+output-window shutdown and restart contract. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

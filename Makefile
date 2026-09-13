@@ -47,8 +47,10 @@ test: $(TARGET)
 	grep -q "step-159 raw-HAL lifecycle regression result: PASS (8/8)" $(OUTPUT)
 	grep -q "Step-160 full raw-HAL lifecycle signature: 2E92563C" $(OUTPUT)
 	grep -q "step-160 full raw-HAL lifecycle regression result: PASS (13/13)" $(OUTPUT)
+	grep -q "Step-161 raw-HAL output lifecycle signature: B22B98ED" $(OUTPUT)
+	grep -q "step-161 raw-HAL output lifecycle regression result: PASS (9/9)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160 HAL regressions pass."
+	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161 HAL regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt
