@@ -1,0 +1,89 @@
+BUA / GM 1227165 STEP 159 - RAW HAL LIFECYCLE INTEGRATION AUDIT
+===============================================================
+
+Purpose
+-------
+Step 159 proves that the raw input seams completed in Steps 157 and 158 drive
+their ordinary scheduler consumers together. It exercises FMD-derived P/N and
+A/C state plus VOLT-derived ignition-off/on transitions without directly
+injecting L0037, L007E, or the L0033 ignition bit as the requested stimulus.
+
+Baseline
+--------
+Step 159 began from remote main commit:
+  cd3db9e887ca53e69b63adbb646a1ece0233a9e7
+  Step 158 expose normal FMD raw HAL boundary
+
+Evidence and implementation reviewed
+------------------------------------
+- evidence/firmware/bua-hac.lst $CBDC-$CC21
+- evidence/firmware/bua-hac.lst Segment-E battery producer $DE6D-$DEA3
+- src/ecm_core.inc.h
+- src/scheduler_serial.inc.h
+- src/segment_f.inc.h
+- src/ignition_shutdown.inc.h
+- src/hal_interface.inc.h
+- tests/hal_interface_regression.inc.h
+- Steps 86, 111, 121, 157, and 158 audits/regressions
+
+Integrated path
+---------------
+The regression exercises this source-shaped sequence:
+
+  raw normal FMD byte 1/2 HAL inputs
+      -> ordinary IRQ FMD refresh
+      -> raw stores L002E/L002F
+      -> complemented/masked status L0037
+      -> listing-documented P/N and A/C status
+
+  raw U10 AN1/VOLT HAL input
+      -> ordinary major Segment E
+      -> processor-visible battery state L007E
+      -> L0033 ignition-off threshold state
+      -> following odd IRQ Step-111 shutdown front
+
+The powered raw VOLT value is then sampled by another ordinary Segment-E
+dispatch. The following odd IRQ takes the ignition-on branch and resets the
+shutdown timer. FMD-derived status remains independent throughout.
+
+Regression
+----------
+The Step-159 regression contains eight positive checks:
+
+1. raw FMD $7E produces P/N plus compressor-not-on status on an ordinary IRQ;
+2. both raw replies are stored at L002E/L002F;
+3. raw FMD $FF changes the decoded state to Drive plus compressor-on;
+4. raw VOLT 20 is acquired by Segment E and asserts ignition-off;
+5. the following odd IRQ advances the existing shutdown timer;
+6. raw VOLT 128 is acquired by Segment E and clears ignition-off;
+7. the following odd IRQ resets the shutdown timer;
+8. FMD-derived state remains independent of the VOLT transitions.
+
+The test saves and restores memory, statistics, raw FMD inputs and enable state,
+and raw VOLT so it cannot contaminate later frozen scenarios.
+
+Makefile gate
+-------------
+The Strict C89 workflow positively requires:
+
+  step-159 raw-HAL lifecycle regression result: PASS (8/8)
+
+Scope discipline
+----------------
+- The test selects scheduler count immediately before Segment E only to reach
+  the listing-defined acquisition slot efficiently; it does not call the
+  battery producer directly.
+- Ignition remains decoded from raw VOLT. No Boolean key setter is introduced.
+- P/N and A/C remain decoded from raw FMD byte 1. No direct L0037 setters are
+  introduced.
+- The test does not invent physical FMD polarity, unresolved bit identities,
+  power-supply behavior, or U12 internals.
+- Terminal software powerdown and retained-memory restart remain covered by
+  the existing Step-121 lifecycle regression and are not duplicated here.
+
+Conclusion
+----------
+Step 159 closes the first cross-boundary raw-input integration gap. The host can
+now command the established raw FMD and VOLT interfaces and observe ordinary
+firmware scheduling produce P/N, A/C, ignition-off, shutdown-entry, ignition-on,
+and timer-reset behavior without bypassing the translated acquisition paths.

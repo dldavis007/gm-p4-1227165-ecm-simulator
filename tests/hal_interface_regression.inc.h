@@ -1,4 +1,74 @@
 /* Step 158 regression for the normal-operation FMD/SPI raw boundary. */
+static void run_step159_raw_hal_lifecycle_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=8u;
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_volt=sim_volt_adc;
+#define STEP159_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-159 raw HAL lifecycle integration regression:\n");
+    ecm_reset();
+
+    /* Raw FMD1 $7E complements to P/N b0 plus compressor-not-on b7. */
+    bua_hal_set_normal_fmd_byte1(0x7Eu);
+    bua_hal_set_normal_fmd_byte2(0x18u);
+    irq_6p25ms();
+    STEP159_CHECK((RAM8(0x0037u)&0x81u)==0x81u,
+                  "ordinary IRQ decodes raw FMD into P/N plus A/C-compressor-not-on status");
+    STEP159_CHECK(RAM8(0x002Eu)==0x7Eu && RAM8(0x002Fu)==0x18u,
+                  "ordinary IRQ preserves both raw FMD replies at listing RAM $002E/$002F");
+
+    /* Raw FMD1 $FF complements those two decoded states clear. */
+    bua_hal_set_normal_fmd_byte1(0xFFu);
+    irq_6p25ms();
+    STEP159_CHECK((RAM8(0x0037u)&0x81u)==0u,
+                  "next IRQ changes decoded state to Drive plus compressor-on from raw FMD only");
+
+    /* Put the scheduler immediately before Segment E so the normal major
+     * dispatch, rather than a direct helper call, acquires raw VOLT. */
+    RAM8(0x0033u)&=(bua_u8)~STEP111_IGNITION_OFF_BIT;
+    bua_hal_set_volt_adc(20u);
+    MINOR_COUNT=0x0Du;
+    irq_6p25ms();
+    STEP159_CHECK(RAM8(0x007Eu)==20u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)!=0u,
+                  "raw VOLT below 40 reaches Segment E and asserts decoded ignition-off state");
+
+    irq_6p25ms();
+    STEP159_CHECK(ram16be_get(0x008Bu)==1u &&
+                  stats.ignition_shutdown_calls!=0ul,
+                  "following odd IRQ enters the existing shutdown front without a RAM key-off poke");
+
+    bua_hal_set_volt_adc(128u);
+    MINOR_COUNT=0x1Du;
+    irq_6p25ms();
+    STEP159_CHECK(RAM8(0x007Eu)==128u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)==0u,
+                  "raw powered VOLT reaches Segment E and clears decoded ignition-off state");
+
+    irq_6p25ms();
+    STEP159_CHECK(ram16be_get(0x008Bu)==0u,
+                  "following odd IRQ takes ignition-on branch and resets shutdown timer");
+    STEP159_CHECK((RAM8(0x0037u)&0x81u)==0u && RAM8(0x002Eu)==0xFFu,
+                  "FMD-derived Drive/A/C state remains independent of VOLT ignition transitions");
+
+    printf("  step-159 raw-HAL lifecycle regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_volt_adc=saved_volt;
+#undef STEP159_CHECK
+}
+
 static void run_step158_normal_fmd_hal_test(void)
 {
     unsigned int passed=0u;
@@ -48,6 +118,8 @@ static void run_step158_normal_fmd_hal_test(void)
     RAM8(0x002Fu)=saved2f;
     RAM8(0x0037u)=saved37;
 #undef STEP158_CHECK
+
+    run_step159_raw_hal_lifecycle_test();
 }
 
 /* Step 128 regression for the explicit raw HAL boundary. */
