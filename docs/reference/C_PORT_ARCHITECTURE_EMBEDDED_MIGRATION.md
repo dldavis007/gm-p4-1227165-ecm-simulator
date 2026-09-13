@@ -79,6 +79,8 @@ Step 128 established `src/hal_interface.inc.h` as the explicit raw processor-fac
 
 Step 163 adds a power-on composition entry that replaces only the duplicate startup VOLT, PUMPVOLT, DIAG and FMD-byte-1 fields with those named raw HAL values. Reset-vector choice, ROM/checksum results, entry Error-51 state and the absent-HUD boundary remain explicit non-ADC inputs.
 
+Step 164 extends that composition through factory IRQ execution. While the factory-mode flag is set, the lifecycle wrapper refreshes its battery, diagnostic and two-byte FMD shadows from the same named raw HAL state before delegating to the listing-backed factory loop. The ordinary IRQ route does not touch those factory-only shadows.
+
 Output observers expose low RAM, U9 MPU state, `$4000` I/O state, `$5000`, synchronous injector command `$3FD0`, IAC position bookkeeping and the established Segment-1 raw outputs `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`.
 
 These accessors deliberately do not assign voltage polarity, driver current, waveform shape, actuator force or hydraulic behavior. That is the correct migration seam: target drivers can consume or produce established raw state without contaminating the translated algorithm with board-specific implementation.

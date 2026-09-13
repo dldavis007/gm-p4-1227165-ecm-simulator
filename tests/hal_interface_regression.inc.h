@@ -1,4 +1,4 @@
-/* Steps 158-163 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
+/* Steps 158-164 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -42,6 +42,159 @@ static bua_u8 step163_power_from_raw_hal(bua_u8 battery,bua_u8 pump,
     bua_hal_set_diag_adc(diagnostic);
     bua_hal_set_normal_fmd_byte1(fmd1);
     return bua_lifecycle_power_cycle_from_hal_step163(vector_address,in);
+}
+
+static void run_step164_raw_hal_factory_irq_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=10u;
+    bua_u8 outcomes[6];
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    BuaStartupResult112 saved_startup_result=bua_startup_last112;
+    BuaFactoryTrace117 saved_factory117=bua_factory_trace117;
+    BuaFactoryTrace118 saved_factory118=bua_factory_trace118;
+    bua_u8 saved_volt=sim_volt_adc;
+    bua_u8 saved_pump=sim_pumpvolt_adc;
+    bua_u8 saved_diag=sim_diag_adc;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_startup_fmd=sim_startup_fmd_status;
+    bua_u8 saved_powerdown=sim_soft_powerdown_latched;
+    bua_u8 saved_factory_battery=sim_factory_battery_adc117;
+    bua_u8 saved_factory_diag=sim_factory_diagnostic_adc117;
+    bua_u8 saved_factory_fmd1=sim_factory_fmd_byte1_117;
+    bua_u8 saved_factory_fmd2=sim_factory_fmd_byte2_117;
+    bua_u8 saved_factory_swi=sim_factory_swi_reason117;
+    BuaPowerOnInput120 in;
+    bua_u32 ordinary_before;
+    bua_u32 signature;
+    unsigned int i;
+#define STEP164_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-164 raw-HAL factory IRQ composition regression:\n");
+    in=bua_power_input_step120();
+    in.whole_rom_checksum=0x1234u;
+    outcomes[0]=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    STEP164_CHECK(outcomes[0]==POWER120_OUTCOME_FACTORY,
+                  "Step-163 raw inputs enter the established factory IRQ route");
+    bua_hal_set_volt_adc(90u);
+    bua_hal_set_diag_adc(40u);
+    bua_hal_set_normal_fmd_byte1(3u);
+    bua_hal_set_normal_fmd_byte2(0xA5u);
+    sim_factory_battery_adc117=1u;
+    sim_factory_diagnostic_adc117=200u;
+    sim_factory_fmd_byte1_117=0u;
+    sim_factory_fmd_byte2_117=0u;
+    RAM8(0x0032u)=12u;
+    RAM8(0x0048u)=0u;
+    ordinary_before=stats.irq_ticks;
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(RAM8(0x0049u)==3u && RAM8(0x004Au)==0xA5u &&
+                  sim_factory_battery_adc117==90u &&
+                  sim_factory_diagnostic_adc117==40u,
+                  "factory IRQ refreshes both FMD bytes, VOLT, and DIAG from named raw HAL state");
+    STEP164_CHECK(RAM8(0x0048u)==3u && RAM8(0x0032u)==0u &&
+                  bua_factory_trace117.mode_changes==1ul,
+                  "refreshed FMD mode and ignition-on VOLT drive the existing factory state change");
+    STEP164_CHECK(stats.irq_ticks==ordinary_before &&
+                  bua_factory_trace117.irq_routes==1ul,
+                  "HAL-aware factory IRQ remains isolated from the ordinary scheduler");
+
+    outcomes[1]=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    bua_hal_set_diag_adc(39u);
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(sim_factory_swi_reason117==FACTORY117_SWI_DIAGNOSTIC &&
+                  bua_vector_trace119.last_swi_source==0xFDB3u &&
+                  bua_factory_trace117.fmd_exchanges==0ul,
+                  "raw DIAG 39 reaches the factory diagnostic SWI before FMD exchange");
+
+    outcomes[2]=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    bua_hal_set_diag_adc(100u);
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(sim_factory_swi_reason117==FACTORY117_SWI_DIAGNOSTIC &&
+                  bua_vector_trace119.last_swi_source==0xFDB3u,
+                  "raw DIAG equality 100 reaches the same listing-backed SWI boundary");
+
+    outcomes[3]=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    bua_hal_set_volt_adc(40u);
+    RAM8(0x0032u)=7u;
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(RAM8(0x0032u)==8u &&
+                  sim_factory_swi_reason117==FACTORY117_SWI_NONE,
+                  "raw VOLT equality 40 increments the factory ignition-off timer");
+    RAM8(0x0032u)=160u;
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(sim_factory_swi_reason117==FACTORY117_SWI_POWERDOWN &&
+                  bua_vector_trace119.last_swi_source==0xFD03u,
+                  "raw low VOLT with timer 160 reaches the factory powerdown SWI boundary");
+
+    outcomes[4]=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    RAM8(0x0032u)=12u;
+    bua_hal_set_volt_adc(89u);
+    bua_lifecycle_irq_from_hal_step164();
+    outcomes[5]=RAM8(0x0032u);
+    bua_hal_set_volt_adc(90u);
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(outcomes[5]==12u && RAM8(0x0032u)==0u,
+                  "raw VOLT 89 preserves and equality 90 clears the factory ignition timer");
+
+    outcomes[5]=step163_power_from_raw_hal(128u,0u,200u,0x7Eu,0xFFFEu,in);
+    sim_factory_battery_adc117=0x11u;
+    sim_factory_diagnostic_adc117=0x22u;
+    sim_factory_fmd_byte1_117=0x33u;
+    sim_factory_fmd_byte2_117=0x44u;
+    ordinary_before=stats.irq_ticks;
+    bua_lifecycle_irq_from_hal_step164();
+    STEP164_CHECK(outcomes[5]==POWER120_OUTCOME_NORMAL &&
+                  stats.irq_ticks==ordinary_before+1ul &&
+                  sim_factory_battery_adc117==0x11u &&
+                  sim_factory_diagnostic_adc117==0x22u &&
+                  sim_factory_fmd_byte1_117==0x33u &&
+                  sim_factory_fmd_byte2_117==0x44u,
+                  "ordinary IRQ does not refresh or enter the factory-only HAL shadow state");
+
+    signature=2166136261ul;
+    for(i=0u;i<6u;++i)
+        signature=step160_hash_byte(signature,outcomes[i]);
+    signature=step160_hash_byte(signature,sim_factory_battery_adc117);
+    signature=step160_hash_byte(signature,sim_factory_diagnostic_adc117);
+    signature=step160_hash_byte(signature,sim_factory_fmd_byte1_117);
+    signature=step160_hash_byte(signature,sim_factory_fmd_byte2_117);
+    signature=step160_hash_word(signature,(bua_u16)stats.irq_ticks);
+    printf("  Step-164 raw-HAL factory IRQ signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-164 raw-HAL factory IRQ regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    bua_startup_last112=saved_startup_result;
+    bua_factory_trace117=saved_factory117;
+    bua_factory_trace118=saved_factory118;
+    sim_volt_adc=saved_volt;
+    sim_pumpvolt_adc=saved_pump;
+    sim_diag_adc=saved_diag;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_startup_fmd_status=saved_startup_fmd;
+    sim_soft_powerdown_latched=saved_powerdown;
+    sim_factory_battery_adc117=saved_factory_battery;
+    sim_factory_diagnostic_adc117=saved_factory_diag;
+    sim_factory_fmd_byte1_117=saved_factory_fmd1;
+    sim_factory_fmd_byte2_117=saved_factory_fmd2;
+    sim_factory_swi_reason117=saved_factory_swi;
+#undef STEP164_CHECK
 }
 
 static void run_step163_raw_hal_power_on_test(void)
@@ -162,6 +315,8 @@ static void run_step163_raw_hal_power_on_test(void)
     sim_factory_fmd_byte2_117=saved_factory_fmd2;
     sim_factory_swi_reason117=saved_factory_swi;
 #undef STEP163_CHECK
+
+    run_step164_raw_hal_factory_irq_test();
 }
 
 static void run_step162_raw_volt_output_safety_test(void)

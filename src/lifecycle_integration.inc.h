@@ -54,3 +54,17 @@ static void bua_lifecycle_irq_step121(void)
     if(stats.irq_ticks==before)
         ++bua_lifecycle_trace121.blocked_irq_requests;
 }
+
+/* Step 164: factory control repeatedly samples the same battery, diagnostic,
+ * and two-byte FMD resources used by the named raw HAL. Refresh only while the
+ * factory IRQ route is selected; ordinary scheduler behavior is unchanged. */
+static void bua_lifecycle_irq_from_hal_step164(void)
+{
+    if((RAM8(0x0047u)&FACTORY117_MODE_BIT)!=0u) {
+        sim_factory_battery_adc117=hw_adc(0x10u);
+        sim_factory_diagnostic_adc117=hw_adc(0x70u);
+        sim_factory_fmd_byte1_117=sim_normal_fmd_byte1;
+        sim_factory_fmd_byte2_117=sim_normal_fmd_byte2;
+    }
+    bua_lifecycle_irq_step121();
+}

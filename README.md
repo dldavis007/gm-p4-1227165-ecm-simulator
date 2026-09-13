@@ -206,6 +206,8 @@ compilers from treating them as separate C source files.
 - Step-162 raw-VOLT output-safety signature: `DB86F332`
 - Step-163 raw-HAL power-on composition regression: 10/10
 - Step-163 raw-HAL power-on signature: `040E3A8B`
+- Step-164 raw-HAL factory IRQ regression: 10/10
+- Step-164 raw-HAL factory IRQ signature: `0194B153`
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -248,7 +250,9 @@ output-window shutdown and restart contract, and
 `docs/STEP162_RAW_VOLT_OUTPUT_SAFETY_AUDIT.txt` for the scheduler-driven
 two-pass overvoltage output shutdown, and
 `docs/STEP163_RAW_HAL_POWER_ON_COMPOSITION_AUDIT.txt` for raw VOLT, PUMPVOLT,
-DIAG, and FMD startup selection. Earlier audits remain checkpoints.
+DIAG, and FMD startup selection, and
+`docs/STEP164_RAW_HAL_FACTORY_IRQ_AUDIT.txt` for continued raw-input ownership
+during factory IRQ execution. Earlier audits remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

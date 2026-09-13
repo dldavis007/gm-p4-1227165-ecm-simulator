@@ -1,0 +1,88 @@
+BUA / GM 1227165 STEP 164 - RAW HAL FACTORY IRQ AUDIT
+===================================================
+
+Purpose
+-------
+Step 164 extends the Step-163 raw-HAL power-on composition through continued
+factory-test execution. Factory IRQs now refresh battery, diagnostic, and both
+FMD reply bytes from the same named raw inputs used for startup and normal
+operation before delegating to the existing listing-backed factory loop.
+
+Baseline
+--------
+Step 164 began from verified remote main commit:
+
+  6b2d2d7d6d8c7ca062eb584619ee49ca696dfd4d
+  Step 163 compose power-on from raw HAL inputs
+
+GitHub Strict C89 regression run 34778316059 completed successfully for that
+exact commit.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $CA6F-$CA73
+- evidence/firmware/bua-hac.lst $F1E0-$F1F8
+- evidence/firmware/bua-hac.lst $FCA2-$FD28
+- src/factory_test_control.inc.h
+- src/lifecycle_integration.inc.h
+- src/hal_interface.inc.h
+- docs/STEP117_FACTORY_TEST_CONTROL_AUDIT.txt
+- docs/STEP158_NORMAL_FMD_RAW_HAL_AUDIT.txt
+- docs/STEP163_RAW_HAL_POWER_ON_COMPOSITION_AUDIT.txt
+
+Established shared inputs
+-------------------------
+The factory loop reads two FMD SPI reply bytes and repeatedly evaluates
+diagnostic and battery A/D results. The authoritative listing uses the same
+LF1E0/LF1E5 FMD byte-selection routines seen in normal operation. Steps 157 and
+158 already established named raw VOLT, DIAG, and two-byte FMD backing.
+
+Step 164 adds bua_lifecycle_irq_from_hal_step164(). When $0047 bit 7 selects
+factory mode, the wrapper refreshes only these existing factory shadows:
+
+  sim_factory_battery_adc117    <- U10 selector $10 / raw VOLT
+  sim_factory_diagnostic_adc117 <- U10 selector $70 / raw DIAG
+  sim_factory_fmd_byte1_117     <- normal raw FMD byte 1
+  sim_factory_fmd_byte2_117     <- normal raw FMD byte 2
+
+It then calls the unchanged Step-121 lifecycle IRQ entry. When factory mode is
+not selected, the wrapper does not modify any factory shadow and the ordinary
+scheduler runs normally.
+
+Regression coverage
+-------------------
+The Step-164 regression contains ten checks. It proves:
+
+- Step-163 raw startup enters the factory IRQ route;
+- both FMD bytes, VOLT, and DIAG overwrite deliberately stale factory shadows;
+- refreshed FMD mode and ignition-on VOLT drive the existing mode/timer state;
+- factory IRQ routing remains isolated from ordinary IRQ tick accounting;
+- raw DIAG 39 and 100 reach the $FDB3 diagnostic SWI before FMD exchange;
+- raw VOLT 40 increments the factory ignition-off timer;
+- raw VOLT 40 with timer 160 reaches the $FD03 powerdown SWI boundary;
+- raw VOLT 89 preserves and equality 90 clears the timer;
+- the normal IRQ route neither enters nor refreshes factory-only state.
+
+The FNV-1a signature covers factory/normal outcomes, the preserved timer case,
+terminal factory shadows, and ordinary IRQ count:
+
+  Step-164 raw-HAL factory IRQ signature: 0194B153
+  step-164 raw-HAL factory IRQ regression result: PASS (10/10)
+
+The test saves and restores memory, statistics, lifecycle/vector/power/startup
+state, factory traces, named raw inputs, FMD state, and factory shadow inputs.
+
+Evidence boundary
+-----------------
+Step 164 does not model SPI electrical timing, FMD internal behavior, diagnostic
+resistor voltages, battery scaling, power removal, watchdog hardware, or the
+custom output exercises. SWI effects remain explicit processor/HAL boundaries.
+The wrapper only removes duplicate PC stimulus for already-established raw
+processor-facing inputs.
+
+Conclusion
+----------
+Factory selection and continued factory IRQ execution now share one raw HAL
+source for VOLT, DIAG, and both FMD bytes. Ordinary execution remains isolated,
+and every factory threshold and SWI decision remains owned by the previously
+translated executable behavior.
