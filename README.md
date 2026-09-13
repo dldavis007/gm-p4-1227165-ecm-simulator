@@ -208,6 +208,8 @@ compilers from treating them as separate C source files.
 - Step-163 raw-HAL power-on signature: `040E3A8B`
 - Step-164 raw-HAL factory IRQ regression: 10/10
 - Step-164 raw-HAL factory IRQ signature: `0194B153`
+- Step-165 raw-HAL factory A/D regression: 9/9
+- Step-165 raw-HAL factory A/D signature: `0EACFF4F`
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -252,7 +254,10 @@ two-pass overvoltage output shutdown, and
 `docs/STEP163_RAW_HAL_POWER_ON_COMPOSITION_AUDIT.txt` for raw VOLT, PUMPVOLT,
 DIAG, and FMD startup selection, and
 `docs/STEP164_RAW_HAL_FACTORY_IRQ_AUDIT.txt` for continued raw-input ownership
-during factory IRQ execution. Earlier audits remain checkpoints.
+during factory IRQ execution, and
+`docs/STEP165_RAW_HAL_FACTORY_ADC_AUDIT.txt` for the live eleven-channel named
+factory sweep with the unidentified `$B0` slot preserved. Earlier audits remain
+checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

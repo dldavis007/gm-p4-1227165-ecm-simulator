@@ -81,6 +81,8 @@ Step 163 adds a power-on composition entry that replaces only the duplicate star
 
 Step 164 extends that composition through factory IRQ execution. While the factory-mode flag is set, the lifecycle wrapper refreshes its battery, diagnostic and two-byte FMD shadows from the same named raw HAL state before delegating to the listing-backed factory loop. The ordinary IRQ route does not touch those factory-only shadows.
 
+Step 165 extends the same lifecycle boundary to the factory `$00-$B0` A/D sweep. The eleven schematic-identified `$00-$A0` slots refresh from their named raw U10 inputs before factory execution. The unidentified `$B0` slot remains a separate unnamed raw boundary, and normal execution does not refresh the factory-only array.
+
 Output observers expose low RAM, U9 MPU state, `$4000` I/O state, `$5000`, synchronous injector command `$3FD0`, IAC position bookkeeping and the established Segment-1 raw outputs `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`.
 
 These accessors deliberately do not assign voltage polarity, driver current, waveform shape, actuator force or hydraulic behavior. That is the correct migration seam: target drivers can consume or produce established raw state without contaminating the translated algorithm with board-specific implementation.

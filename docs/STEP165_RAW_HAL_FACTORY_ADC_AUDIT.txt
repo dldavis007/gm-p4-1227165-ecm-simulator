@@ -1,0 +1,108 @@
+BUA / GM 1227165 STEP 165 - RAW HAL FACTORY A/D AUDIT
+====================================================
+
+Purpose
+-------
+Step 165 removes the remaining duplicate stimulus for the identified channels
+in the factory-test A/D sweep. Before a factory IRQ, a thin lifecycle wrapper
+refreshes selectors $00 through $A0 from the same named raw HAL inputs used by
+normal and startup execution. The unidentified $B0 slot remains explicit and
+unnamed.
+
+Baseline
+--------
+Step 165 began from verified Step-164 tree:
+
+  9b509ed825f5f4044a690c06c612b787f22904b7
+  Step 164 drive factory IRQ from raw HAL inputs
+
+The corresponding remote main commit is:
+
+  1e0a1973739d444f151c27a046a441680e88aab9
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $F1BE-$F1DF
+- evidence/firmware/bua-hac.lst $FDB5-$FDC5
+- evidence/firmware/bua-hac.lst $FDC7-$FDE1
+- docs/reference/ADC_SENSOR_ACQUISITION.md
+- docs/STEP118_FACTORY_TEST_EXECUTION_AUDIT.txt
+- docs/STEP157_COMPLETE_U10_RAW_HAL_AUDIT.txt
+- docs/STEP164_RAW_HAL_FACTORY_IRQ_AUDIT.txt
+- src/factory_test_execution.inc.h
+- src/lifecycle_integration.inc.h
+- src/hal_interface.inc.h
+
+Listing behavior
+----------------
+The factory low-bit mode starts with X=$017B and selector A=$00. It calls LF1BE,
+stores one byte through X, increments X, adds $10 to the selector and repeats
+until the selector reaches $C0. The twelve results therefore occupy
+$017B-$0186 in exact selector order $00-$B0.
+
+On every fourth factory count, the $40/CTS result at $017F is copied to $0187
+or $0188 according to $0031 bit 0, after which that bit is toggled. These are
+raw factory snapshots; no temperature or pull-up electrical transfer is added.
+
+Composition change
+------------------
+The existing Step-118 translation deliberately retains sim_factory_adc118[] as
+its twelve-byte raw input boundary. Step 165 adds
+bua_lifecycle_irq_from_hal_step165(), which refreshes only elements 0 through 10
+while factory mode is selected:
+
+  index  0 / $00 / $017B <- MAP2
+  index  1 / $10 / $017C <- VOLT
+  index  2 / $20 / $017D <- O2
+  index  3 / $30 / $017E <- MAP
+  index  4 / $40 / $017F <- CTS
+  index  5 / $50 / $0180 <- TPS
+  index  6 / $60 / $0181 <- PUMPVOLT
+  index  7 / $70 / $0182 <- DIAG
+  index  8 / $80 / $0183 <- MAT
+  index  9 / $90 / $0184 <- ESC
+  index 10 / $A0 / $0185 <- VMAF
+
+Element 11, selector $B0 and result $0186, is preserved rather than sourced
+through hw_adc(), whose default return would silently replace an unresolved
+input with zero. This keeps the selector available as a raw factory-test
+boundary without inventing a schematic name or physical meaning.
+
+The wrapper then delegates through the unchanged Step-164 and Step-121 entries.
+The translated Step-117 control and Step-118 execution routines are not altered,
+so their frozen direct-input regressions retain their original contracts.
+
+Regression coverage
+-------------------
+The Step-165 regression contains nine checks. It proves:
+
+- raw startup enters the factory execution route;
+- all eleven identified selector slots refresh from named raw HAL inputs;
+- the unresolved $B0 slot is preserved;
+- the complete twelve-byte array reaches $017B-$0186 in listing order;
+- consecutive quarter-count scans capture live CTS at $0188 and $0187 and
+  toggle the selection bit;
+- a non-scan factory mode leaves the processor-visible result table unchanged;
+- ordinary execution neither refreshes the factory array nor changes ordinary
+  IRQ accounting.
+
+The FNV-1a signature covers the final lifecycle outcome, all twelve factory
+shadow bytes, all twelve processor-visible result bytes and ordinary IRQ count:
+
+  Step-165 raw-HAL factory A/D signature: 0EACFF4F
+  step-165 raw-HAL factory A/D regression result: PASS (9/9)
+
+Evidence boundary
+-----------------
+Step 165 does not identify selector $B0, model U10 conversion timing, assign
+engineering units, reproduce sensor pull-up networks, or infer electrical
+polarity. MAP2, MAP and ESC remain factory-convertible raw channels without an
+explicit normal-operation acquisition in this PROM. The alternating coolant
+captures reproduce processor-visible behavior only.
+
+Conclusion
+----------
+Factory selection, factory control and the identified portion of the factory
+A/D sweep now share the same raw HAL sources used elsewhere in the simulator.
+The only factory sweep slot left independently supplied is the deliberately
+unidentified $B0 selector.

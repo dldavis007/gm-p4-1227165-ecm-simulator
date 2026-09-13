@@ -1,4 +1,4 @@
-/* Steps 158-164 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
+/* Steps 158-165 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -42,6 +42,179 @@ static bua_u8 step163_power_from_raw_hal(bua_u8 battery,bua_u8 pump,
     bua_hal_set_diag_adc(diagnostic);
     bua_hal_set_normal_fmd_byte1(fmd1);
     return bua_lifecycle_power_cycle_from_hal_step163(vector_address,in);
+}
+
+static void run_step165_raw_hal_factory_adc_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=9u;
+    unsigned int i;
+    bua_u8 outcome;
+    bua_u8 matched;
+    bua_u8 saved_adc[12];
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    BuaStartupResult112 saved_startup_result=bua_startup_last112;
+    BuaFactoryTrace117 saved_factory117=bua_factory_trace117;
+    BuaFactoryTrace118 saved_factory118=bua_factory_trace118;
+    bua_u8 saved_map2=sim_map2_adc;
+    bua_u8 saved_volt=sim_volt_adc;
+    bua_u8 saved_o2=sim_o2_adc;
+    bua_u8 saved_map=sim_map_adc;
+    bua_u8 saved_cts=sim_cts_adc;
+    bua_u8 saved_tps=sim_tps_adc;
+    bua_u8 saved_pump=sim_pumpvolt_adc;
+    bua_u8 saved_diag=sim_diag_adc;
+    bua_u8 saved_mat=sim_mat_adc;
+    bua_u8 saved_esc=sim_esc_adc;
+    bua_u8 saved_maf=sim_maf_adc;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_startup_fmd=sim_startup_fmd_status;
+    bua_u8 saved_powerdown=sim_soft_powerdown_latched;
+    bua_u8 saved_factory_battery=sim_factory_battery_adc117;
+    bua_u8 saved_factory_diag=sim_factory_diagnostic_adc117;
+    bua_u8 saved_factory_fmd1=sim_factory_fmd_byte1_117;
+    bua_u8 saved_factory_fmd2=sim_factory_fmd_byte2_117;
+    bua_u8 saved_factory_swi=sim_factory_swi_reason117;
+    BuaPowerOnInput120 in;
+    bua_u32 sweeps_before;
+    bua_u32 ordinary_before;
+    bua_u32 signature;
+#define STEP165_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    for(i=0u;i<12u;++i)
+        saved_adc[i]=sim_factory_adc118[i];
+    printf("\nStep-165 raw-HAL factory A/D sweep regression:\n");
+    in=bua_power_input_step120();
+    in.whole_rom_checksum=0x4321u;
+    outcome=step163_power_from_raw_hal(99u,160u,40u,1u,0xFFFEu,in);
+    STEP165_CHECK(outcome==POWER120_OUTCOME_FACTORY,
+                  "raw startup selects the established factory execution route");
+
+    bua_hal_set_map2_adc(0x11u);
+    bua_hal_set_volt_adc(90u);
+    bua_hal_set_o2_adc(0x22u);
+    bua_hal_set_map_adc(0x33u);
+    bua_hal_set_cts_adc(0x44u);
+    bua_hal_set_tps_adc(0x55u);
+    bua_hal_set_pumpvolt_adc(0x66u);
+    bua_hal_set_diag_adc(40u);
+    bua_hal_set_mat_adc(0x88u);
+    bua_hal_set_esc_adc(0x99u);
+    bua_hal_set_maf_adc(0xAAu);
+    bua_hal_set_normal_fmd_byte1(1u);
+    bua_hal_set_normal_fmd_byte2(0xA5u);
+    for(i=0u;i<12u;++i)
+        sim_factory_adc118[i]=(bua_u8)(0xD0u+i);
+    sim_factory_adc118[11]=0xBCu;
+    RAM8(0x0048u)=1u;
+    RAM8(0x0172u)=3u;
+    RAM8(0x0031u)=0u;
+    bua_lifecycle_irq_from_hal_step165();
+
+    matched=(bua_u8)(sim_factory_adc118[0]==0x11u &&
+                     sim_factory_adc118[1]==90u &&
+                     sim_factory_adc118[2]==0x22u &&
+                     sim_factory_adc118[3]==0x33u &&
+                     sim_factory_adc118[4]==0x44u &&
+                     sim_factory_adc118[5]==0x55u &&
+                     sim_factory_adc118[6]==0x66u &&
+                     sim_factory_adc118[7]==40u &&
+                     sim_factory_adc118[8]==0x88u &&
+                     sim_factory_adc118[9]==0x99u &&
+                     sim_factory_adc118[10]==0xAAu);
+    STEP165_CHECK(matched!=0u,
+                  "all eleven identified selector slots refresh from their named raw HAL inputs");
+    STEP165_CHECK(sim_factory_adc118[11]==0xBCu,
+                  "unidentified selector $B0 remains a preserved unnamed factory boundary");
+    for(i=0u;i<12u && RAM8((bua_u16)(0x017Bu+i))==sim_factory_adc118[i];++i) { }
+    STEP165_CHECK(i==12u && bua_factory_trace118.adc_sweeps==1ul,
+                  "$FDB5-$FDC5 stores the complete $00-$B0 sweep at $017B-$0186 in source order");
+    STEP165_CHECK(RAM8(0x0188u)==0x44u && (RAM8(0x0031u)&0x01u)!=0u,
+                  "first quarter-count captures raw CTS at $0188 and selects the alternate pull-up");
+
+    bua_hal_set_cts_adc(0x45u);
+    RAM8(0x0172u)=7u;
+    bua_lifecycle_irq_from_hal_step165();
+    STEP165_CHECK(RAM8(0x017Fu)==0x45u && RAM8(0x0187u)==0x45u &&
+                  (RAM8(0x0031u)&0x01u)==0u &&
+                  sim_factory_adc118[11]==0xBCu,
+                  "next factory sweep consumes live CTS, captures $0187, and still preserves $B0");
+
+    RAM8(0x0048u)=2u;
+    bua_hal_set_normal_fmd_byte1(2u);
+    sweeps_before=bua_factory_trace118.adc_sweeps;
+    for(i=0u;i<12u;++i)
+        RAM8((bua_u16)(0x017Bu+i))=(bua_u8)(0x60u+i);
+    bua_hal_set_map2_adc(0xE1u);
+    bua_lifecycle_irq_from_hal_step165();
+    for(i=0u;i<12u && RAM8((bua_u16)(0x017Bu+i))==(bua_u8)(0x60u+i);++i) { }
+    STEP165_CHECK(i==12u && bua_factory_trace118.adc_sweeps==sweeps_before,
+                  "non-scan factory mode leaves the processor-visible A/D result table unchanged");
+
+    outcome=step163_power_from_raw_hal(128u,0u,200u,0x7Eu,0xFFFEu,in);
+    for(i=0u;i<12u;++i)
+        sim_factory_adc118[i]=(bua_u8)(0x30u+i);
+    ordinary_before=stats.irq_ticks;
+    bua_hal_set_map2_adc(0xF1u);
+    bua_lifecycle_irq_from_hal_step165();
+    for(i=0u;i<12u && sim_factory_adc118[i]==(bua_u8)(0x30u+i);++i) { }
+    STEP165_CHECK(outcome==POWER120_OUTCOME_NORMAL && i==12u,
+                  "ordinary IRQ does not refresh the factory-only A/D shadow array");
+    STEP165_CHECK(stats.irq_ticks==ordinary_before+1ul,
+                  "ordinary IRQ accounting remains unchanged through the Step-165 wrapper");
+
+    signature=2166136261ul;
+    signature=step160_hash_byte(signature,outcome);
+    for(i=0u;i<12u;++i)
+        signature=step160_hash_byte(signature,sim_factory_adc118[i]);
+    for(i=0u;i<12u;++i)
+        signature=step160_hash_byte(signature,RAM8((bua_u16)(0x017Bu+i)));
+    signature=step160_hash_word(signature,(bua_u16)stats.irq_ticks);
+    printf("  Step-165 raw-HAL factory A/D signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-165 raw-HAL factory A/D regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    bua_startup_last112=saved_startup_result;
+    bua_factory_trace117=saved_factory117;
+    bua_factory_trace118=saved_factory118;
+    sim_map2_adc=saved_map2;
+    sim_volt_adc=saved_volt;
+    sim_o2_adc=saved_o2;
+    sim_map_adc=saved_map;
+    sim_cts_adc=saved_cts;
+    sim_tps_adc=saved_tps;
+    sim_pumpvolt_adc=saved_pump;
+    sim_diag_adc=saved_diag;
+    sim_mat_adc=saved_mat;
+    sim_esc_adc=saved_esc;
+    sim_maf_adc=saved_maf;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_startup_fmd_status=saved_startup_fmd;
+    sim_soft_powerdown_latched=saved_powerdown;
+    sim_factory_battery_adc117=saved_factory_battery;
+    sim_factory_diagnostic_adc117=saved_factory_diag;
+    sim_factory_fmd_byte1_117=saved_factory_fmd1;
+    sim_factory_fmd_byte2_117=saved_factory_fmd2;
+    sim_factory_swi_reason117=saved_factory_swi;
+    for(i=0u;i<12u;++i)
+        sim_factory_adc118[i]=saved_adc[i];
+#undef STEP165_CHECK
 }
 
 static void run_step164_raw_hal_factory_irq_test(void)
@@ -195,6 +368,8 @@ static void run_step164_raw_hal_factory_irq_test(void)
     sim_factory_fmd_byte2_117=saved_factory_fmd2;
     sim_factory_swi_reason117=saved_factory_swi;
 #undef STEP164_CHECK
+
+    run_step165_raw_hal_factory_adc_test();
 }
 
 static void run_step163_raw_hal_power_on_test(void)

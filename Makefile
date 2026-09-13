@@ -55,8 +55,10 @@ test: $(TARGET)
 	grep -q "step-163 raw-HAL power-on regression result: PASS (10/10)" $(OUTPUT)
 	grep -q "Step-164 raw-HAL factory IRQ signature: 0194B153" $(OUTPUT)
 	grep -q "step-164 raw-HAL factory IRQ regression result: PASS (10/10)" $(OUTPUT)
+	grep -q "Step-165 raw-HAL factory A/D signature: 0EACFF4F" $(OUTPUT)
+	grep -q "step-165 raw-HAL factory A/D regression result: PASS (9/9)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162/163/164 HAL regressions pass."
+	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162/163/164/165 HAL regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt

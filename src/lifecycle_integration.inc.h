@@ -68,3 +68,17 @@ static void bua_lifecycle_irq_from_hal_step164(void)
     }
     bua_lifecycle_irq_step121();
 }
+
+/* Step 165: the factory low-bit path scans U10 selectors $00 through $B0.
+ * Refresh the eleven schematic-identified selector slots from their named raw
+ * HAL backing before factory execution.  Slot $B0 remains an explicit unnamed
+ * factory boundary and is deliberately preserved. */
+static void bua_lifecycle_irq_from_hal_step165(void)
+{
+    bua_u8 i;
+    if((RAM8(0x0047u)&FACTORY117_MODE_BIT)!=0u) {
+        for(i=0u;i<11u;++i)
+            sim_factory_adc118[i]=hw_adc((bua_u8)(i<<4));
+    }
+    bua_lifecycle_irq_from_hal_step164();
+}
