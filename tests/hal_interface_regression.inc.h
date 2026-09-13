@@ -1,4 +1,143 @@
 /* Step 158 regression for the normal-operation FMD/SPI raw boundary. */
+static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
+{
+    hash^=(bua_u32)value;
+    return (hash*16777619ul)&0xFFFFFFFFul;
+}
+
+static bua_u32 step160_hash_word(bua_u32 hash,bua_u16 value)
+{
+    hash=step160_hash_byte(hash,(bua_u8)(value>>8));
+    return step160_hash_byte(hash,(bua_u8)value);
+}
+
+static void run_step160_raw_hal_full_lifecycle_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=13u;
+    unsigned int guard=0u;
+    BuaMemory saved_mem=mem;
+    BuaStats saved_stats=stats;
+    BuaLifecycleTrace121 saved_lifecycle=bua_lifecycle_trace121;
+    BuaVectorTrace119 saved_vector=bua_vector_trace119;
+    BuaPowerOnTrace120 saved_power=bua_power_on_trace120;
+    BuaStartupTrace114 saved_startup=bua_startup_trace114;
+    bua_u8 saved_fmd1=sim_normal_fmd_byte1;
+    bua_u8 saved_fmd2=sim_normal_fmd_byte2;
+    bua_u8 saved_fmd_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved_volt=sim_volt_adc;
+    BuaPowerOnInput120 in;
+    bua_u8 outcome;
+    bua_u32 blocked_before;
+    bua_u32 signature;
+#define STEP160_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-160 full raw-HAL lifecycle regression:\n");
+    ecm_reset();
+    bua_lifecycle_reset_trace_step121();
+    bua_power_valid_retained_step120();
+    in=bua_power_input_step120();
+    in.initial_fmd_byte1=0x7Eu;
+    outcome=bua_lifecycle_power_cycle_step121(0xFFFEu,in);
+    STEP160_CHECK(outcome==POWER120_OUTCOME_NORMAL &&
+                  bua_startup_trace114.scheduler_handoff!=0u,
+                  "reset vector and retained startup reach the ordinary scheduler handoff");
+
+    bua_hal_set_normal_fmd_byte1(0x7Eu);
+    bua_hal_set_normal_fmd_byte2(0x18u);
+    bua_hal_set_volt_adc(128u);
+    MINOR_COUNT=0x0Du;
+    bua_lifecycle_irq_step121();
+    STEP160_CHECK(RAM8(0x007Eu)==128u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)==0u,
+                  "raw powered VOLT is acquired by ordinary Segment E");
+    STEP160_CHECK((RAM8(0x0037u)&0x81u)==0x81u &&
+                  RAM8(0x002Eu)==0x7Eu && RAM8(0x002Fu)==0x18u,
+                  "raw FMD produces P/N and compressor-not-on status before shutdown");
+
+    RAM8(0x0034u)|=STEP111_ENGINE_RUNNING_BIT;
+    RAM8(0x000Au)=160u;
+    RAM8(0x000Cu)=110u;
+    RAM8(0x002Cu)=50u;
+    RAM8(0x00F3u)=0x80u;
+    bua_hal_set_volt_adc(20u);
+    MINOR_COUNT=0x1Du;
+    bua_lifecycle_irq_step121();
+    STEP160_CHECK(RAM8(0x007Eu)==20u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)!=0u,
+                  "raw low VOLT is acquired by Segment E and asserts ignition-off");
+
+    while(sim_soft_powerdown_latched==0u && guard<2500u) {
+        bua_lifecycle_irq_step121();
+        ++guard;
+    }
+    STEP160_CHECK(sim_soft_powerdown_latched!=0u && guard<2500u,
+                  "raw key-off runs naturally to the D6EA software-powerdown boundary");
+    STEP160_CHECK(ram16be_get(0x008Bu)==STEP111_POWERDOWN_COUNT &&
+                  stats.soft_powerdown_events==1ul,
+                  "shutdown timer reaches exact LC012 terminal count with one powerdown event");
+    STEP160_CHECK(bua_vector_trace119.last_swi_source==0xD6EAu,
+                  "terminal shutdown records the listing-exact D6EA SWI source");
+    STEP160_CHECK(RAM8(0x001Cu)==150u && RAM8(0x001Du)==118u &&
+                  RAM8(0x002Bu)==118u,
+                  "key-off commits bounded SAM values into retained BLM cells");
+    STEP160_CHECK(RAM8(0x002Cu)==STEP111_IAC_PARK_POSITION &&
+                  (RAM8(0x0002u)&STEP111_SKIP_IAC_RESET_BIT)!=0u,
+                  "IAC completes close-and-reopen homing to calibrated park before powerdown");
+    printf("  IAC terminal state: position=%u mode=%02X command=%02X reset=%02X guard=%u\n",
+           (unsigned int)RAM8(0x002Cu),(unsigned int)RAM8(0x00F3u),
+           (unsigned int)RAM8(0x0101u),(unsigned int)RAM8(0x0002u),guard);
+
+    blocked_before=bua_lifecycle_trace121.blocked_irq_requests;
+    bua_lifecycle_irq_step121();
+    STEP160_CHECK(bua_lifecycle_trace121.blocked_irq_requests==blocked_before+1ul,
+                  "powerdown latch blocks a subsequent host IRQ request");
+
+    bua_hal_set_volt_adc(128u);
+    outcome=bua_lifecycle_power_cycle_step121(0xFFF8u,in);
+    STEP160_CHECK(outcome==POWER120_OUTCOME_NORMAL &&
+                  sim_soft_powerdown_latched==0u,
+                  "host reset acknowledgement releases powerdown and re-enters normal startup");
+    STEP160_CHECK(bua_power_on_trace120.retained_checksum_valid!=0u &&
+                  bua_power_on_trace120.retained_recoveries==0ul &&
+                  RAM8(0x001Cu)==150u && RAM8(0x002Bu)==118u,
+                  "restart accepts retained checksum and preserves shutdown-committed BLM state");
+
+    MINOR_COUNT=0x2Du;
+    bua_lifecycle_irq_step121();
+    STEP160_CHECK(RAM8(0x007Eu)==128u &&
+                  (RAM8(0x0033u)&STEP111_IGNITION_OFF_BIT)==0u &&
+                  (RAM8(0x0037u)&0x81u)==0x81u,
+                  "post-reset Segment E reacquires powered VOLT and independent raw FMD state");
+
+    signature=2166136261ul;
+    signature=step160_hash_word(signature,(bua_u16)guard);
+    signature=step160_hash_word(signature,ram16be_get(0x008Bu));
+    signature=step160_hash_byte(signature,RAM8(0x001Cu));
+    signature=step160_hash_byte(signature,RAM8(0x002Bu));
+    signature=step160_hash_byte(signature,RAM8(0x002Cu));
+    signature=step160_hash_byte(signature,RAM8(0x0037u));
+    signature=step160_hash_byte(signature,RAM8(0x007Eu));
+    signature=step160_hash_word(signature,(bua_u16)stats.soft_powerdown_events);
+    signature=step160_hash_word(signature,(bua_u16)bua_lifecycle_trace121.blocked_irq_requests);
+    printf("  Step-160 full raw-HAL lifecycle signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-160 full raw-HAL lifecycle regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    stats=saved_stats;
+    bua_lifecycle_trace121=saved_lifecycle;
+    bua_vector_trace119=saved_vector;
+    bua_power_on_trace120=saved_power;
+    bua_startup_trace114=saved_startup;
+    sim_normal_fmd_byte1=saved_fmd1;
+    sim_normal_fmd_byte2=saved_fmd2;
+    sim_normal_fmd_enabled=saved_fmd_enabled;
+    sim_volt_adc=saved_volt;
+#undef STEP160_CHECK
+}
+
 static void run_step159_raw_hal_lifecycle_test(void)
 {
     unsigned int passed=0u;
@@ -67,6 +206,8 @@ static void run_step159_raw_hal_lifecycle_test(void)
     sim_normal_fmd_enabled=saved_fmd_enabled;
     sim_volt_adc=saved_volt;
 #undef STEP159_CHECK
+
+    run_step160_raw_hal_full_lifecycle_test();
 }
 
 static void run_step158_normal_fmd_hal_test(void)

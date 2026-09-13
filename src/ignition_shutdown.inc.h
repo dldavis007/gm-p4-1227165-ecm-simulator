@@ -192,10 +192,13 @@ static void bua_iac_shutdown_homing_even_step111(void)
     ++stats.iac_shutdown_homing_calls;
     position=RAM8(0x002Cu);
     if((iac_mode&STEP111_IAC_OPEN_PHASE_BIT)!=0u) {
-        /* SUBA LC62F; NEGA; BPL in the listing.  An unexpected position
-           above park therefore saturates to +127 rather than stopping. */
-        command=(position<=STEP111_IAC_PARK_POSITION)?
-                (bua_u8)(STEP111_IAC_PARK_POSITION-position):127u;
+        /* SUBA LC62F; NEGA; BPL in the listing.  Preserve the intervening
+         * 8-bit values: any requested opening distance whose encoded result
+         * has bit 7 set (including 144 from hard stop to park) clamps to 127.
+         * The next even services recompute the remaining distance. */
+        command=(bua_u8)(0u-(bua_u8)(position-STEP111_IAC_PARK_POSITION));
+        if((command&0x80u)!=0u)
+            command=127u;
     } else if((iac_mode&STEP111_IAC_CLOSE_PHASE_BIT)!=0u) {
         if(position!=0u)
             command=0xFFu;

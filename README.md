@@ -198,6 +198,8 @@ compilers from treating them as separate C source files.
 - Step-121 end-to-end ignition-lifecycle integration: 18/18
 - Step-158 normal-operation FMD raw HAL regression: 7/7
 - Step-159 raw-HAL lifecycle integration regression: 8/8
+- Step-160 full raw-HAL lifecycle integration regression: 13/13
+- Step-160 full raw-HAL lifecycle signature: `2E92563C`
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -232,7 +234,10 @@ custom-device, sensor-acquisition, timing and ESC/knock theory-of-operation
 cross-reference work. See `docs/STEP158_NORMAL_FMD_RAW_HAL_AUDIT.txt` for the
 normal-operation FMD/SPI raw-input boundary and
 `docs/STEP159_RAW_HAL_LIFECYCLE_INTEGRATION_AUDIT.txt` for its integration with
-the raw VOLT ignition path. Earlier audits remain checkpoints.
+the raw VOLT ignition path. See
+`docs/STEP160_FULL_RAW_HAL_LIFECYCLE_AUDIT.txt` for the full key-off, IAC homing,
+powerdown, and retained-restart acceptance cycle. Earlier audits remain
+checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

@@ -1,0 +1,95 @@
+BUA / GM 1227165 STEP 160 - FULL RAW HAL LIFECYCLE AUDIT
+=======================================================
+
+Purpose
+-------
+Step 160 closes the full-cycle raw-input acceptance path. It starts through the
+real reset/power-on composition, supplies normal FMD and VOLT at their HAL
+boundaries, runs key-off naturally through IAC homing and the $D6EA software
+powerdown endpoint, acknowledges a reset, and verifies retained-state restart.
+
+Baseline
+--------
+Step 160 began from remote main commit:
+  7622dd745953e3da2a3e0126f1cbd02c9f4cafcd
+  ran make test
+
+That commit is directly based on Step 159 and adds only .vscode/settings.json.
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $CBDC-$CC21
+- evidence/firmware/bua-hac.lst $D370-$D3EF
+- evidence/firmware/bua-hac.lst $D6D1-$D769
+- evidence/firmware/bua-hac.lst $F5DF-$F644
+- Steps 111, 121, 158, and 159 code, regressions, and audit records
+
+Integrated acceptance path
+--------------------------
+The Step-160 regression executes:
+
+1. retained-valid reset-vector startup and scheduler handoff;
+2. raw powered VOLT acquisition by ordinary Segment E;
+3. raw FMD acquisition and P/N plus compressor-not-on decoding;
+4. raw low VOLT acquisition and ignition-off decoding;
+5. natural shutdown timing to LC012=$0385;
+6. SAM-to-BLM retained commit;
+7. complete IAC close-to-stop and reopen-to-park homing;
+8. exact $D6EA software-powerdown recording;
+9. rejection of a later IRQ while powerdown is latched;
+10. host reset acknowledgement and normal retained restart;
+11. post-reset reacquisition of powered VOLT and independent FMD state.
+
+IAC integration defect found and corrected
+------------------------------------------
+The first complete-cycle run exposed a real disagreement between two translated
+paths. The shutdown producer issued decimal 144 when reopening the IAC from the
+hard stop. The common motor consumer uses command bit 7 as its direction carry,
+so $90 was interpreted as a closing command and the motor remained at zero.
+
+The assembled source at $D3AC-$D3B4 does not simply calculate an unbounded
+park-minus-position value. It performs:
+
+  SUBA LC62F
+  NEGA
+  BPL LD3B4
+  LDAA #127
+
+With position zero and LC62F=144, the 8-bit result after NEGA is $90. Its sign
+bit is set, so the source replaces it with 127 before storing L0101. Later even
+passes recompute the remaining distance until it fits the positive command
+range. The corrected translation now preserves those intermediate 8-bit values
+and the source sign test.
+
+This is an F0 behavioral correction supported directly by executable bytes. It
+does not change motor electrical assumptions or command encoding.
+
+Regression and signature
+------------------------
+The new regression passes 13/13 checks. Its FNV-1a signature covers the natural
+shutdown duration, terminal timer, retained BLM endpoints, IAC park position,
+FMD status, battery state, powerdown count, and blocked-IRQ count.
+
+  Step-160 full raw-HAL lifecycle signature: 2E92563C
+  step-160 full raw-HAL lifecycle regression result: PASS (13/13)
+
+The test saves and restores memory, statistics, lifecycle/vector/power/startup
+traces, FMD raw state, and VOLT raw state. It cannot contaminate later frozen
+scenarios.
+
+Verification
+------------
+Local command:
+
+  make clean && make test
+
+The Makefile positively requires both the Step-160 signature and 13/13 result,
+along with every prior frozen signature and regression gate.
+
+Conclusion
+----------
+Step 160 proves the complete raw-input key-off and restart lifecycle and closes
+the IAC producer/consumer mismatch that only became visible when the shutdown
+was allowed to run naturally. The simulator now reaches calibrated IAC park,
+the exact software-powerdown endpoint, and a retained normal restart from its
+established raw VOLT and FMD boundaries.
