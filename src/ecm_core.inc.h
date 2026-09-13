@@ -550,6 +550,12 @@ static bua_u8 sim_diag_adc = 200u;
 static bua_u8 sim_mat_adc = 0u;
 static bua_u8 sim_esc_adc = 0u;
 static bua_u8 sim_maf_adc = 128u;
+/* Step 158 raw replies from the normal-operation FMD/SPI boundary.  The
+ * enable keeps historical simulations unchanged until a caller explicitly
+ * supplies this input pair through the HAL. */
+static bua_u8 sim_normal_fmd_byte1 = 0u;
+static bua_u8 sim_normal_fmd_byte2 = 0u;
+static bua_u8 sim_normal_fmd_enabled = 0u;
 /* PC-only VSS signal generator.  Capture register emulates P4 L3FC2. */
 static bua_u32 sim_vss_abs_ticks;
 static bua_u32 sim_vss_next_edge;
@@ -3258,6 +3264,27 @@ static void bua_compute_dwell_12p5ms(void)
     ++stats.dwell_calculations;
 }
 static void bua_mode4_timeout_step116(void);
+
+/* Step 158: listing-exact normal FMD refresh front at $CBDC-$CC03 for the
+ * actual BUA LC017=$00 calibration.  FMD byte 1 is complemented into L0037,
+ * bit 5 retains the firmware-owned TCC state, and the disabled power-steering
+ * selection clears status bit 3.  Byte 2 is preserved at L002F as read.
+ *
+ * The raw reply bytes are the established processor-visible boundary.  This
+ * routine does not assign connector polarity or names to unresolved FMD bits.
+ */
+static void bua_normal_fmd_refresh_step158(void)
+{
+    bua_u8 status;
+    RAM8(0x002Eu)=sim_normal_fmd_byte1;
+    RAM8(0x002Fu)=sim_normal_fmd_byte2;
+    status=(bua_u8)((bua_u8)~sim_normal_fmd_byte1&0xDFu);
+    status=(bua_u8)(status|(RAM8(0x0037u)&0x20u));
+    /* LC017=$00: no normal-open fan inversion and no P/S selection. */
+    status=(bua_u8)(status&0xF7u);
+    RAM8(0x0037u)=status;
+}
+
 static void one_second_event(void)
 {
     bua_u16 seconds;

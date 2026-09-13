@@ -1,0 +1,136 @@
+BUA / GM 1227165 STEP 158 - NORMAL FMD RAW HAL AUDIT
+=====================================================
+
+Purpose
+-------
+Step 158 begins the post-U10 discrete/event-input audit by exposing the
+normal-operation FMD/SPI reply pair at its established processor-visible
+boundary. It implements only the listing-supported refresh into L002E/L002F
+and L0037 and does not create separate Boolean inputs for vehicle circuits
+whose exact FMD bit or electrical polarity is not established.
+
+Baseline
+--------
+Step 158 began from main commit:
+  ea0ab2dca40cedd4ee74992e14f1430f1a991215
+  Step 157 document complete known U10 raw HAL boundary
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst, especially $CBDC-$CC21 and LF1E0/LF1E5
+- evidence/hardware/1227165-schematics/1 Processor.gif
+- evidence/hardware/1227165-schematics/2 Inputs.gif
+- evidence/hardware/1227165-schematics/5 Connectors.gif
+- src/ecm_core.inc.h
+- src/scheduler_serial.inc.h
+- src/hal_interface.inc.h
+- tests/tcc_transmission_regression.inc.h
+- tests/iac_ac_regression.inc.h
+
+Established normal boundary
+---------------------------
+The listing disables interrupts, reads FMD byte 1 through LF1E0, stores it at
+L002E, reads byte 2 through LF1E5, and stores it at L002F. It then rebuilds
+L0037 from the complement of byte 1 while preserving the firmware-owned TCC
+status bit 5.
+
+For the actual BUA calibration LC017=$00:
+
+- the optional normal-open fan inversion is not selected;
+- the power-steering selection is not enabled, so status bit 3 is cleared;
+- no separate physical power-steering input should be presented as active.
+
+The listing documents these L0037 meanings relevant to this audit:
+
+- bit 0 set: Park/Neutral;
+- bit 5: TCC status, preserved across the FMD refresh;
+- bit 7 set: A/C compressor not on.
+
+Those meanings support regression checks of the raw-byte transformation. They
+do not establish names for every raw FMD bit or reconstruct U12 internals.
+
+Implementation
+--------------
+Added raw PC backing values:
+
+- sim_normal_fmd_byte1
+- sim_normal_fmd_byte2
+- sim_normal_fmd_enabled
+
+Added raw HAL setters:
+
+- bua_hal_set_normal_fmd_byte1(raw)
+- bua_hal_set_normal_fmd_byte2(raw)
+
+Added bua_normal_fmd_refresh_step158(), which performs the listing-supported
+raw stores and L0037 reconstruction for LC017=$00. Once a caller explicitly
+sets either raw FMD reply, the ordinary IRQ front refreshes the FMD-derived
+status before the IAC and odd/even paths consume it.
+
+The explicit-enable gate preserves all historical simulations unless the new
+HAL boundary is intentionally used. It is a PC compatibility mechanism, not
+source RAM or a claimed ECM mode.
+
+Regression
+----------
+The Step-158 7-check regression verifies:
+
+1. both raw setters retain their reply bytes and enable the boundary;
+2. refresh stores byte 1 and byte 2 at L002E/L002F;
+3. raw byte-1 bit 0 clear produces documented P/N status;
+4. TCC status bit 5 survives refresh;
+5. raw byte-1 bit 7 clear produces documented compressor-not-on status;
+6. raw byte-1 bit 0 set produces Drive status;
+7. actual LC017=$00 suppresses power-steering status bit 3.
+
+The regression saves and restores all raw inputs, enable state, and affected
+RAM so it cannot contaminate later frozen signatures. The Makefile positively
+requires:
+
+  step-158 normal-FMD HAL regression result: PASS (7/7)
+
+Scope decisions
+---------------
+Ignition/key state
+  No new Boolean setter was added. Normal ignition state in this image is
+  derived from the established raw U10 VOLT acquisition and thresholds. The
+  Step-157 raw VOLT setter is the correct upstream boundary.
+
+A/C and Park/Neutral
+  No direct L0037 setters were added. These states now enter through the raw
+  FMD reply and the executable complement/mask transformation.
+
+Power steering
+  The executable capability is known, but LC017=$00 disables selection and the
+  BUA TPS limits also make physical switch sampling unreachable in the proven
+  path. Step 158 therefore verifies suppression instead of exposing an active
+  semantic setter.
+
+Brake
+  No brake-labelled software input has been proven. The existing TCC work
+  correctly retains the brake switch as an external series-power boundary.
+
+Fan
+  Cooling-fan state at L0037 bit 6 is affected by firmware request/calibration
+  logic during refresh; it is not introduced as an independent raw input.
+
+Verification
+------------
+Local strict C89 command:
+
+  make clean && make test
+
+Result:
+
+- compile with -std=c89 -Wall -Wextra -pedantic: no warnings
+- Step-158 normal-FMD regression: PASS 7/7
+- all positively gated Step-104 through Step-121 and Step-128/155/156/157
+  checks: PASS
+- frozen signatures unchanged
+
+Conclusion
+----------
+Step 158 adds the first normal discrete-input HAL seam at the raw shared
+FMD/SPI reply boundary. It exposes the proven P/N and A/C status path without
+bypassing firmware decoding, without inventing unresolved FMD bit names, and
+without converting disabled or external vehicle circuits into fake ECM inputs.

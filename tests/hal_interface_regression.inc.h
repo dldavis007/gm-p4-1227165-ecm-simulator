@@ -1,3 +1,55 @@
+/* Step 158 regression for the normal-operation FMD/SPI raw boundary. */
+static void run_step158_normal_fmd_hal_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=7u;
+    bua_u8 saved1=sim_normal_fmd_byte1;
+    bua_u8 saved2=sim_normal_fmd_byte2;
+    bua_u8 saved_enabled=sim_normal_fmd_enabled;
+    bua_u8 saved2e=RAM8(0x002Eu);
+    bua_u8 saved2f=RAM8(0x002Fu);
+    bua_u8 saved37=RAM8(0x0037u);
+#define STEP158_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-158 normal FMD raw input HAL regression:\n");
+    sim_normal_fmd_enabled=0u;
+    bua_hal_set_normal_fmd_byte1(0xFEu);
+    bua_hal_set_normal_fmd_byte2(0xA5u);
+    STEP158_CHECK(sim_normal_fmd_enabled!=0u && sim_normal_fmd_byte1==0xFEu &&
+                  sim_normal_fmd_byte2==0xA5u,
+                  "raw setters enable and retain the two normal FMD/SPI reply bytes");
+
+    RAM8(0x0037u)=0x20u;
+    bua_normal_fmd_refresh_step158();
+    STEP158_CHECK(RAM8(0x002Eu)==0xFEu && RAM8(0x002Fu)==0xA5u,
+                  "normal refresh stores LF1E0/LF1E5 replies at listing RAM $002E/$002F");
+    STEP158_CHECK((RAM8(0x0037u)&0x01u)!=0u,
+                  "raw FMD1 bit 0 clear produces listing-documented P/N status bit 0 set");
+    STEP158_CHECK((RAM8(0x0037u)&0x20u)!=0u,
+                  "FMD refresh preserves firmware-owned TCC status bit 5");
+
+    bua_hal_set_normal_fmd_byte1(0x7Fu);
+    RAM8(0x0037u)=0u;
+    bua_normal_fmd_refresh_step158();
+    STEP158_CHECK((RAM8(0x0037u)&0x80u)!=0u,
+                  "raw FMD1 bit 7 clear produces documented A/C-compressor-not-on status");
+    STEP158_CHECK((RAM8(0x0037u)&0x01u)==0u,
+                  "raw FMD1 bit 0 set produces Drive status without a synthetic PRNDL input");
+    STEP158_CHECK((RAM8(0x0037u)&0x08u)==0u,
+                  "actual LC017=$00 suppresses power-steering status rather than enabling it");
+
+    printf("  step-158 normal-FMD HAL regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    sim_normal_fmd_byte1=saved1;
+    sim_normal_fmd_byte2=saved2;
+    sim_normal_fmd_enabled=saved_enabled;
+    RAM8(0x002Eu)=saved2e;
+    RAM8(0x002Fu)=saved2f;
+    RAM8(0x0037u)=saved37;
+#undef STEP158_CHECK
+}
+
 /* Step 128 regression for the explicit raw HAL boundary. */
 static void run_step157_remaining_u10_hal_test(void)
 {
@@ -46,6 +98,8 @@ static void run_step157_remaining_u10_hal_test(void)
     sim_pumpvolt_adc=saved_pumpvolt;
     sim_esc_adc=saved_esc;
 #undef STEP157_CHECK
+
+    run_step158_normal_fmd_hal_test();
 }
 
 static void run_step156_cts_mat_hal_test(void)

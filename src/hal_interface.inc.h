@@ -3,6 +3,7 @@
  * Step 155: named raw setters for additional already-backed ECM inputs.
  * Step 156: raw CTS/MAT backing plus named U10-facing setters.
  * Step 157: complete named raw setters for the remaining known U10 channels.
+ * Step 158: raw normal-operation FMD/SPI reply-byte setters.
  *
  * This layer intentionally exposes raw ECM-facing stimuli and observations.
  * It does not convert engineering units other than the two already-existing
@@ -102,6 +103,22 @@ static void bua_hal_set_esc_adc(bua_u8 raw)
 static void bua_hal_set_u9_knock_counter(bua_u16 raw)
 {
     mpu16be_set(0x3FCAu,raw);
+}
+
+/* The executable reads two normal-operation reply bytes through LF1E0/LF1E5.
+ * Keep that SPI/FMD boundary raw: known P/N and A/C meanings are decoded by
+ * the listing-backed refresh, while unresolved bits remain unnamed.
+ */
+static void bua_hal_set_normal_fmd_byte1(bua_u8 raw)
+{
+    sim_normal_fmd_byte1=raw;
+    sim_normal_fmd_enabled=1u;
+}
+
+static void bua_hal_set_normal_fmd_byte2(bua_u8 raw)
+{
+    sim_normal_fmd_byte2=raw;
+    sim_normal_fmd_enabled=1u;
 }
 
 /* These delegate to the existing phase/timing sources. The MPH/RPM values are

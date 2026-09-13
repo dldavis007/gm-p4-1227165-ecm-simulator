@@ -750,6 +750,8 @@ static void irq_6p25ms(void)
     }
     MINOR_COUNT = count;
     TIMER_SNAPSHOT = hw_timer8();
+    if(sim_normal_fmd_enabled!=0u)
+        bua_normal_fmd_refresh_step158();
     /* LCC21 calls LF4DF before the odd/even minor-loop dispatch. */
     bua_iac_motor_service_6p25ms();
     /* LCC21 reads/normalizes TPS and updates its transient filter. */
