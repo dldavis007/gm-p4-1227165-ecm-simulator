@@ -1,4 +1,4 @@
-/* Steps 158-165 regress the normal FMD/VOLT and full lifecycle HAL boundary. */
+/* Steps 158-166 regress the normal FMD/VOLT, SCI and full lifecycle HAL boundary. */
 static bua_u32 step160_hash_byte(bua_u32 hash,bua_u8 value)
 {
     hash^=(bua_u32)value;
@@ -42,6 +42,92 @@ static bua_u8 step163_power_from_raw_hal(bua_u8 battery,bua_u8 pump,
     bua_hal_set_diag_adc(diagnostic);
     bua_hal_set_normal_fmd_byte1(fmd1);
     return bua_lifecycle_power_cycle_from_hal_step163(vector_address,in);
+}
+
+static void run_step166_sci8192_hal_test(void)
+{
+    unsigned int passed=0u;
+    unsigned int total=9u;
+    unsigned int i;
+    BuaMemory saved_mem=mem;
+    BuaSci115 saved_sci=bua_sci115;
+    bua_u8 frame[6];
+    bua_u8 status;
+    bua_u8 sum;
+    bua_u32 signature;
+#define STEP166_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
+
+    printf("\nStep-166 8192-baud SCI raw-HAL regression:\n");
+    bua_hal_sci8192_init();
+    STEP166_CHECK(mem.io4000[7]==0x27u && (SERIAL_MODE_WORD&0x04u)!=0u,
+                  "HAL initialization delegates to the established SCI receive/search setup");
+
+    frame[0]=0x80u;
+    frame[1]=0x56u;
+    frame[2]=0x00u;
+    frame[3]=0x2Au;
+    status=bua_hal_sci8192_receive(frame,4u);
+    STEP166_CHECK(status==SCI115_OK && bua_hal_sci8192_status()==SCI115_OK,
+                  "complete raw Mode-0 frame enters the translated device-$80 receiver");
+    STEP166_CHECK(bua_hal_sci8192_response_count()==4u &&
+                  bua_hal_sci8192_response_byte(0u)==0x80u &&
+                  bua_hal_sci8192_response_byte(1u)==0x56u &&
+                  bua_hal_sci8192_response_byte(2u)==0x00u,
+                  "HAL observers expose the complete translated Mode-0 response framing");
+    sum=0u;
+    for(i=0u;i<bua_hal_sci8192_response_count();++i)
+        sum=(bua_u8)(sum+bua_hal_sci8192_response_byte((bua_u8)i));
+    STEP166_CHECK(sum==0u,
+                  "response bytes exposed by the HAL retain the translated checksum");
+    STEP166_CHECK(bua_hal_sci8192_response_byte(4u)==0u &&
+                  bua_hal_sci8192_response_byte(255u)==0u,
+                  "bounded response observer rejects indices outside the emitted frame");
+
+    frame[3]=0x2Bu;
+    status=bua_hal_sci8192_receive(frame,4u);
+    STEP166_CHECK(status==SCI115_ERR_CHECKSUM &&
+                  bua_hal_sci8192_response_count()==0u,
+                  "malformed checksum remains rejected inside the translated SCI core");
+    frame[0]=0x81u;
+    frame[3]=0x29u;
+    status=bua_hal_sci8192_receive(frame,4u);
+    STEP166_CHECK(status==SCI115_ERR_DEVICE,
+                  "unknown device ID remains rejected through the raw-frame boundary");
+    status=bua_hal_sci8192_receive(frame,3u);
+    STEP166_CHECK(status==SCI115_ERR_LENGTH,
+                  "truncated raw frame remains rejected before protocol interpretation");
+
+    RAM8(0x0020u)=0xA1u;
+    RAM8(0x0021u)=0xB2u;
+    frame[0]=0x80u;
+    frame[1]=0x58u;
+    frame[2]=0x02u;
+    frame[3]=0x00u;
+    frame[4]=0x20u;
+    frame[5]=0x06u;
+    status=bua_hal_sci8192_receive(frame,6u);
+    STEP166_CHECK(status==SCI115_OK &&
+                  bua_hal_sci8192_response_count()==67u &&
+                  bua_hal_sci8192_response_byte(3u)==0xA1u &&
+                  bua_hal_sci8192_response_byte(4u)==0xB2u,
+                  "valid Mode-2 request exposes the existing 63-byte sequential response");
+
+    signature=2166136261ul;
+    signature=step160_hash_byte(signature,status);
+    signature=step160_hash_byte(signature,bua_hal_sci8192_status());
+    signature=step160_hash_byte(signature,bua_hal_sci8192_response_count());
+    for(i=0u;i<8u;++i)
+        signature=step160_hash_byte(signature,
+                              bua_hal_sci8192_response_byte((bua_u8)i));
+    signature=step160_hash_byte(signature,mem.io4000[7]);
+    printf("  Step-166 8192-baud SCI raw-HAL signature: %08lX\n",
+           (unsigned long)signature);
+    printf("  step-166 8192-baud SCI raw-HAL regression result: %s (%u/%u)\n",
+           (passed==total)?"PASS":"FAIL",passed,total);
+
+    mem=saved_mem;
+    bua_sci115=saved_sci;
+#undef STEP166_CHECK
 }
 
 static void run_step165_raw_hal_factory_adc_test(void)
@@ -215,6 +301,8 @@ static void run_step165_raw_hal_factory_adc_test(void)
     for(i=0u;i<12u;++i)
         sim_factory_adc118[i]=saved_adc[i];
 #undef STEP165_CHECK
+
+    run_step166_sci8192_hal_test();
 }
 
 static void run_step164_raw_hal_factory_irq_test(void)

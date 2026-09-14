@@ -1,0 +1,92 @@
+BUA / GM 1227165 STEP 166 - 8192-BAUD SCI RAW HAL AUDIT
+======================================================
+
+Purpose
+-------
+Step 166 adds a stable message-level HAL boundary around the listing-backed
+Step-115 8192-baud SCI implementation. Host or target transport code can submit
+a complete raw frame and retrieve the translated status and response without
+directly accessing BuaSci115 internals.
+
+Baseline
+--------
+Step 166 began from verified Step-165 tree:
+
+  beb19f204a39b271d70eb9357349d3f534bd318c
+  Step 165 drive factory ADC sweep from raw HAL inputs
+
+The corresponding remote main commit is:
+
+  f0f3e726228ce793aa6bc748cc4d31ecd15ad29b
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $C9F4-$CA6E
+- evidence/firmware/bua-hac.lst $FA58-$FC71
+- src/sci_8192.inc.h
+- src/mode4_lifecycle.inc.h
+- src/hal_interface.inc.h
+- tests/sci_8192_regression.inc.h
+- docs/STEP115_SCI_8192_AUDIT.txt
+- docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt
+
+Existing translated ownership
+-----------------------------
+Step 115 already owns the device-$80 message protocol. It validates complete
+frame count, biased message length, supported Mode 0-4 lengths and the
+two's-complement checksum. It performs the listing-backed RAM/control writes,
+builds the response and preserves unresolved ROM reads as an explicit error
+boundary.
+
+Step 166 does not move or duplicate those decisions. It exposes five thin HAL
+operations:
+
+- initialize the existing SCI receive/search state;
+- submit a pointer and byte count for one complete raw request frame;
+- read the translated receive status;
+- read the translated response byte count;
+- read a response byte through a bounds-checked index.
+
+An out-of-range response index returns zero and never reads outside the fixed
+Step-115 response buffer. The existing SCI maximum-frame and protocol-length
+checks remain authoritative.
+
+Regression coverage
+-------------------
+The Step-166 regression contains nine checks. It proves:
+
+- HAL initialization reaches the translated SCI setup;
+- a literal raw Mode-0 frame is accepted;
+- response header, count and checksum are visible through HAL observers;
+- response reads are bounded at both the immediate end and index 255;
+- bad checksum, unknown device ID and truncated frames retain their existing
+  Step-115 error results;
+- a literal Mode-2 request exposes the existing 63-byte sequential response.
+
+The test supplies literal wire-message bytes rather than using the Step-115
+request builder. This independently checks that the HAL entry accepts the raw
+frame format expected by the translated receiver. State is saved and restored
+so the new test cannot contaminate later frozen signatures.
+
+The FNV-1a signature covers the final status, response count, first eight
+response bytes and the translated SCI control register:
+
+  Step-166 8192-baud SCI raw-HAL signature: 52396771
+  step-166 8192-baud SCI raw-HAL regression result: PASS (9/9)
+
+Evidence boundary
+-----------------
+This is deliberately a message-level boundary. It does not reproduce 8192-baud
+bit timing, start/stop-bit sampling, physical line polarity, wakeup behavior,
+shared-line arbitration, collisions, cable loading or the ECM transceiver.
+Those mechanisms remain target transport, electrical-model or unresolved
+hardware responsibilities. The wrapper also does not claim that invalid host
+pointers are a recoverable ECM condition; callers must supply readable storage
+for the stated byte count.
+
+Conclusion
+----------
+The complete translated device-$80 protocol can now be driven and observed
+without reaching into its internal structure. Embedded and host transports have
+a narrow raw-message seam while all established protocol behavior remains
+owned by Step 115.

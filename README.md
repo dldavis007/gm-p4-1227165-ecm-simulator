@@ -210,6 +210,8 @@ compilers from treating them as separate C source files.
 - Step-164 raw-HAL factory IRQ signature: `0194B153`
 - Step-165 raw-HAL factory A/D regression: 9/9
 - Step-165 raw-HAL factory A/D signature: `0EACFF4F`
+- Step-166 8192-baud SCI raw-HAL regression: 9/9
+- Step-166 8192-baud SCI raw-HAL signature: `52396771`
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -256,7 +258,9 @@ DIAG, and FMD startup selection, and
 `docs/STEP164_RAW_HAL_FACTORY_IRQ_AUDIT.txt` for continued raw-input ownership
 during factory IRQ execution, and
 `docs/STEP165_RAW_HAL_FACTORY_ADC_AUDIT.txt` for the live eleven-channel named
-factory sweep with the unidentified `$B0` slot preserved. Earlier audits remain
+factory sweep with the unidentified `$B0` slot preserved, and
+`docs/STEP166_SCI8192_RAW_HAL_AUDIT.txt` for the message-level receive/response
+boundary around the translated 8192-baud SCI core. Earlier audits remain
 checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The

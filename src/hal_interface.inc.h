@@ -4,6 +4,7 @@
  * Step 156: raw CTS/MAT backing plus named U10-facing setters.
  * Step 157: complete named raw setters for the remaining known U10 channels.
  * Step 158: raw normal-operation FMD/SPI reply-byte setters.
+ * Step 166: raw 8192-baud SCI message submission and response observers.
  *
  * This layer intentionally exposes raw ECM-facing stimuli and observations.
  * It does not convert engineering units other than the two already-existing
@@ -221,4 +222,35 @@ static bua_u8 bua_hal_get_output_3fd8(void)
 static bua_u8 bua_hal_get_output_4004(void)
 {
     return bua_hal_get_io4000(0x4004u);
+}
+
+/* Step 166: message-level boundary for the listing-backed 8192-baud SCI core.
+ * The target transport supplies a complete raw frame and consumes the complete
+ * response. Physical baud timing, line polarity and transceiver behavior stay
+ * outside this boundary. */
+static void bua_hal_sci8192_init(void)
+{
+    bua_sci115_init();
+}
+
+static bua_u8 bua_hal_sci8192_receive(const bua_u8 *frame,bua_u8 count)
+{
+    return bua_sci115_receive(frame,count);
+}
+
+static bua_u8 bua_hal_sci8192_status(void)
+{
+    return bua_sci115.status;
+}
+
+static bua_u8 bua_hal_sci8192_response_count(void)
+{
+    return bua_sci115.output_count;
+}
+
+static bua_u8 bua_hal_sci8192_response_byte(bua_u8 index)
+{
+    if(index<bua_sci115.output_count)
+        return bua_sci115.output[index];
+    return 0u;
 }
