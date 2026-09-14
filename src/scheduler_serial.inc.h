@@ -428,6 +428,41 @@ static void bua_160_load_next_diagnostic_byte(void)
     }
     ALCL_TABLE_INDEX=(bua_u8)(i+1u); ++stats.display_bytes_loaded;
 }
+/* F88E..F8B4: three 16-byte factory streams rooted at FC72/FC82/FC92. */
+static const bua_u16 bua_160_factory_addresses[3][8]={
+ {0x017Bu,0x017Du,0x017Fu,0x0181u,0x0183u,0x0185u,0x0187u,0x0049u},
+ {0xC000u,0xC002u,0xC004u,0x0173u,0x0175u,0x4002u,0x0047u,0x0000u},
+ {0x3FC0u,0x3FC2u,0x3FC4u,0x3FC6u,0x3FC8u,0x3FCAu,0x3FE0u,0x3FF8u}
+};
+static bua_u8 bua_160_factory_read(bua_u16 p)
+{
+    if(p<0x0500u) return RAM8(p);
+    if(p>=0x3FC0u&&p<0x4000u) return mem.mpu[p-0x3FC0u];
+    if(p>=0x4000u&&p<0x4010u) return mem.io4000[p-0x4000u];
+    switch(p) {
+    case 0xC000u:return 0x25u; case 0xC001u:return 0xE5u;
+    case 0xC002u:return 0x09u; case 0xC003u:return 0x79u;
+    case 0xC004u:return 0x02u; case 0xC005u:return 0xEEu;
+    default:return 0u;
+    }
+}
+static bua_u8 bua_160_load_next_factory_byte(void)
+{
+    bua_u8 mode=RAM8(0x0048u),i=ALCL_TABLE_INDEX;
+    bua_u16 p;
+    if(mode==0u||mode>3u) return 0u;
+    if(i>=16u) {
+        ALCL_TABLE_INDEX=0u; ALCL_XMIT_BYTE=0xFFu; return 0u;
+    }
+    if((i&1u)!=0u) ALCL_XMIT_BYTE=RAM8(0x017Au);
+    else {
+        p=bua_160_factory_addresses[mode-1u][i>>1];
+        ALCL_XMIT_BYTE=bua_160_factory_read(p);
+        RAM8(0x017Au)=bua_160_factory_read((bua_u16)(p+1u));
+    }
+    ALCL_TABLE_INDEX=(bua_u8)(i+1u); ++stats.display_bytes_loaded;
+    return 1u;
+}
 static int bua_lf880_manager(bua_u32 t)
 {
     bua_u8 msb;
@@ -440,8 +475,9 @@ static int bua_lf880_manager(bua_u32 t)
         return msb!=0u?1:0;
     }
     ALCL_BIT_COUNT=8u;
-    if((RAM8(0x0047u)&0x80u)!=0u) return -1;
-    if((MINOR_MODE_WORD2&0x30u)!=0u) bua_160_load_next_diagnostic_byte();
+    if((RAM8(0x0047u)&0x80u)!=0u) {
+        if(bua_160_load_next_factory_byte()==0u) return -1;
+    } else if((MINOR_MODE_WORD2&0x30u)!=0u) bua_160_load_next_diagnostic_byte();
     else bua_160_load_next_normal_byte();
     if(ALCL_TABLE_INDEX!=0u) serial_line_high_at(t);
     return -1;
