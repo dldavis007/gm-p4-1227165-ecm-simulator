@@ -1,5 +1,10 @@
 # 1227165 ECM technical-reference foundation
 
+For project-level orientation, current closure status, and the numbered audit
+trail, start at the [documentation hub](../README.md),
+[current project status](../CURRENT_PROJECT_STATUS.md), and
+[step history index](../STEP_HISTORY_INDEX.md).
+
 This directory is the entry point for assembling a traceable technical
 reference for the GM P4 ECM service number 1227165 and the supplied 9340 PROM
 material. It links the executable assembly, assembled listing, calibration and

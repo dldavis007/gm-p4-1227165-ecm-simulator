@@ -1,5 +1,24 @@
 # BUA / GM 1227165 Step-171 evidence-supported whole-image closure
 
+## Current status
+
+The supplied 9340 / 16059335 PROM image has an evidence-supported behavioral
+C89 translation with no known reachable, internally defined executable area
+remaining classified as unported. This is not a claim of cycle-exact processor
+emulation or electrical equivalence to the original ECM.
+
+- [Current project status](docs/CURRENT_PROJECT_STATUS.md)
+- [Documentation hub](docs/README.md)
+- [Step history index](docs/STEP_HISTORY_INDEX.md)
+- [Technical-reference index](docs/reference/README.md)
+- [Step 171 closure audit](docs/STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt)
+
+New behavioral work requires a newly identified exact listing discrepancy or
+new primary evidence. Embedded/HIL implementation is a separate phase at the
+documented HAL boundaries.
+
+## Development history
+
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
 107 begins the listing-backed translation of Major Segment D diagnostics,

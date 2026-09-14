@@ -1,0 +1,52 @@
+BUA / GM 1227165 STEP 172 - DOCUMENTATION AND NAVIGATION AUDIT
+============================================================
+
+Purpose
+-------
+Step 172 begins the post-closure documentation phase. It provides a clear
+current-state entry point and a navigable development record without changing
+behavioral C code, test logic, calibration data, evidence classifications or
+frozen signatures.
+
+Changes
+-------
+- README.md now leads with the Step-171 closure status and direct start links.
+- docs/README.md is the project documentation hub.
+- docs/CURRENT_PROJECT_STATUS.md separates established behavioral scope from
+  processor, custom-device, absent-ROM and electrical boundaries.
+- docs/STEP_HISTORY_INDEX.md links every available Step-104 through Step-172
+  audit and explicitly records the absence of a standalone Step-153 audit.
+- docs/reference/README.md links back to the project-level orientation pages.
+
+Preservation rules
+------------------
+Historical numbered audits remain checkpoint records. Step 172 does not rewrite
+their original claims into a fictional latest-state history. Corrections remain
+visible through later addenda and later audits.
+
+The documentation retains the established authority order: emitted listing
+behavior first, then calibration/address use, independent evidence and tests,
+comments, and secondary material. It does not use bua-hac.txt and does not
+promote simulator assumptions or unresolved hardware semantics to firmware
+facts.
+
+Closure relationship
+--------------------
+Step 171 remains the final evidence-supported behavioral-port milestone. Step
+172 is a documentation/usability checkpoint. New behavioral translation still
+requires a newly established exact listing discrepancy or new primary evidence.
+
+Verification
+------------
+All new relative Markdown links were checked against repository paths. The
+unchanged behavioral source was rebuilt with strict C89 flags and the complete
+Makefile regression gate was run. Compiler diagnostics were empty, runtime exit
+status was zero, all gated regressions passed, and no genuine FAIL result was
+present.
+
+Step-172 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
