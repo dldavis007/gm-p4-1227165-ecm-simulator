@@ -1,0 +1,44 @@
+BUA / GM 1227165 STEP 173 - SIMULATOR, BUILD AND TESTING GUIDE AUDIT
+==================================================================
+
+Purpose
+-------
+Step 173 provides a practical operating guide for the completed behavioral PC
+model. It changes no C source, tests, calibration, executable behavior or frozen
+signature.
+
+Documentation changes
+---------------------
+- docs/SIMULATOR_BUILD_TEST_GUIDE.md documents the one-translation-unit C89
+  contract and all supplied host build paths.
+- The guide identifies `make test` as the complete acceptance command and
+  distinguishes it from build/run-only shell and Windows helpers.
+- The guide explains focused, integration, lifecycle and scenario layers;
+  lists every Makefile-gated signature; and describes failure triage without
+  authorizing weakened checks or silent baseline changes.
+- Raw U10, U9, FMD, RAM, output, 8192-baud and 160-baud HAL surfaces are
+  summarized with their evidence limits intact.
+- The root README, documentation hub, status page and step index link the guide.
+- The simulation-theory chapter is updated from its older gate description to
+  the actual Step-170 Makefile coverage.
+
+Evidence discipline
+-------------------
+The guide treats a regression PASS as bounded evidence for its defined vectors,
+not proof of external electrical or undocumented device behavior. Step-104 and
+Step-105 plant parameters remain simulator assumptions. It does not use
+bua-hac.txt or change the Step-171 behavioral closure conclusion.
+
+Verification
+------------
+All new relative links were checked against repository paths. The unchanged
+source was rebuilt with strict C89 flags and the complete `make test` gate was
+run. Compiler diagnostics were empty, runtime exit status was zero, all gated
+results and signatures passed, and no genuine FAIL result was present.
+
+Step-173 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

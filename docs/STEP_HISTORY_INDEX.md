@@ -88,3 +88,4 @@ audits remain historical checkpoints; the current conclusion is summarized in
 ## Documentation consolidation
 
 - [172 — documentation/navigation consolidation](STEP172_DOCUMENTATION_NAVIGATION_AUDIT.txt)
+- [173 — simulator/build/testing guide](STEP173_SIMULATOR_TESTING_GUIDE_AUDIT.txt)

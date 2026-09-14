@@ -58,6 +58,9 @@ evidence. Otherwise, useful work belongs to one of these separate tracks:
 - new PC scenarios that remain explicitly simulator-only and do not redefine
   firmware behavior.
 
+For practical use of the existing PC model, see the
+[simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md).
+
 See [Step 171](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt), the
 [evidence register](reference/EVIDENCE_REGISTER.md), and the
 [embedded-migration chapter](reference/C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md)

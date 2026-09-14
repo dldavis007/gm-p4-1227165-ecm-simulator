@@ -9,6 +9,7 @@ emulation or electrical equivalence to the original ECM.
 
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)
 - [Documentation hub](docs/README.md)
+- [Simulator, build, and testing guide](docs/SIMULATOR_BUILD_TEST_GUIDE.md)
 - [Step history index](docs/STEP_HISTORY_INDEX.md)
 - [Technical-reference index](docs/reference/README.md)
 - [Step 171 closure audit](docs/STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt)

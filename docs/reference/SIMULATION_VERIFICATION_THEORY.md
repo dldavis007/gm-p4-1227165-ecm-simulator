@@ -90,11 +90,15 @@ The repository `Makefile` builds only `main.c` with:
 
 `gcc -std=c89 -Wall -Wextra -pedantic`
 
-and runs the executable into a captured output file. It then checks the frozen Step-104/105 signatures and the numbered Step-106 through Step-121 regression result strings, and rejects unexpected `FAIL` output.
+and runs the executable into a captured output file. It checks the frozen
+Step-104/105 signatures; the Step-106 through Step-121 behavioral/lifecycle
+results; the Step-128 and Step-155 through Step-166 raw-HAL results and
+signatures; the Step-168/169 160-baud manager results; and the Step-170 complete
+160-baud raw-HAL result. It rejects unexpected `FAIL` output.
 
-This gate verifies the historical core/lifecycle checkpoints represented in the Makefile. Later documentation-only theory steps do not themselves imply a new executable baseline.
-
-The Step-128 HAL regression is wired through the existing regression include chain. Because the current Makefile text predates the later theory-documentation sequence, verification claims should distinguish between regressions known from prior executed audits and checks that are only statically present until the next local or CI run.
+This gate verifies the historical core, lifecycle, HAL and manager checkpoints
+explicitly represented in the current Makefile. Documentation-only steps do not
+create a new executable baseline.
 
 ## 8. Strict compiler warnings
 
@@ -185,6 +189,8 @@ Future numbered steps should correspond to new evidence, corrections, implementa
 - `tests/` — focused and integration regression fragments.
 - `Makefile` — strict-C89 build and regression gate.
 - `main.c` — single-translation-unit harness and regression entry point.
+- `docs/SIMULATOR_BUILD_TEST_GUIDE.md` — practical build, run, HAL and result
+  interpretation guide.
 - `docs/STEP104_BASELINE_FREEZE.txt` and `docs/STEP104_SIGNATURE.txt` — frozen baseline evidence.
 - `docs/STEP105_TRANSMISSION_AUDIT.txt` — transmission-aware simulation boundary.
 - `docs/STEP110_WHOLE_IMAGE_COVERAGE_AUDIT.txt` and `docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt` — coverage/closure context.

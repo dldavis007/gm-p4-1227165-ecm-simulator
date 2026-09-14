@@ -8,7 +8,9 @@ immutable development trail.
 
 - [Current project status](CURRENT_PROJECT_STATUS.md) — what is complete, what
   remains bounded, and what can legitimately start new work.
-- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-172 record.
+- [Simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md) — how to
+  build, run, verify, use the raw HAL, and interpret the results.
+- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-173 record.
 - [Technical-reference foundation](reference/README.md) — integrated system,
   firmware, hardware, MEMCAL, theory and migration chapters.
 - [Step 171 whole-image reclosure](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt) —
