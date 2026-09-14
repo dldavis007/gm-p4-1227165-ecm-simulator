@@ -58,12 +58,14 @@ shutdown, BLM commit, IAC homing, the software-powerdown boundary, and a later
 retained restart in one end-to-end PC/HAL lifecycle. It also proves corrupted
 retained recovery and factory-path isolation. Physical power switching and
 processor reset consequences remain explicitly acknowledged HAL boundaries.
-Step 122 re-audits the complete assembled image after the Step-111 through
-Step-121 integrations. It finds no known reachable, internally defined
-firmware area still classified as unported. Remaining limitations are
-calibration/data, external or absent ROM, processor/custom-device behavior,
-and physical electrical/timing boundaries. This is a coverage conclusion,
-not a claim of instruction-by-instruction or whole-machine equivalence.
+Step 122 re-audited the complete assembled image after the Step-111 through
+Step-121 integrations and initially found no known reachable, internally
+defined firmware area still classified as unported. Step 167 later narrowed
+that conclusion after reconciling the explicit normal-only LF880 implementation
+against `$F88E-$F8B4` and `$F8CB-$F8ED`: the factory and diagnostic branches of
+the 160-baud byte manager remain bounded implementation gaps. Other remaining
+limitations are calibration/data, external or absent ROM, processor/custom-
+device behavior, and physical electrical/timing boundaries.
 Step 123 inventories the historical Library/Drive evidence before cleanup. It
 confirms the committed assembled listing, identifies the six ECM schematic
 sheets and MEMCAL records awaiting controlled import, classifies duplicate
@@ -260,8 +262,10 @@ during factory IRQ execution, and
 `docs/STEP165_RAW_HAL_FACTORY_ADC_AUDIT.txt` for the live eleven-channel named
 factory sweep with the unidentified `$B0` slot preserved, and
 `docs/STEP166_SCI8192_RAW_HAL_AUDIT.txt` for the message-level receive/response
-boundary around the translated 8192-baud SCI core. Earlier audits remain
-checkpoints.
+boundary around the translated 8192-baud SCI core, and
+`docs/STEP167_ALDL160_COMPLETENESS_AUDIT.txt` for the corrected scope of the
+normal, diagnostic and factory 160-baud byte-manager paths. Earlier audits
+remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

@@ -156,3 +156,14 @@ Preserve this completed software milestone with a Git tag/release, then import
 and classify the important external Library evidence before any cleanup. Any
 later Step-123 behavioral work should begin with a newly identified exact
 listing range and executable discrepancy, not with a presumed missing feature.
+
+Post-Step-167 correction
+------------------------
+Step 167 later identified one exact exception to this audit's closure
+conclusion. The C function bua_lf880_normal() intentionally implements only the
+ordinary 160-baud display path and returns without executing the listing's
+factory table branch at $F88E-$F8B4 or diagnostic table branch at $F8CB-$F8ED.
+Those branches are internally defined and table-backed, not merely electrical
+ALDL behavior. They are therefore bounded UNPORTED behavior pending a future
+source-ordered implementation. The original Step-122 test evidence remains
+valid; only the completeness claim is narrowed.

@@ -1,0 +1,116 @@
+BUA / GM 1227165 STEP 167 - 160-BAUD ALDL COMPLETENESS AUDIT
+===========================================================
+
+Purpose
+-------
+Step 167 audits whether the existing 160-baud implementation is complete enough
+for a public raw HAL boundary after Step 166 exposed the 8192-baud message core.
+It compares the authoritative LF880 and IRQ/compare paths with the C port and
+corrects the older whole-image closure claim where necessary.
+
+Baseline
+--------
+Step 167 began from verified Step-166 tree:
+
+  84848120f0317e2e794de69dcc9f8d65c137b996
+  Step 166 expose 8192-baud SCI raw HAL boundary
+
+The corresponding remote main commit is:
+
+  3cdbcf99021ef785184edd8159dd04f39ced8d4b
+
+Evidence reviewed
+-----------------
+- evidence/firmware/bua-hac.lst $CA2C-$CA4B
+- evidence/firmware/bua-hac.lst $CA67-$CAB3
+- evidence/firmware/bua-hac.lst $F880-$F8F8
+- evidence/firmware/bua-hac.lst $C6FD-$C73C
+- evidence/firmware/bua-hac.lst $FC72-$FCA1
+- src/scheduler_serial.inc.h
+- docs/STEP122_WHOLE_IMAGE_CLOSURE_AUDIT.txt
+- docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt
+- docs/STEP147_DIAGNOSTICS_ALDL_COMMUNICATION_THEORY_AUDIT.txt
+- docs/reference/DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md
+
+Confirmed translated normal path
+--------------------------------
+The current normal path preserves the established pulse-width-coded cell:
+
+- ordinary IRQ scheduling at $CAA4 starts the low output and arms the +11 and
+  +143 compare events;
+- $CA2C clears the first flag and calls LF880 at +11;
+- a shifted zero raises the line at +11 while a shifted one keeps it low;
+- $CA3B clears the second flag and raises the line at +143;
+- LF880 uses one framing/load cell followed by eight MSB-first data cells;
+- the normal display sequence emits $0035, calibration byte $C009, $011A,
+  $011E and calibration byte $C70C, then reaches the emitted $FF reset state.
+
+The independent PC receiver observes only line transitions and timestamps. It
+does not inspect the transmitter's byte, index or bit-count state. This is
+appropriate verification of the represented normal stream and does not assign
+external voltage polarity to the ALDL connector.
+
+Exact internally defined gaps
+-----------------------------
+The function name bua_lf880_normal() and its comments correctly disclose that
+only the normal non-diagnostic path is represented. Two reachable LF880 branches
+remain absent:
+
+1. Factory branch $F88E-$F8B4
+
+   When $0047 bit 7 is set and $0048 is nonzero, the listing selects one of
+   three 16-byte source tables rooted at $FC72, $FC82 or $FC92. Even table
+   indices fetch through the emitted address words; odd indices transmit the
+   prior word's second byte retained at $017A. Index 16 reaches the common
+   reset/$FF state.
+
+2. Diagnostic branch $F8CB-$F8ED
+
+   When $0035 bit 4 or 5 is set, indices 1 through 24 select the address table
+   at $C70D-$C73C. Index 25 reaches the common reset/$FF state. The table begins
+   with PROM ID bytes and continues through established RAM diagnostic values.
+
+The current C routine instead returns immediately when factory mode is selected
+or when either diagnostic-mode bit is set. These are software/table-manager
+gaps. They cannot be classified solely as external transceiver or electrical
+boundaries.
+
+Step-122 correction
+-------------------
+Step 122 concluded that no known reachable, internally defined executable area
+remained unported after Step 121. Step 147 later explicitly described the
+low-speed factory/diagnostic branches as untranslated, and direct Step-167
+comparison confirms that statement.
+
+The Step-122 regression results and all translated-region conclusions remain
+valid. Its global completeness statement is narrowed to exclude
+$F88E-$F8B4 and $F8CB-$F8ED until those branches are implemented and tested.
+The evidence register records the narrowed claim rather than silently retaining
+the contradiction.
+
+HAL decision
+------------
+Step 167 deliberately does not add a supposedly complete 160-baud HAL API.
+Doing so now would hide the distinction between the proven ordinary display
+stream and the still-missing diagnostic/factory byte selection.
+
+A future implementation should first translate both branches in source order,
+using the emitted tables and preserving $017A/$0189-$018B state. Only then
+should a raw transition or cell-level transport seam be frozen. External ALDL
+line voltage, transceiver polarity, collision behavior and connector loading
+will remain HAL/electrical boundaries after the software gap is closed.
+
+Source and regression impact
+----------------------------
+Step 167 is an audit/correction only. It changes no C source, test source,
+calibration, generated output or frozen signature. The complete existing Strict
+C89 regression workflow is rerun to ensure the documentation correction does
+not disturb the verified tree.
+
+Conclusion
+----------
+The normal 160-baud output path is substantially and usefully translated, but
+the overall LF880 manager is not yet complete. Step 167 records the two exact
+listing-backed gaps and prevents premature HAL closure. The next behavioral
+step should translate the diagnostic and factory table branches before exposing
+a complete 160-baud transport boundary.
