@@ -10,7 +10,9 @@ immutable development trail.
   remains bounded, and what can legitimately start new work.
 - [Simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md) — how to
   build, run, verify, use the raw HAL, and interpret the results.
-- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-173 record.
+- [Embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md)
+  — phased target selection, porting, seam verification and hardware validation.
+- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-174 record.
 - [Technical-reference foundation](reference/README.md) — integrated system,
   firmware, hardware, MEMCAL, theory and migration chapters.
 - [Step 171 whole-image reclosure](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt) —

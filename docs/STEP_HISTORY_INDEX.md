@@ -89,3 +89,4 @@ audits remain historical checkpoints; the current conclusion is summarized in
 
 - [172 — documentation/navigation consolidation](STEP172_DOCUMENTATION_NAVIGATION_AUDIT.txt)
 - [173 — simulator/build/testing guide](STEP173_SIMULATOR_TESTING_GUIDE_AUDIT.txt)
+- [174 — embedded/HIL implementation roadmap](STEP174_EMBEDDED_HIL_ROADMAP_AUDIT.txt)

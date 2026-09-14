@@ -1,0 +1,50 @@
+BUA / GM 1227165 STEP 174 - EMBEDDED AND HIL ROADMAP AUDIT
+=========================================================
+
+Purpose
+-------
+Step 174 converts the existing migration architecture into a phased,
+target-neutral embedded/HIL implementation roadmap. It changes no C source,
+tests, calibration, executable behavior or frozen signature.
+
+Roadmap content
+---------------
+- Target selection is an explicit Phase-0 decision; no MCU, compiler, board or
+  transceiver is silently selected by this audit.
+- F0-F4 responsibilities govern every phase and keep simulator plants and
+  unresolved custom-device behavior outside the translated core.
+- Phases cover target-compiler portability, scheduler/timebase, raw inputs,
+  shadow-first outputs, communications, retained startup/power, HIL, and
+  separately authorized physical integration.
+- Every phase has evidence-backed exit criteria, and every migrated seam has a
+  traceability record covering authority, target resource, verification,
+  unresolved limits and safety behavior.
+- Stop conditions prevent target convenience, missing device semantics or
+  absent ROM from being turned into fabricated firmware behavior.
+
+Documentation integration
+-------------------------
+The root README, documentation hub, status page and history index link the new
+roadmap. The C-port architecture chapter now describes the actual Step-170
+Makefile gate and links the implementation roadmap.
+
+Scope preservation
+------------------
+Step 171 remains the evidence-supported behavioral closure. Step 174 plans a
+separate engineering phase; it does not claim cycle-exact emulation, electrical
+equivalence, production safety qualification or implementation of U9/U11/U12,
+selector `$B0`, `$5800`, or `$6000` boundaries.
+
+Verification
+------------
+All new relative links were checked against repository paths. The unchanged
+source was rebuilt with strict C89 flags and the complete `make test` gate was
+run. Compiler diagnostics were empty, runtime exit status was zero, all gated
+results and signatures passed, and no genuine FAIL result was present.
+
+Step-174 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

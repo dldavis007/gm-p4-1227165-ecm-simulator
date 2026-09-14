@@ -146,9 +146,11 @@ This sequence limits the number of simultaneous changes and makes a mismatch att
 
 ## 12. Build and regression evidence
 
-The repository Makefile builds only `main.c` with strict C89 flags and runs the historical Step-104/105 signatures plus the Step-106 through Step-121 regression gates. Step 128 added a 15-check HAL regression through the existing regression include chain rather than reordering `main.c`.
-
-The GitHub connector cannot execute the build, so documentation-only theory steps do not claim a fresh runtime result. Existing audit records distinguish tests that were actually executed from later static wiring that still requires a local or CI run.
+The repository Makefile builds only `main.c` with strict C89 flags and gates
+the Step-104/105 signatures, Step-106 through Step-121 behavioral/lifecycle
+results, Step-128 and Step-155 through Step-166 raw-HAL results and signatures,
+the Step-168/169 manager results, and the Step-170 complete 160-baud HAL result.
+Documentation-only steps do not create new executable baselines.
 
 ## 13. Current migration readiness
 
@@ -183,6 +185,8 @@ Those are separate hardware-selection or evidence tasks. They should remain expl
 - `docs/reference/PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md` — address/custom-device boundaries.
 - `docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md` — startup/reset/retained-power boundary.
 - `docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md` — raw-output/electrical boundary.
+- `docs/EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md` — phased implementation,
+  verification and exit criteria for a future target port.
 
 
 Step 170 follows the Step-168/169 manager closure with a cell-level 160-baud HAL. Target code can initialize the translated state, advance one listing-equivalent cell at an explicit timer origin, and observe line/index/bit/byte state. External voltage polarity and transceiver behavior remain outside the port.

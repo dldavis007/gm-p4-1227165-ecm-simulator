@@ -60,6 +60,8 @@ evidence. Otherwise, useful work belongs to one of these separate tracks:
 
 For practical use of the existing PC model, see the
 [simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md).
+For a separately scoped target port, see the
+[embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md).
 
 See [Step 171](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt), the
 [evidence register](reference/EVIDENCE_REGISTER.md), and the
