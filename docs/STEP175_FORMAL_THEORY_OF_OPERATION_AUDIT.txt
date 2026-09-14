@@ -1,0 +1,48 @@
+BUA / GM 1227165 STEP 175 - FORMAL THEORY OF OPERATION AUDIT
+==========================================================
+
+Purpose
+-------
+Step 175 publishes a formal master theory of operation synthesized from the
+sixteen completed technical-reference chapters. It changes no C source, tests,
+calibration, executable behavior or frozen signature.
+
+Document content
+----------------
+- Establishes document scope, controlled system identity, firmware authority,
+  evidence order, claim statuses and F0-F4 fidelity classes.
+- Describes processor/custom-peripheral and MEMCAL architecture, reset and
+  retained startup, scheduler/event timing, acquisition, spark, fuel, IAC,
+  emissions/accessories, transmission, output staging, diagnostics, shutdown,
+  the portable C/HAL boundary, and verification.
+- Retains address-level anchors and links every chapter back to the existing
+  detailed evidence rather than replacing or rewriting those chapters.
+- Collects unresolved custom-device, electrical, mechanical, variant,
+  unavailable-code and physical-power boundaries in one explicit section.
+
+Evidence preservation
+---------------------
+The authoritative firmware source remains evidence/firmware/bua-hac.lst.
+bua-hac.txt remains excluded. The document does not invent U9/U11/U12
+internals, selector $B0, optional $5800 code, external $6000 behavior,
+electrical polarity, actuator dynamics or plant truth.
+
+Documentation integration
+-------------------------
+The root README, documentation hub, reference foundation, theory index and step
+history link the master document. The sixteen detailed chapters and historical
+step audits remain intact.
+
+Verification
+------------
+All new relative links were checked against repository paths. The unchanged
+source was rebuilt with strict C89 flags and the complete make test gate was
+run. Compiler diagnostics were empty, runtime exit status was zero, all gated
+results and signatures passed, and no genuine FAIL result was present.
+
+Step-175 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

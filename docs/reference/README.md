@@ -11,6 +11,10 @@ material. It links the executable assembly, assembled listing, calibration and
 MEMCAL evidence, ECM schematics, behavioral C port, and regression evidence
 without treating interpretation as fact.
 
+For a continuous system-level engineering description, read the
+[formal theory of operation](../../THEORY_OF_OPERATION.md). This directory
+retains the detailed address-level chapters that control its technical claims.
+
 `BUA` is retained as source and photographed label text. It is not used by
 itself to prove that every artifact belongs to one calibration or MEMCAL
 variant.
@@ -124,6 +128,9 @@ assembled listing.
   retard, recovery, spark, and Error-43 behavior.
 - [Theory-of-operation index](THEORY_OF_OPERATION_INDEX.md) is the integrated
   sixteen-chapter structure for the current ECM description.
+- [Formal theory of operation](../../THEORY_OF_OPERATION.md) synthesizes those
+  chapters into the master system-level engineering narrative while linking
+  back to their detailed evidence.
 
 The historical `docs/STEPxxx_*.txt` files remain checkpoint records. They
 should not be rewritten into a single latest-state narrative. New evidence

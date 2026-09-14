@@ -8,6 +8,7 @@ remaining classified as unported. This is not a claim of cycle-exact processor
 emulation or electrical equivalence to the original ECM.
 
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)
+- [Formal theory of operation](THEORY_OF_OPERATION.md)
 - [Documentation hub](docs/README.md)
 - [Simulator, build, and testing guide](docs/SIMULATOR_BUILD_TEST_GUIDE.md)
 - [Embedded and HIL implementation roadmap](docs/EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md)

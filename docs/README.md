@@ -6,13 +6,15 @@ immutable development trail.
 
 ## Start here
 
+- [Formal theory of operation](../THEORY_OF_OPERATION.md) — master engineering
+  description synthesized from the sixteen detailed theory chapters.
 - [Current project status](CURRENT_PROJECT_STATUS.md) — what is complete, what
   remains bounded, and what can legitimately start new work.
 - [Simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md) — how to
   build, run, verify, use the raw HAL, and interpret the results.
 - [Embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md)
   — phased target selection, porting, seam verification and hardware validation.
-- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-174 record.
+- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-175 record.
 - [Technical-reference foundation](reference/README.md) — integrated system,
   firmware, hardware, MEMCAL, theory and migration chapters.
 - [Step 171 whole-image reclosure](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt) —
@@ -40,6 +42,7 @@ for the distinction between regression evidence and physical-hardware fidelity.
 - [Evidence register](reference/EVIDENCE_REGISTER.md)
 - [Hardware/firmware cross-reference](reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md)
 - [Theory-of-operation index](reference/THEORY_OF_OPERATION_INDEX.md)
+- [Formal theory of operation](../THEORY_OF_OPERATION.md)
 - [C-port architecture and embedded migration](reference/C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md)
 
 The verified assembled listing `evidence/firmware/bua-hac.lst` is authoritative

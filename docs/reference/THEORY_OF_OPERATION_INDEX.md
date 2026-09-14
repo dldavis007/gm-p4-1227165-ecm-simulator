@@ -4,6 +4,10 @@ This is the planned structure for the integrated theory of operation. Chapters
 should link to exact assembly/listing addresses, schematic nets, C modules, and
 regressions through `HARDWARE_FIRMWARE_CROSS_REFERENCE.md`.
 
+The completed structure is synthesized as a continuous engineering document in
+the repository's [formal theory of operation](../../THEORY_OF_OPERATION.md).
+The chapters below remain the detailed technical authority.
+
 ## Planned chapters
 
 1. **System overview and evidence method**
