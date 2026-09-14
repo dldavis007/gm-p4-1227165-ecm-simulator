@@ -1,0 +1,105 @@
+BUA / GM 1227165 STEP 171 - WHOLE-IMAGE RECLOSURE AUDIT
+=======================================================
+
+Purpose
+-------
+Step 171 reconciles the whole-image closure record after Steps 168-170 resolve
+the exact 160-baud LF880 exception found by Step 167. It is a documentation-only
+audit and changes no C behavior, tables, tests or frozen signatures.
+
+Authority and method
+--------------------
+The authoritative firmware evidence remains evidence/firmware/bua-hac.lst.
+Emitted instructions, bytes, resolved targets, address use and tables outrank
+comments. bua-hac.txt is not used. BUA remains a source label rather than an
+independently proved calibration identity.
+
+This audit starts from the Step-122 region map, applies the Step-167 correction,
+and verifies the dispositions recorded by Steps 168, 169 and 170. It does not
+infer behavior for absent ROM, undocumented devices or external circuitry.
+
+Resolved Step-167 exception
+---------------------------
+Step 167 found two reachable, internally defined LF880 branches that the then
+normal-only C routine returned around:
+
+1. Diagnostic table manager $F8CB-$F8ED.
+   Step 168 translates indices 1-24 through the emitted $C70D-$C73C address
+   table and preserves the index-25 common reset/$FF state.
+
+2. Factory table manager $F88E-$F8B4.
+   Step 169 translates all three 16-byte streams rooted at $FC72, $FC82 and
+   $FC92, including even-index word fetch, odd-index $017A carry, and the
+   index-16 common reset/$FF state.
+
+Step 170 then exposes the complete normal/diagnostic/factory byte manager at a
+cell-level raw HAL while leaving byte selection and ownership in LF880. Its
+tests observe raw line and manager state without assigning connector voltage
+polarity or external transceiver behavior.
+
+Reconciled classification
+-------------------------
+The Step-122 region map and translated/HAL/data/boundary classifications remain
+valid. The sole later-discovered UNPORTED exception, $F88E-$F8B4 and
+$F8CB-$F8ED, is now TRANSLATED. No other exact listing-backed discrepancy has
+been established by the subsequent hardware, theory or HAL audits.
+
+The following remain explicit boundaries rather than unported application
+behavior:
+
+- vector destinations at $6000 and optional HUD code at $5800, whose bytes are
+  absent from the supplied PROM image;
+- processor exception-entry, COP, clock-fail, reset and stack mechanics;
+- undocumented U9/U11/U12 and other custom-device internal transfer behavior;
+- target-specific A/D, timer, retained-power and output-driver implementation;
+- SCI/ALDL/FMD transceivers, voltage polarity, collision/loading behavior and
+  physical timing; and
+- physical plant, actuator, ignition, injection and hydraulic consequences.
+
+Closure conclusion
+------------------
+No known reachable, internally defined executable area in the supplied image
+remains classified as UNPORTED after Step 170. This is an evidence-supported,
+qualified behavioral closure, not a claim of byte-for-byte processor emulation,
+cycle accuracy, complete electrical emulation, exact calibration identity or
+equivalence to absent external ROM.
+
+Any future behavioral translation must begin with a newly identified exact
+listing range and executable discrepancy. Hardware integration may continue at
+the established HAL boundaries without changing this software conclusion.
+
+Verification
+------------
+The unchanged Step-170 source was rebuilt and the complete Strict C89 workflow
+was run with:
+
+  gcc -std=c89 -Wall -Wextra -pedantic main.c -o build/bua_step121
+  make test
+
+Compiler diagnostics: no warnings.
+Runtime exit status: 0.
+Genuine FAIL search: no failed regression; only expected historical `FAIL 0`
+summary text is present.
+
+Step-168 diagnostic 160-baud manager regression: PASS 6/6
+Step-169 factory 160-baud manager regression: PASS 8/8
+Step-170 complete 160-baud raw-HAL regression: PASS 9/9
+Step-166 8192-baud SCI raw-HAL signature: 52396771 (unchanged)
+Step-165 factory A/D signature: 0EACFF4F (unchanged)
+Step-164 factory IRQ signature: 0194B153 (unchanged)
+Step-163 power-on signature: 040E3A8B (unchanged)
+Step-162 output-safety signature: DB86F332 (unchanged)
+Step-161 output-lifecycle signature: B22B98ED (unchanged)
+Step-160 lifecycle signature: 2E92563C (unchanged)
+Step-111 ignition-lifecycle signature: 16D17C9C (unchanged)
+Step-110 output-stage signature: FAADF8A6 (unchanged)
+Step-109 diagnostic signature: F357A5F2 (unchanged)
+Step-105 transmission signature: 9732D09B (unchanged)
+Step-104 normal-operation signature: 4BA6B7C6 (unchanged)
+
+Step-171 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

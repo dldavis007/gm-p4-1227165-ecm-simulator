@@ -167,3 +167,16 @@ Those branches are internally defined and table-backed, not merely electrical
 ALDL behavior. They are therefore bounded UNPORTED behavior pending a future
 source-ordered implementation. The original Step-122 test evidence remains
 valid; only the completeness claim is narrowed.
+
+Post-Step-171 resolution
+------------------------
+Steps 168 and 169 subsequently translate the diagnostic branch $F8CB-$F8ED
+and factory branch $F88E-$F8B4 in source order, including their emitted tables,
+terminal reset states and $017A carry behavior. Step 170 exposes the resulting
+complete normal/diagnostic/factory manager through a cell-level raw HAL.
+
+Step 171 therefore resolves the Step-167 exception and restores this audit's
+qualified conclusion: no known reachable, internally defined executable area
+in the supplied image remains classified as UNPORTED. The original boundaries
+listed above remain boundaries; the resolution does not claim absent ROM,
+custom-device internals, processor electrical behavior or physical ALDL timing.

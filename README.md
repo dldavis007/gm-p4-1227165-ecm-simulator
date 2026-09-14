@@ -1,4 +1,4 @@
-# BUA / GM 1227165 Step-135 hardware/MEMCAL signal-chain audit
+# BUA / GM 1227165 Step-171 evidence-supported whole-image closure
 
 This retains the modular frozen Step-104 C89 PC harness, independent Step-105
 transmission-aware driving scenario, and Step-106 listing correction.  Step
@@ -61,11 +61,12 @@ processor reset consequences remain explicitly acknowledged HAL boundaries.
 Step 122 re-audited the complete assembled image after the Step-111 through
 Step-121 integrations and initially found no known reachable, internally
 defined firmware area still classified as unported. Step 167 later narrowed
-that conclusion after reconciling the explicit normal-only LF880 implementation
-against `$F88E-$F8B4` and `$F8CB-$F8ED`: the factory and diagnostic branches of
-the 160-baud byte manager remain bounded implementation gaps. Other remaining
-limitations are calibration/data, external or absent ROM, processor/custom-
-device behavior, and physical electrical/timing boundaries.
+that conclusion after identifying the missing LF880 factory and diagnostic
+table branches. Steps 168 and 169 translate those exact listing-backed gaps,
+Step 170 exposes the completed manager through a cell-level raw HAL, and Step
+171 restores the qualified whole-image closure conclusion. Remaining limits
+are calibration/data, external or absent ROM, processor/custom-device behavior,
+and physical electrical/timing boundaries rather than known unported behavior.
 Step 123 inventories the historical Library/Drive evidence before cleanup. It
 confirms the committed assembled listing, identifies the six ECM schematic
 sheets and MEMCAL records awaiting controlled import, classifies duplicate
@@ -214,6 +215,9 @@ compilers from treating them as separate C source files.
 - Step-165 raw-HAL factory A/D signature: `0EACFF4F`
 - Step-166 8192-baud SCI raw-HAL regression: 9/9
 - Step-166 8192-baud SCI raw-HAL signature: `52396771`
+- Step-168 diagnostic 160-baud manager regression: 6/6
+- Step-169 factory 160-baud manager regression: 8/8
+- Step-170 complete 160-baud raw-HAL regression: 9/9
 - Strict C89 compile: no warnings
 - Integrated drive regression: 26/26
 - Step-104 freeze regression: 10/10
@@ -265,8 +269,10 @@ factory sweep with the unidentified `$B0` slot preserved, and
 boundary around the translated 8192-baud SCI core, and
 `docs/STEP167_ALDL160_COMPLETENESS_AUDIT.txt` for the corrected scope of the
 normal, diagnostic and factory 160-baud byte-manager paths.
-Steps 168 and 169 close both table-manager gaps; `docs/STEP170_ALDL160_RAW_HAL_AUDIT.txt` records the resulting cell-level raw HAL boundary. Earlier audits
-remain checkpoints.
+Steps 168 and 169 close both table-manager gaps;
+`docs/STEP170_ALDL160_RAW_HAL_AUDIT.txt` records the resulting cell-level raw
+HAL boundary, and `docs/STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt` reconciles the
+whole-image closure conclusion. Earlier audits remain historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen

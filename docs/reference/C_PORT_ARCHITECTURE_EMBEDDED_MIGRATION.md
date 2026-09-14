@@ -85,7 +85,7 @@ Step 165 extends the same lifecycle boundary to the factory `$00-$B0` A/D sweep.
 
 Step 166 exposes the translated 8192-baud SCI core at a message-level HAL boundary. A target transport may submit a complete raw frame and retrieve bounded status, response length and response bytes. Checksum, device, length and Mode 0-4 interpretation remain in the translated core; baud timing, line polarity, collision handling and transceiver behavior remain target-specific.
 
-Step 167 prevents the 160-baud interface from being overstated. Its ordinary display stream and `$CA2C/$CA3B/$CAA4` pulse scheduling are translated, but LF880's factory table path `$F88E-$F8B4` and diagnostic table path `$F8CB-$F8ED` remain explicit software gaps. A complete 160-baud target HAL must wait until those internally defined branches are implemented; this is separate from the unresolved external transceiver.
+Step 167 prevented the 160-baud interface from being overstated by identifying LF880's then-missing factory table path `$F88E-$F8B4` and diagnostic table path `$F8CB-$F8ED`. Steps 168 and 169 implement those paths, and Step 170 exposes the complete normal/diagnostic/factory manager through a cell-level raw HAL. The external transceiver and electrical line behavior remain separate unresolved hardware boundaries.
 
 Output observers expose low RAM, U9 MPU state, `$4000` I/O state, `$5000`, synchronous injector command `$3FD0`, IAC position bookkeeping and the established Segment-1 raw outputs `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8/$4004`.
 

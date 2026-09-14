@@ -63,7 +63,7 @@ test: $(TARGET)
 	grep -q "step-169 factory-160 manager regression result: PASS (8/8)" $(OUTPUT)
 	grep -q "step-170 complete-160 raw-HAL regression result: PASS (9/9)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
-	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162/163/164/165/166 HAL regressions pass."
+	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155-170 HAL/manager regressions pass."
 
 clean:
 	rm -f $(TARGET) $(OUTPUT) build/compiler_warnings.txt
