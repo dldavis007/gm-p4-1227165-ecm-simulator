@@ -59,6 +59,7 @@ test: $(TARGET)
 	grep -q "step-165 raw-HAL factory A/D regression result: PASS (9/9)" $(OUTPUT)
 	grep -q "Step-166 8192-baud SCI raw-HAL signature: 52396771" $(OUTPUT)
 	grep -q "step-166 8192-baud SCI raw-HAL regression result: PASS (9/9)" $(OUTPUT)
+	grep -q "step-168 diagnostic-160 manager regression result: PASS (6/6)" $(OUTPUT)
 	@if grep "FAIL" $(OUTPUT) | grep -v "FAIL 0"; then exit 1; fi
 	@echo "Step-104/105 baselines, Step-106 through Step-121 regressions, and Step-128/155/156/157/158/159/160/161/162/163/164/165/166 HAL regressions pass."
 

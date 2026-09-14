@@ -387,66 +387,63 @@ static void serial_line_high_at(bua_u32 time_count)
         rx_high_edge(time_count);
     }
 }
-/* LF8B6/LF8E6 byte manager, normal non-diagnostic path only. */
+/* LF8B6/LF8E6 normal and diagnostic byte sources (Steps 89/168). */
+static const bua_u16 bua_160_diagnostic_addresses[24]={
+0xC000u,0xC001u,0x002Cu,0x005Du,0x0065u,0x0112u,0x0057u,0x0081u,
+0x00C6u,0x006Fu,0x0005u,0x0006u,0x0007u,0x0008u,0x0044u,0x0060u,
+0x0037u,0x00A1u,0x00C0u,0x00F1u,0x00EAu,0x00EBu,0x00D5u,0x00D6u};
+static bua_u8 bua_160_diag_read(bua_u16 p)
+{
+    if(p==0xC000u) return 0x25u;
+    if(p==0xC001u) return 0xE5u;
+    return RAM8(p);
+}
 static void bua_160_load_next_normal_byte(void)
 {
-    bua_u8 index;
-    bua_u8 value;
-    index = ALCL_TABLE_INDEX;
-    if (index == 0u) {
-        /* BEQ LF8ED leaves A holding L0035. */
-        value = MINOR_MODE_WORD2;
-    } else {
-        if (index > DISPLAY_TABLE_LENGTH) {
-            /* LF8CF: CLR A; table index=0; DECA; xmit byte=$FF; exit. */
-            ALCL_TABLE_INDEX = 0u;
-            ALCL_XMIT_BYTE = 0xFFu;
-            return;
+    bua_u8 i=ALCL_TABLE_INDEX,v;
+    if(i==0u) v=MINOR_MODE_WORD2;
+    else {
+        if(i>DISPLAY_TABLE_LENGTH) {
+            ALCL_TABLE_INDEX=0u; ALCL_XMIT_BYTE=0xFFu; return;
         }
-        switch (index) {
-            case 1u: value = (bua_u8)CAL_NUM_CYL_CODE; break;
-            case 2u: value = RAM8(0x011Au);            break;
-            case 3u: value = RAM8(0x011Eu);            break;
-            default: value = (bua_u8)CAL_GPH_SCALE_FACTOR; break;
+        switch(i) {
+        case 1u:v=(bua_u8)CAL_NUM_CYL_CODE;break;
+        case 2u:v=RAM8(0x011Au);break;
+        case 3u:v=RAM8(0x011Eu);break;
+        default:v=(bua_u8)CAL_GPH_SCALE_FACTOR;break;
         }
     }
-    ALCL_XMIT_BYTE = value;
-    ALCL_TABLE_INDEX = (bua_u8)(index + 1u);
+    ALCL_XMIT_BYTE=v; ALCL_TABLE_INDEX=(bua_u8)(i+1u);
     ++stats.display_bytes_loaded;
 }
-/*
- * LF880, restricted only by design to the normal path used when L0047 b7 is
- * clear and L0035 b4/b5 are clear.  Diagnostic and factory branches remain
- * for later steps rather than being guessed here.
- *
- * Return value:
- *   -1 : no data bit was shifted this call (byte load/reset cell)
- *    0 : shifted-out MSB was zero
- *    1 : shifted-out MSB was one
- */
-static int bua_lf880_normal(bua_u32 event_time)
+static void bua_160_load_next_diagnostic_byte(void)
 {
-    bua_u8 old_msb;
-    ++stats.serial_manager_calls;
-    if (ALCL_BIT_COUNT != 0u) {
-        ALCL_BIT_COUNT = (bua_u8)(ALCL_BIT_COUNT - 1u);
-        old_msb = (bua_u8)((ALCL_XMIT_BYTE & 0x80u) != 0u);
-        ALCL_XMIT_BYTE = (bua_u8)(ALCL_XMIT_BYTE << 1);
-        if (old_msb == 0u)
-            serial_line_high_at(event_time);
-        return (old_msb != 0u) ? 1 : 0;
+    bua_u8 i=ALCL_TABLE_INDEX;
+    if(i==0u) ALCL_XMIT_BYTE=MINOR_MODE_WORD2;
+    else {
+        if(i==25u) {
+            ALCL_TABLE_INDEX=0u; ALCL_XMIT_BYTE=0xFFu; return;
+        }
+        ALCL_XMIT_BYTE=bua_160_diag_read(bua_160_diagnostic_addresses[i-1u]);
     }
-    ALCL_BIT_COUNT = 8u;
-    /* L0047 b7 / L0048 select another path not yet translated. */
-    if ((RAM8(0x0047u) & 0x80u) != 0u)
-        return -1;
-    /* LF8B6: normal display manager only while diagnostic switch bits clear. */
-    if ((MINOR_MODE_WORD2 & 0x30u) != 0u)
-        return -1;
-    bua_160_load_next_normal_byte();
-    /* Ordinary LF8ED path raises the line at +11.  LF8CF reset exits early. */
-    if (ALCL_TABLE_INDEX != 0u)
-        serial_line_high_at(event_time);
+    ALCL_TABLE_INDEX=(bua_u8)(i+1u); ++stats.display_bytes_loaded;
+}
+static int bua_lf880_manager(bua_u32 t)
+{
+    bua_u8 msb;
+    ++stats.serial_manager_calls;
+    if(ALCL_BIT_COUNT!=0u) {
+        ALCL_BIT_COUNT=(bua_u8)(ALCL_BIT_COUNT-1u);
+        msb=(bua_u8)((ALCL_XMIT_BYTE&0x80u)!=0u);
+        ALCL_XMIT_BYTE=(bua_u8)(ALCL_XMIT_BYTE<<1);
+        if(msb==0u) serial_line_high_at(t);
+        return msb!=0u?1:0;
+    }
+    ALCL_BIT_COUNT=8u;
+    if((RAM8(0x0047u)&0x80u)!=0u) return -1;
+    if((MINOR_MODE_WORD2&0x30u)!=0u) bua_160_load_next_diagnostic_byte();
+    else bua_160_load_next_normal_byte();
+    if(ALCL_TABLE_INDEX!=0u) serial_line_high_at(t);
     return -1;
 }
 /* One complete 6.25-ms cell, corresponding to LCAA4 then LCA2C then LCA3B. */
@@ -465,7 +462,7 @@ static void bua_160_cell_at(BuaSerialCellTrace *trace, bua_u32 cell_start)
     serial_line_low_at(cell_start);
     /* LCA2C occurs at cell_start + 11 in this normalized trace. */
     SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
-    bit = bua_lf880_normal(cell_start + (bua_u32)SERIAL_T_FIRST);
+    bit = bua_lf880_manager(cell_start + (bua_u32)SERIAL_T_FIRST);
     if (trace != 0) {
         trace->line_at_first = sim_serial_line_high;
         if (bit >= 0) {

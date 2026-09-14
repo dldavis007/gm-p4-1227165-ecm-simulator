@@ -83,6 +83,7 @@
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
 #include "tests/scheduler_regression.inc.h"
+#include "tests/aldl160_diagnostic_regression.inc.h"
 #include "simulation/transmission_drive.inc.h"
 #include "tests/diagnostic_integration_regression.inc.h"
 
@@ -316,6 +317,7 @@ int main(void)
     run_step119_vector_boundaries_test();
     run_step120_power_on_dispatch_test();
     run_step121_lifecycle_integration_test();
+    run_step168_aldl160_diagnostic_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();
