@@ -1,0 +1,60 @@
+BUA / GM 1227165 STEP 176 - THEORY-OF-OPERATION PUBLICATION AUDIT
+================================================================
+
+Purpose
+-------
+Step 176 performs the publication review of the formal theory of operation.
+It changes no C source, tests, calibration, executable behavior or frozen
+signature.
+
+Editorial review
+----------------
+- Removed development-step language from the controlled publication while
+  retaining historical milestones in their separate audit files.
+- Standardized firmware address notation and subsystem terminology.
+- Checked internal references and preserved the distinction among F0
+  listing-backed behavior, F1 proven hardware connections, F2 raw HAL state,
+  F3 simulation assumptions and F4 unresolved/external behavior.
+- Expanded the executable-anchor appendix into a consolidated RAM,
+  processor-visible register and executable-region index.
+- Added a publication glossary while preserving the detailed reference
+  chapters as the address-level authority.
+
+PDF publication
+---------------
+THEORY_OF_OPERATION.pdf is the stable 13-page Letter-size publication of the
+Markdown master. It includes a cover, generated contents, linked references,
+consistent tables, repeated table headings, headers, footers and page numbers.
+The PDF is generated reproducibly by tools/generate_theory_of_operation_pdf.py.
+
+Visual verification
+-------------------
+All 13 pages were rendered to PNG with Poppler and visually inspected. Cover,
+contents, section transitions, tables, page breaks, hyperlinks, headers,
+footers, and page numbering were legible with no clipping, overlap, missing
+glyphs, black squares or unintended blank pages. PDF text extraction contained
+no replacement characters, placeholders or development-step language.
+
+Evidence preservation
+---------------------
+The authoritative firmware source remains evidence/firmware/bua-hac.lst.
+bua-hac.txt remains excluded. The publication does not invent U9/U11/U12
+internals, selector $B0, optional $5800 code, external $6000 behavior,
+electrical polarity, actuator dynamics or plant truth.
+
+Verification
+------------
+All new relative links were checked against repository paths. The publication
+generator produced identical output on consecutive runs. The unchanged source
+was rebuilt with strict C89 flags and the complete make test gate was run.
+Compiler diagnostics were empty, runtime exit status was zero, all gated
+results and signatures passed, and no genuine FAIL result was present.
+
+Theory-of-operation PDF SHA-256:
+  c5ca3d77515aaed7a2069b3b4b4e28ee79b904e50dc0ba394add7ac435ee20a4
+Step-176 verification output SHA-256:
+  a051798cdf2d1b35b314d0967620e980a99dc7361027a80528bc2864ec24dbd9
+Unchanged main.c SHA-256:
+  aa1139b3d92ee53e53321865f815daae4a5cb7f21acbd1d8d651936e3457b9d3
+Empty compiler-warnings SHA-256:
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

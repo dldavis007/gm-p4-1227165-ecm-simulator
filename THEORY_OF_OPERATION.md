@@ -8,7 +8,8 @@
 | Firmware basis | Supplied 9340 image and corrected BUA source/listing provenance |
 | Firmware authority | `evidence/firmware/bua-hac.lst` |
 | Implementation | Strict-C89 behavioral port and deterministic PC simulator |
-| Status | Formal engineering synthesis; Step 175 |
+| Revision | 1.0 |
+| Status | Controlled engineering publication |
 | Detailed authority | Linked reference chapters and hardware/firmware cross-reference |
 
 This document is the master operational description of the repository's
@@ -392,9 +393,10 @@ Verification has three complementary layers:
 `make test` compiles only `main.c` using `gcc -std=c89 -Wall -Wextra -pedantic`,
 runs the complete regression program, checks every Makefile-gated result and
 signature, and rejects genuine `FAIL` output. Frozen signatures include the
-Step-104 normal-operation signature `4BA6B7C6`, Step-105 transmission-aware
-signature `9732D09B`, and later whole-image/lifecycle signatures documented by
-the verification chapter and audits.
+normal-operation signature `4BA6B7C6`, transmission-aware signature `9732D09B`,
+Segment-D diagnostic signature `F357A5F2`, Segment-1 output signature
+`FAADF8A6`, and ignition-lifecycle signature `16D17C9C`. Later raw-HAL and
+lifecycle signatures are documented by the verification chapter and audits.
 
 Signatures are broad deterministic change detectors. They do not replace
 explicit assertions, prove untested paths, or establish physical truth. A
@@ -428,10 +430,58 @@ These are engineering work items, not gaps to be closed by plausible guesses.
 New evidence should update the evidence register and cross-reference first,
 then the affected detailed chapter and this synthesis.
 
-## Appendix A. Principal executable anchors
+## Appendix A. Consolidated address and register index
+
+This index collects the principal processor-visible locations used in the
+system narrative. Functional names describe established executable use; they
+do not imply undocumented electrical or custom-device behavior.
+
+### A.1 RAM and software state
 
 | Address/range | Established role | Detailed reference |
 | --- | --- | --- |
+| `$002C` | IAC software position bookkeeping | [Idle-air control](docs/reference/IDLE_AIR_CONTROL_THEORY.md) |
+| `$005B-$005F` | coolant conversion and diagnostic state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$0061-$0063` | prior and current load state | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$0064` | common temporary A/D result | [A/D acquisition](docs/reference/ADC_SENSOR_ACQUISITION.md) |
+| `$006F/$0071/$0073` | oxygen acquisition/filter state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$007E` | persistent `VOLT` sample | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$007F` | persistent `PUMPVOLT` sample | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$0081/$0082` | raw and normalized TPS state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$0086/$0087` | learned closed-throttle state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$0095:$0096` | reference-period state used by load/fuel processing | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$00A5` | accumulated knock-retard state | [ESC/knock chain](docs/reference/ESC_KNOCK_SIGNAL_CHAIN.md) |
+| `$00DD-$00DE` | transient TPS state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$00EA:$00EB` | processed airflow word | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$00ED/$00EF` | raw and intermediate VMAF state | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$012B/$0060` | complemented raw and processed MAT state | [Sensor acquisition](docs/reference/SENSOR_ACQUISITION_FILTERING_THEORY.md) |
+| `$0152/$0153/$0156/$0157` | Mode-4 raw PWM override state | [Output staging](docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md) |
+| `$017B-$0186` | factory-test sequential A/D snapshot | [A/D acquisition](docs/reference/ADC_SENSOR_ACQUISITION.md) |
+
+### A.2 Processor-visible peripheral locations
+
+| Address/range | Established role | Detailed reference |
+| --- | --- | --- |
+| `$3FC8` | current spark/reference-period state | [U9 register map](docs/reference/U9_REGISTER_WINDOW_MAP.md) |
+| `$3FCA` | knock-event quantity consumed by firmware | [ESC/knock chain](docs/reference/ESC_KNOCK_SIGNAL_CHAIN.md) |
+| `$3FCC` | Segment-1 raw MPU output word | [Output staging](docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md) |
+| `$3FCE` | EFI delay state | [Ignition/injection chain](docs/reference/IGNITION_INJECTION_SIGNAL_CHAIN.md) |
+| `$3FD0` | synchronous injector command | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$3FD2/$3FD4/$3FD6/$3FD8` | Segment-1 raw MPU output words | [Output staging](docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md) |
+| `$3FDC` | dwell-period value | [Reference/RPM/dwell/spark](docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md) |
+| `$3FE4/$3FE6` | next-dwell timing and update state | [Reference/RPM/dwell/spark](docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md) |
+| `$3FE8` | current fire/fall delta | [Reference/RPM/dwell/spark](docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md) |
+| `$3FEC` | counter value at last reference | [Reference/RPM/dwell/spark](docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md) |
+| `$3FF6` | reference-to-fire offset | [Reference/RPM/dwell/spark](docs/reference/REFERENCE_RPM_DWELL_SPARK_THEORY.md) |
+| `$3FFC` | control/status word used by EST/bypass and other modes | [U9 register map](docs/reference/U9_REGISTER_WINDOW_MAP.md) |
+| `$4004` | parallel-I/O byte modified by Segment 1 | [Output staging](docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md) |
+
+### A.3 Executable regions and external boundaries
+
+| Address/range | Established role | Detailed reference |
+| --- | --- | --- |
+| `$5800` | optional-ROM boundary; code unavailable | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
+| `$6000` | external vector destination; behavior unavailable | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
 | `$8000-$FFFF` | supplied program window | [Processor/memory architecture](docs/reference/PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md) |
 | `$C800-$C9F3` | reset and power-on sequence | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
 | `$C9F4`, `$FA58-$FC71` | device `$80` SCI core | [Diagnostics/ALDL](docs/reference/DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md) |
@@ -441,6 +491,7 @@ then the affected detailed chapter and this synthesis.
 | `$D370-$D3DB` | IAC reset/homing state machine | [Idle-air control](docs/reference/IDLE_AIR_CONTROL_THEORY.md) |
 | `$D6D1-$D769` | key-off transition and adjacent lifecycle path | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
 | `$D769-$D7A0` | airflow/reference-period load producer | [Airflow/fuel/injection](docs/reference/AIRFLOW_FUEL_INJECTOR_THEORY.md) |
+| `$D6EA` | terminal SWI software-powerdown request | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
 | `$EDA3-$EF03` | Segment-1 raw output staging | [Output staging](docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md) |
 | `$F1BE-$F1DF` | common U10 A/D transaction | [A/D acquisition](docs/reference/ADC_SENSOR_ACQUISITION.md) |
 | `$F3A7-$F3B4` | retained checksum computation | [Startup/shutdown](docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md) |
@@ -475,3 +526,42 @@ test mapping remains in the
 The [theory-of-operation index](docs/reference/THEORY_OF_OPERATION_INDEX.md)
 retains the acceptance criteria and supporting signal-chain references for the
 sixteen-chapter source set.
+
+## Appendix C. Glossary
+
+| Term | Meaning |
+| --- | --- |
+| A/C | Air conditioning. |
+| A/D | Analog-to-digital conversion. |
+| AE | Acceleration enrichment. |
+| AFR | Air/fuel ratio. |
+| AIR | Secondary-air management system. |
+| ALDL | Assembly Line Diagnostic Link. |
+| BLM | Block-learn memory; retained adaptive fuel-correction state. |
+| CCP | Canister-control purge; used here for the canister-purge function. |
+| CTS | Coolant temperature sensor. |
+| DFCO | Deceleration fuel cutoff. |
+| ECM | Engine control module. |
+| EGR | Exhaust-gas recirculation. |
+| ESC | Electronic spark control; the analog observation path is distinct from the knock-event path. |
+| EST | Electronic spark timing. |
+| FMD | Factory-mode data/exchange boundary used by the factory-test path. |
+| HAL | Hardware abstraction layer; the raw processor-visible F2 seam. |
+| HIL | Hardware-in-the-loop verification. |
+| IAC | Idle-air control. |
+| IRQ | Interrupt request; ordinary periodic firmware service in this document. |
+| MAF | Mass airflow. |
+| MAP | Manifold absolute pressure. |
+| MAT | Manifold air temperature. |
+| MEMCAL | Removable memory/calibration and configuration carrier. |
+| MPU | The custom processor-visible peripheral/register resource named by the source material. |
+| PROM | Programmable read-only memory containing program and calibration data. |
+| PWM | Pulse-width modulation. |
+| RPM | Revolutions per minute. |
+| SCI | Serial communications interface used by the 8192-baud path. |
+| SWI | Software interrupt; used by the terminal powerdown request path. |
+| TCC | Torque-converter clutch. |
+| TPS | Throttle position sensor. |
+| VIGN | Ignition-switched supply/sense domain. |
+| VMAF | Analog mass-airflow voltage net presented to U10. |
+| VSS | Vehicle-speed signal. |

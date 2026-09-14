@@ -61,7 +61,8 @@ evidence. Otherwise, useful work belongs to one of these separate tracks:
 For practical use of the existing PC model, see the
 [simulator, build, and testing guide](SIMULATOR_BUILD_TEST_GUIDE.md).
 For the integrated engineering description, see the
-[formal theory of operation](../THEORY_OF_OPERATION.md).
+[formal theory of operation](../THEORY_OF_OPERATION.md) or its stable
+[PDF publication](../THEORY_OF_OPERATION.pdf).
 For a separately scoped target port, see the
 [embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md).
 

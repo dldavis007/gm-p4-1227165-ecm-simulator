@@ -12,8 +12,9 @@ MEMCAL evidence, ECM schematics, behavioral C port, and regression evidence
 without treating interpretation as fact.
 
 For a continuous system-level engineering description, read the
-[formal theory of operation](../../THEORY_OF_OPERATION.md). This directory
-retains the detailed address-level chapters that control its technical claims.
+[formal theory of operation](../../THEORY_OF_OPERATION.md) or the stable
+[PDF publication](../../THEORY_OF_OPERATION.pdf). This directory retains the
+detailed address-level chapters that control the publication's technical claims.
 
 `BUA` is retained as source and photographed label text. It is not used by
 itself to prove that every artifact belongs to one calibration or MEMCAL
