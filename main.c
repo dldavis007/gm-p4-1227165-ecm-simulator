@@ -85,6 +85,7 @@
 #include "tests/scheduler_regression.inc.h"
 #include "tests/aldl160_diagnostic_regression.inc.h"
 #include "tests/aldl160_factory_regression.inc.h"
+#include "tests/aldl160_hal_regression.inc.h"
 #include "simulation/transmission_drive.inc.h"
 #include "tests/diagnostic_integration_regression.inc.h"
 
@@ -320,6 +321,7 @@ int main(void)
     run_step121_lifecycle_integration_test();
     run_step168_aldl160_diagnostic_test();
     run_step169_aldl160_factory_test();
+    run_step170_aldl160_hal_test();
     run_step86_battery_test();
     run_step89_scheduler_wiring_test();
     run_step90_major_wiring_test();

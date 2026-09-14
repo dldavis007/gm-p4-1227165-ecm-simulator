@@ -264,7 +264,8 @@ factory sweep with the unidentified `$B0` slot preserved, and
 `docs/STEP166_SCI8192_RAW_HAL_AUDIT.txt` for the message-level receive/response
 boundary around the translated 8192-baud SCI core, and
 `docs/STEP167_ALDL160_COMPLETENESS_AUDIT.txt` for the corrected scope of the
-normal, diagnostic and factory 160-baud byte-manager paths. Earlier audits
+normal, diagnostic and factory 160-baud byte-manager paths.
+Steps 168 and 169 close both table-manager gaps; `docs/STEP170_ALDL160_RAW_HAL_AUDIT.txt` records the resulting cell-level raw HAL boundary. Earlier audits
 remain checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The

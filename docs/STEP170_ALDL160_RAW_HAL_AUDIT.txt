@@ -1,0 +1,27 @@
+BUA / GM 1227165 STEP 170 - COMPLETE 160-BAUD RAW HAL AUDIT
+=============================================================
+
+Purpose
+-------
+Steps 168 and 169 closed the diagnostic and factory LF880 gaps identified by
+Step 167. Step 170 now exposes the complete translated 160-baud manager through
+a narrow cell-level raw HAL.
+
+Boundary
+--------
+The HAL initializes L0189-L018B and the serial flags, advances one complete
+LCAA4/LCA2C/LCA3B cell at a caller-supplied timer origin, and exposes the raw
+line, table index, bit count and transmit byte. Selection and byte ownership
+remain in LF880: ordinary display, 25-byte diagnostic, and each of the three
+16-byte factory streams.
+
+Regression
+----------
+Nine Strict C89 checks cover reset state, a full normal byte reconstructed only
+from cell trace bits, terminal line/flag state, diagnostic selection, factory
+even/odd L017A carry, and load-cell trace behavior. Existing frozen signatures
+and all prior regression gates remain unchanged.
+
+This seam does not assign connector voltage polarity, reproduce the external
+transceiver, model cable loading or collision behavior, or prescribe a target
+timer driver. Those remain hardware responsibilities.

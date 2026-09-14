@@ -183,3 +183,6 @@ Those are separate hardware-selection or evidence tasks. They should remain expl
 - `docs/reference/PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md` — address/custom-device boundaries.
 - `docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md` — startup/reset/retained-power boundary.
 - `docs/reference/OUTPUT_STAGING_ELECTRICAL_INTERFACES.md` — raw-output/electrical boundary.
+
+
+Step 170 follows the Step-168/169 manager closure with a cell-level 160-baud HAL. Target code can initialize the translated state, advance one listing-equivalent cell at an explicit timer origin, and observe line/index/bit/byte state. External voltage polarity and transceiver behavior remain outside the port.

@@ -130,3 +130,5 @@ The text `BUA` appears in the supplied source labeling and on an available
 MEMCAL photograph alongside `9340`. That is useful corroboration, but the
 project does not use the label alone to claim calibration identity or to prove
 that every photographed hardware variant contains the supplied PROM image.
+
+| SYS-023 | Confirmed | Steps 168-169 complete LF880 normal/diagnostic/factory selection; Step 170 exposes that manager through a cell-level raw HAL without assigning external electrical semantics. | `bua-hac.lst` `$CA2C-$CA4B`, `$CAA4-$CAB3`, `$F880-$F8F8`; Step-168/169/170 regressions. |

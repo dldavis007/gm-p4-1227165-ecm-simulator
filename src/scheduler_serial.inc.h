@@ -520,6 +520,35 @@ static void bua_160_cell_at(BuaSerialCellTrace *trace, bua_u32 cell_start)
         trace->xmit_after = ALCL_XMIT_BYTE;
     }
 }
+/* Step 170: cell-level raw HAL boundary for the complete LF880 manager. */
+static void bua_hal_aldl160_init(void)
+{
+    ALCL_TABLE_INDEX=0u;
+    ALCL_BIT_COUNT=0u;
+    ALCL_XMIT_BYTE=0xFFu;
+    SERIAL_MODE_WORD&=(bua_u8)~(SERIAL_FLAG_FIRST|SERIAL_FLAG_SECOND);
+    sim_serial_line_high=1u;
+}
+static void bua_hal_aldl160_cell(BuaSerialCellTrace *trace,bua_u32 cell_start)
+{
+    bua_160_cell_at(trace,cell_start);
+}
+static bua_u8 bua_hal_aldl160_line_high(void)
+{
+    return sim_serial_line_high;
+}
+static bua_u8 bua_hal_aldl160_table_index(void)
+{
+    return ALCL_TABLE_INDEX;
+}
+static bua_u8 bua_hal_aldl160_bit_count(void)
+{
+    return ALCL_BIT_COUNT;
+}
+static bua_u8 bua_hal_aldl160_xmit_byte(void)
+{
+    return ALCL_XMIT_BYTE;
+}
 static void print_serial_trace(void)
 {
     BuaSerialCellTrace tr;
