@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="900" viewBox="0 0 940 900">
+<rect width="940" height="900" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#172d43} .wire{stroke:#172d43;stroke-width:2;fill:none}</style>
+<text x="470" y="35" font-size="24" text-anchor="middle">16055375_14R — fitted replacement candidate</text>
+<text x="470" y="62" font-size="15" text-anchor="middle">Nominal E96 values • Original package-pin numbering • DC resistance model</text>
+<circle cx="130" cy="120" r="4" fill="#172d43"/>
+<text x="130" y="105" font-size="17" text-anchor="middle">Pin 1</text>
+<circle cx="330" cy="120" r="4" fill="#172d43"/>
+<text x="330" y="105" font-size="17" text-anchor="middle">Pin 2</text>
+<circle cx="530" cy="120" r="4" fill="#172d43"/>
+<text x="530" y="105" font-size="17" text-anchor="middle">Pin 3</text>
+<path class="wire" d="M130 120 L200.0 120"/>
+<path class="wire" d="M260.0 120 L330 120"/>
+<rect x="200.0" y="110" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="230.0" y="78" font-size="15" text-anchor="middle">R1: 12.7 kΩ</text>
+<path class="wire" d="M330 120 L400.0 120"/>
+<path class="wire" d="M460.0 120 L530 120"/>
+<rect x="400.0" y="110" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="430.0" y="78" font-size="15" text-anchor="middle">R3: 34.8 kΩ</text>
+<path class="wire" d="M130 120 L130 165.0"/>
+<path class="wire" d="M130 215.0 L130 260"/>
+<rect x="120" y="165.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="195" y="195.0" font-size="15" text-anchor="middle">R2: 68.1 kΩ</text>
+<circle cx="130" cy="260" r="4" fill="#172d43"/>
+<text x="130" y="245" font-size="17" text-anchor="middle">Pin 14</text>
+<path class="wire" d="M530 120 L530 165.0"/>
+<path class="wire" d="M530 215.0 L530 260"/>
+<rect x="520" y="165.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="595" y="195.0" font-size="15" text-anchor="middle">R4: 14.3 kΩ</text>
+<circle cx="530" cy="260" r="4" fill="#172d43"/>
+<text x="530" y="245" font-size="17" text-anchor="middle">Pin 14</text>
+<circle cx="800" cy="410" r="4" fill="#172d43"/>
+<text x="800" y="395" font-size="17" text-anchor="middle">Pin 4</text>
+<circle cx="610" cy="410" r="4" fill="#172d43"/>
+<text x="610" y="395" font-size="17" text-anchor="middle">Pin 5</text>
+<circle cx="420" cy="410" r="4" fill="#172d43"/>
+<text x="420" y="395" font-size="17" text-anchor="middle">Pin 6</text>
+<circle cx="230" cy="410" r="4" fill="#172d43"/>
+<text x="230" y="395" font-size="17" text-anchor="middle">Pin 9</text>
+<circle cx="60" cy="410" r="4" fill="#172d43"/>
+<text x="60" y="395" font-size="17" text-anchor="middle">Pin 7 = 8</text>
+<path class="wire" d="M610 410 L675.0 410"/>
+<path class="wire" d="M735.0 410 L800 410"/>
+<rect x="675.0" y="400" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="705.0" y="368" font-size="15" text-anchor="middle">R5: 30.9 kΩ</text>
+<path class="wire" d="M420 410 L485.0 410"/>
+<path class="wire" d="M545.0 410 L610 410"/>
+<rect x="485.0" y="400" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="515.0" y="368" font-size="15" text-anchor="middle">R6: 46.4 kΩ</text>
+<path class="wire" d="M230 410 L295.0 410"/>
+<path class="wire" d="M355.0 410 L420 410"/>
+<rect x="295.0" y="400" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="325.0" y="368" font-size="15" text-anchor="middle">R8: 267 kΩ</text>
+<path class="wire" d="M60 410 L115.0 410"/>
+<path class="wire" d="M175.0 410 L230 410"/>
+<rect x="115.0" y="400" width="60" height="20" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="145.0" y="368" font-size="15" text-anchor="middle">R9: 71.5 kΩ</text>
+<path class="wire" d="M610 410 L610 460.0"/>
+<path class="wire" d="M610 510.0 L610 560"/>
+<rect x="600" y="460.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="675" y="490.0" font-size="15" text-anchor="middle">R7: 154 kΩ</text>
+<circle cx="610" cy="560" r="4" fill="#172d43"/>
+<text x="610" y="545" font-size="17" text-anchor="middle">Pin 14</text>
+<path class="wire" d="M230 410 L230 460.0"/>
+<path class="wire" d="M230 510.0 L230 560"/>
+<rect x="220" y="460.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="295" y="490.0" font-size="15" text-anchor="middle">R10: 412 kΩ</text>
+<circle cx="230" cy="560" r="4" fill="#172d43"/>
+<text x="230" y="545" font-size="17" text-anchor="middle">Pin 14</text>
+<circle cx="130" cy="690" r="4" fill="#172d43"/>
+<text x="130" y="675" font-size="17" text-anchor="middle">Pin 10</text>
+<path class="wire" d="M130 690 L130 730.0"/>
+<path class="wire" d="M130 780.0 L130 820"/>
+<rect x="120" y="730.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="195" y="760.0" font-size="15" text-anchor="middle">R11: 88.7 kΩ</text>
+<circle cx="340" cy="690" r="4" fill="#172d43"/>
+<text x="340" y="675" font-size="17" text-anchor="middle">Pin 11</text>
+<path class="wire" d="M340 690 L340 730.0"/>
+<path class="wire" d="M340 780.0 L340 820"/>
+<rect x="330" y="730.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="405" y="760.0" font-size="15" text-anchor="middle">R12: 95.3 kΩ</text>
+<circle cx="550" cy="690" r="4" fill="#172d43"/>
+<text x="550" y="675" font-size="17" text-anchor="middle">Pin 12</text>
+<path class="wire" d="M550 690 L550 730.0"/>
+<path class="wire" d="M550 780.0 L550 820"/>
+<rect x="540" y="730.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="615" y="760.0" font-size="15" text-anchor="middle">R13: 9.76 kΩ</text>
+<circle cx="760" cy="690" r="4" fill="#172d43"/>
+<text x="760" y="675" font-size="17" text-anchor="middle">Pin 13</text>
+<path class="wire" d="M760 690 L760 730.0"/>
+<path class="wire" d="M760 780.0 L760 820"/>
+<rect x="750" y="730.0" width="20" height="50" fill="white" stroke="#172d43" stroke-width="2"/>
+<text x="825" y="760.0" font-size="15" text-anchor="middle">R14: 16.9 kΩ</text>
+<path class="wire" d="M130 820 L760 820"/>
+<circle cx="445" cy="820" r="4" fill="#172d43"/>
+<text x="445" y="805" font-size="17" text-anchor="middle">Pin 14</text>
+<text x="470" y="868" font-size="16" text-anchor="middle">Every Pin 14 label is the SAME electrical net. Pins 7 and 8 are directly linked.</text>
+</svg>

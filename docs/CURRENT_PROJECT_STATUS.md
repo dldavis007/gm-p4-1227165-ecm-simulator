@@ -34,9 +34,10 @@ unchanged.
 - Exact calibration identity from the `BUA` label alone.
 - Physical verification of every MEMCAL network relationship; the optional
   16055375 isolated physical terminal-resistance matrix remains nonblocking
-  for software closure. Step 178 recovered a historical workbook matrix,
-  but its cross-terminal entries conflict with the simplified candidate and
-  its measurement conditions remain undocumented.
+  for software closure. Step 179 records the owner's confirmation that the
+  workbook contains original-device measurements and defines the replacement
+  target. New passive fitted candidates closely reproduce those readings;
+  the earlier hand reconstruction remains an approximate replacement.
 
 ## Authority rules
 
@@ -81,3 +82,13 @@ full terminal equivalence after recovering the historical resistance table.
 Start a new session from this document, the step history, the build guide,
 and [Step-178 audit](STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
 Inspect the live branch head before assigning the next step number.
+
+## Step 179 — measured NetRes replacement candidates
+
+The owner confirmed the original-device measurement provenance and accepted
+the workbook as the target for replacement networks. The measured-matrix
+[reconstruction report](NETRES_MEASURED_MATRIX_RECONSTRUCTION.md) proposes
+15- or 14-resistor 16055375 networks and a nine-resistor 16055376 network.
+They remain computed DC candidates pending new physical build/measurement.
+The original measured matrices govern resistance targets; photographs govern
+what was installed on the earlier reconstruction. Behavioral closure is unchanged.

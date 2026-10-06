@@ -15,7 +15,7 @@ immutable development trail.
   build, run, verify, use the raw HAL, and interpret the results.
 - [Embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md)
   — phased target selection, porting, seam verification and hardware validation.
-- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-178 record.
+- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-179 record.
 - [Technical-reference foundation](reference/README.md) — integrated system,
   firmware, hardware, MEMCAL, theory and migration chapters.
 - [Step 171 whole-image reclosure](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt) —
@@ -63,3 +63,8 @@ known.
 [Preservation manifest](ORIGINAL_EVIDENCE_MANIFEST.md) and
 [Step-178 consistency audit](STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md)
 identify archived originals and the recovered 16055375 workbook discrepancy.
+
+## Measured NetRes replacement candidates
+
+[Measured-matrix reconstruction report](NETRES_MEASURED_MATRIX_RECONSTRUCTION.md)
+contains fitted circuits, standard resistor values and pair-error comparisons.

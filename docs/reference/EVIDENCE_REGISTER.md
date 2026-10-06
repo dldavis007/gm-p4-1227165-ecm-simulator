@@ -146,3 +146,14 @@ full equivalent. The recovered 91-pair table substantially conflicts with its
 documented simplified topology at 6-9, 5-9 and 4-9. Measurement provenance is
 unknown. See [Step-178 audit](../STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
 MEM-008's 16055376 photo/topology conclusion remains unchanged.
+
+## Step-179 owner confirmation and fitted candidates
+
+The owner confirmed the ODS as original NetRes pin-to-pin measurements and
+the target for replacement. Original-device measurement provenance is now
+owner-confirmed; detailed instrument/setup metadata is still unspecified.
+The earlier 16055375 reconstruction is an approximate replacement.
+New [DC candidates](../NETRES_MEASURED_MATRIX_RECONSTRUCTION.md) match the
+measurements closely but have not been physically built or validated.
+The original 16055376 model/photo topology agreement remains a separate fact
+from closeness to original measured resistances.

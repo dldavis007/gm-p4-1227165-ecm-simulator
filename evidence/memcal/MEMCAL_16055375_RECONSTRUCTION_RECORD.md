@@ -191,3 +191,12 @@ external-terminal equivalence. Workbook measurement conditions remain unknown.
 The earlier findings above are historical; full equivalence remains unconfirmed
 pending provenance and isolated physical-matrix checks. Photo-authoritative
 as-built values and established carrier mapping remain unchanged.
+
+## Step-179 owner confirmation
+
+The owner confirmed on 2026-10-06 that the workbook is the original NetRes
+pin-to-pin measurement table and accepted it as the final replacement target.
+The previous physical reconstruction was an imperfect approximation.
+The original-device provenance uncertainty in the Step-178 addendum is
+superseded by this confirmation; instrument/setup details remain unspecified.
+See the [new fitted-candidate report](../../docs/NETRES_MEASURED_MATRIX_RECONSTRUCTION.md).

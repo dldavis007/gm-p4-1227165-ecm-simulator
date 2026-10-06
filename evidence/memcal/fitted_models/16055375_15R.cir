@@ -1,0 +1,20 @@
+* Owner-measured matrix fit; values are kOhm.
+* Candidate DC resistor model; no undocumented device dynamics.
+.subckt NETRES_16055375_15R P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 P13 P14
+R1 P1 P2 12.7k
+R2 P1 P14 68.1k
+R3 P2 P3 34.8k
+R4 P3 P4 1500k
+R5 P3 P14 14.3k
+R6 P4 P5 31.6k
+R7 P5 P6 45.3k
+R8 P5 P14 178k
+R9 P6 P9 267k
+R10 P7 P9 71.5k
+R11 P9 P14 412k
+R12 P10 P14 88.7k
+R13 P11 P14 95.3k
+R14 P12 P14 9.76k
+R15 P13 P14 16.9k
+VSHORT1 P7 P8 0
+.ends NETRES_16055375_15R

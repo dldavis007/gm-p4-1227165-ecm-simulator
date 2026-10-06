@@ -47,3 +47,10 @@ See the [manifest](../../docs/ORIGINAL_EVIDENCE_MANIFEST.md) and
 [Step-178 audit](../../docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
 The recovered workbook raises unresolved cross-terminal discrepancies for the
 16055375 candidate; full electrical equivalence is not established.
+
+## Original measurement targets and new candidates
+
+The owner confirmed the workbook as original-device measurements and the
+replacement target. The earlier hand reconstruction is approximate.
+See [fitted candidates](fitted_models/README.md) and
+[engineering report](../../docs/NETRES_MEASURED_MATRIX_RECONSTRUCTION.md).

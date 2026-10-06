@@ -1,7 +1,8 @@
 """Compare the retained 16055375 table with the documented candidate network.
 
-Uses Python standard library only. Values are compared on the inferred kOhm
-scale; this is model consistency, not proof of the workbook's measurement setup.
+Uses Python standard library only. The owner confirmed on 2026-10-06 that
+the workbook records original-device pin-to-pin measurements and is the
+replacement target. Instrument/setup details remain unspecified.
 """
 import csv
 import pathlib
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     output = ROOT/"evidence/memcal/16055375_WORKBOOK_MODEL_COMPARISON.csv"
     with output.open("w",newline="") as stream:
         writer = csv.writer(stream)
-        writer.writerow(["terminal_a","terminal_b","workbook_inferred_kohm",
+        writer.writerow(["terminal_a","terminal_b","original_measured_kohm",
                          "candidate_kohm","difference_kohm","absolute_percent"])
         writer.writerows(rows)
     print("Compared 91 recorded pairs; output:", output.relative_to(ROOT))

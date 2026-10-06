@@ -78,3 +78,13 @@ historical image comparisons were independently rechecked. All local Markdown
 file links resolve. Strict C89 `make clean test` passes without warnings and
 with frozen signatures unchanged. No C source, calibration or behavioral baseline
 was changed.
+
+## Step-179 owner-confirmation addendum
+
+The owner subsequently confirmed the workbook as original-device measurements
+and the target for replacements, explaining that the prior reconstruction was
+an imperfect approximation. Thus source-device provenance is now confirmed by
+the owner; detailed instrument/setup conditions remain unspecified. Step 179
+renames `workbook_inferred_kohm` to `original_measured_kohm` in the comparison
+and its generating tool without changing the original workbook or its values.
+See [measured-matrix reconstruction](NETRES_MEASURED_MATRIX_RECONSTRUCTION.md).

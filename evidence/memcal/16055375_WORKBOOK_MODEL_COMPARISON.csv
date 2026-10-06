@@ -1,4 +1,4 @@
-terminal_a,terminal_b,workbook_inferred_kohm,candidate_kohm,difference_kohm,absolute_percent
+terminal_a,terminal_b,original_measured_kohm,candidate_kohm,difference_kohm,absolute_percent
 1,2,11.5,11.742618,0.242618,2.109722
 1,3,30.3,31.940828,1.640828,5.415273
 1,4,187.0,183.582121,-3.417879,1.827743

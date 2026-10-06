@@ -120,11 +120,12 @@ architecture. Photograph and direct physical evidence control the as-built
 reconstruction where legible. KiCad, LTspice, measurements, and historical
 notes provide supporting evidence; discrepancies remain visible.
 
-Step 178 preserves the original evidence and recovers a historical 16055375
-terminal-pair table that conflicts with its simplified candidate at several
-cross-terminal pairs. Full terminal equivalence remains unconfirmed; workbook
-measurement conditions require clarification. See the
-[consistency audit](docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+Step 179 records the owner's confirmation that the preserved workbook contains
+original NetRes pin-to-pin measurements and defines the resistance target.
+The earlier hand reconstruction is approximate. New passive DC candidates
+closely match the measured matrices but still require physical validation.
+Photographs remain authoritative for the earlier as-built population.
+See the [reconstruction report](docs/NETRES_MEASURED_MATRIX_RECONSTRUCTION.md).
 
 Important established anchors include CAL42 to U11 pin 18 `OSC`, CAL56 to U12
 pin 11 `CYL`, CAL61 to U11 pin 28 `MAP`, CAL59 to VIGN, and the CAL45/CAL46

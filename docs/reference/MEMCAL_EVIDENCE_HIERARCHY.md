@@ -41,3 +41,14 @@ When a legible installed resistor or jumper in the completed MEMCAL photograph c
 - do not normalize the records to force agreement.
 
 This rule applies in particular to the current 16055376 J5-J6 / nominal-model discrepancy. The next determination must come from the photograph or direct inspection of that physical location, not from choosing between KiCad and LTspice.
+
+## Owner-confirmed original-device resistance target (Step 179)
+
+On 2026-10-06 the owner confirmed that the archived ODS contains pin-to-pin
+measurements on the original NetRes devices and accepted those values as the
+replacement target. The earlier reconstruction was acknowledged as imperfect.
+For original terminal DC resistance behavior, these measurements govern model
+fitting. For the earlier hand reconstruction's installed parts, photographs
+remain controlling. These are different claims, not competing authorities.
+Test instrument, temperature and uncertainty remain unspecified.
+See [reconstruction report](../NETRES_MEASURED_MATRIX_RECONSTRUCTION.md).
