@@ -163,3 +163,16 @@ CAL45 and CAL46 are electrically common in the reconstruction.
 The 16055375 reconstruction is much simpler electrically than its generic-grid appearance. It is not resistor-for-resistor identical to the LTspice internal model, but the targeted external-terminal resistance comparison now gives substantial evidence that the simplification was intentional and electrically valid at the disputed terminals when the retained **220 kOhm** reconstruction value is used.
 
 The main remaining closure item is no longer "why are the topologies different?" but rather whether the simplified as-built network matches the original across the **full terminal-resistance matrix**, not only the presently recoverable terminal-14 comparisons.
+
+## Step-178 later-evidence addendum (2026-10-06)
+
+The original model/design files and ODS are now preserved under `originals/`;
+see the repository [preservation audit](../../docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+The recovered 16055375 workbook contains all 91 terminal pairs. Its 6-9 entry
+is 187 (inferred kOhm), whereas the documented simplified candidate using the
+220-kOhm branch calculates 373.371 kOhm. Similar discrepancies occur at 5-9
+and 4-9. Thus agreement for terminal-14 comparisons does not establish full
+external-terminal equivalence. Workbook measurement conditions remain unknown.
+The earlier findings above are historical; full equivalence remains unconfirmed
+pending provenance and isolated physical-matrix checks. Photo-authoritative
+as-built values and established carrier mapping remain unchanged.

@@ -79,3 +79,11 @@ The strongest supported interpretation is:
 5. The authoritative status of the listing remains appropriate for address/byte evidence, while the corrected `.asm` can now also be treated as its verified source counterpart rather than an unverified text reconstruction.
 
 The original raw binary and S-record files remain external historical artifacts unless separately imported into the repository.
+
+## Step-178 preservation update
+
+The corrected assembly source, S-record, generated binary and all three listed
+historical binaries are now archived beside this record. All seven table hashes,
+including the already committed listing, were reverified against raw downloads.
+The earlier external-only preservation statement is superseded. See
+[manifest](../../docs/ORIGINAL_EVIDENCE_MANIFEST.md).

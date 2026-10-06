@@ -33,8 +33,10 @@ unchanged.
   code is absent from the supplied PROM image.
 - Exact calibration identity from the `BUA` label alone.
 - Physical verification of every MEMCAL network relationship; the optional
-  16055375 terminal-resistance matrix remains a refinement, not a closure
-  blocker.
+  16055375 isolated physical terminal-resistance matrix remains nonblocking
+  for software closure. Step 178 recovered a historical workbook matrix,
+  but its cross-terminal entries conflict with the simplified candidate and
+  its measurement conditions remain undocumented.
 
 ## Authority rules
 
@@ -70,3 +72,12 @@ See [Step 171](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt), the
 [evidence register](reference/EVIDENCE_REGISTER.md), and the
 [embedded-migration chapter](reference/C_PORT_ARCHITECTURE_EMBEDDED_MIGRATION.md)
 for the detailed basis and boundaries.
+
+## Latest preservation checkpoint — Step 178
+
+Step 177 added accessible JPEG evidence. Step 178 archives verified original
+firmware and MEMCAL source artifacts and qualifies the 16055375 candidate's
+full terminal equivalence after recovering the historical resistance table.
+Start a new session from this document, the step history, the build guide,
+and [Step-178 audit](STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+Inspect the live branch head before assigning the next step number.

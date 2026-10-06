@@ -10,3 +10,10 @@ Makefile text eol=lf
 *.bat text eol=crlf
 evidence/firmware/bua-hac.lst -text
 evidence/memcal/Resistors.txt -text -diff
+evidence/firmware/*.asm -text
+evidence/firmware/*.s19 -text
+evidence/firmware/*.bin -text -diff
+evidence/memcal/originals/** -text
+evidence/memcal/16055375_WORKBOOK_MODEL_COMPARISON.csv -text
+evidence/research/*.docx -text -diff
+*.pdf -text -diff

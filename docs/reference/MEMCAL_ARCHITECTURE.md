@@ -153,11 +153,10 @@ For contacts above the CAL61 range explicitly present in the user's connection
 notes, J4 62-64 are retained as absolute connector contacts without assigning
 unsupported CAL semantics.
 
-As with the 16055375 board, the generic-grid implementation uses zero-ohm links
-and open positions. Some fitted values differ slightly from nominal LTspice
-values. Those differences are preserved as reconstruction choices or potential
-review points rather than silently treated as proof of the original molded
-network's internal values.
+The generic-grid implementation uses zero-ohm links and open positions.
+The completed 16055376 photo audit establishes all nine installed values,
+matching the nominal LTspice values; conflicting KiCad strings are design-record
+discrepancies, not fitted substitutions. See the topology and photo audits.
 
 ## Historical resistor evidence
 
@@ -272,3 +271,10 @@ behavior. Keep these layers distinct:
 Only the fourth layer is automatically established by the PROM source. A
 semantic claim spanning the earlier layers requires corresponding schematic,
 measurement, or test evidence.
+
+## Step-178 preservation and equivalence boundary
+
+Original model/design/workbook files are now in `evidence/memcal/originals/`.
+The recovered 16055375 matrix raises cross-terminal model discrepancies.
+An intended terminal equivalent is not a proven full electrical equivalent;
+see [Step-178 audit](../STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).

@@ -178,3 +178,16 @@ Still unresolved:
 - unresolved motherboard destinations and U11/U12 internal behavior.
 
 The best next verification is a **terminal-resistance comparison focused on terminals 6, 7/8, 9, and 14**, using the saved measurement workbook and/or targeted resistance measurements of the physical reconstruction. That will determine whether the simplified topology is an intentional electrical equivalent or an actual reverse-engineering error.
+
+## Step-178 later-evidence addendum (2026-10-06)
+
+The original model/design files and ODS are now preserved under `originals/`;
+see the repository [preservation audit](../../docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+The recovered 16055375 workbook contains all 91 terminal pairs. Its 6-9 entry
+is 187 (inferred kOhm), whereas the documented simplified candidate using the
+220-kOhm branch calculates 373.371 kOhm. Similar discrepancies occur at 5-9
+and 4-9. Thus agreement for terminal-14 comparisons does not establish full
+external-terminal equivalence. Workbook measurement conditions remain unknown.
+The earlier findings above are historical; full equivalence remains unconfirmed
+pending provenance and isolated physical-matrix checks. Photo-authoritative
+as-built values and established carrier mapping remain unchanged.

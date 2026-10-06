@@ -19,3 +19,11 @@ its size and SHA-256 before using a replaced or externally transferred copy.
 `bua-hac.txt` is deliberately excluded. Its corrected-revision status is not
 established, and it must not be used to fill, reinterpret, or override the
 assembled listing.
+
+## Preserved build and historical artifacts
+
+Step 178 adds the verified corrected `bua-hac.asm`, `bua-hac.s19`,
+`bua-hac.bin` and three historical variant binaries. The listing remains
+authoritative for behavioral translation; historical variants do not replace it.
+See [provenance](BUA_SOURCE_PROVENANCE.md) and
+[preservation manifest](../../docs/ORIGINAL_EVIDENCE_MANIFEST.md).

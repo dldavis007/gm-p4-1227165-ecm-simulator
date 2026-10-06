@@ -38,3 +38,12 @@ normalized.
 - `Resistors.txt`
 
 See `docs/reference/MEMCAL_EVIDENCE_HIERARCHY.md` for the project-wide evidence-priority rule and the numbered STEP audit documents for the chronological reconstruction history.
+
+## Original models and resistance workbook
+
+The `originals/` directory preserves both LTspice drawings, both KiCad
+PCB/schematic/project sets and the original ODS resistance workbook.
+See the [manifest](../../docs/ORIGINAL_EVIDENCE_MANIFEST.md) and
+[Step-178 audit](../../docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+The recovered workbook raises unresolved cross-terminal discrepancies for the
+16055375 candidate; full electrical equivalence is not established.

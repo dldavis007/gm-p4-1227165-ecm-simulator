@@ -132,3 +132,17 @@ The text `BUA` appears in the supplied source labeling and on an available
 MEMCAL photograph alongside `9340`. That is useful corroboration, but the
 project does not use the label alone to claim calibration identity or to prove
 that every photographed hardware variant contains the supplied PROM image.
+
+## Step-178 current-evidence update
+
+The external-only source inventory descriptions above are superseded for the
+firmware build/historical files and MEMCAL models, KiCad projects and ODS by the
+[preservation manifest](../ORIGINAL_EVIDENCE_MANIFEST.md). Research notes are
+preserved as a native-document DOCX export; supporting PDFs remain external.
+
+MEM-007, MEM-009 and OPEN-002 must be read with this qualification: the
+16055375 is an intended/candidate external-terminal equivalent, not a proven
+full equivalent. The recovered 91-pair table substantially conflicts with its
+documented simplified topology at 6-9, 5-9 and 4-9. Measurement provenance is
+unknown. See [Step-178 audit](../STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+MEM-008's 16055376 photo/topology conclusion remains unchanged.

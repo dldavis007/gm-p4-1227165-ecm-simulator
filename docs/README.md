@@ -15,7 +15,7 @@ immutable development trail.
   build, run, verify, use the raw HAL, and interpret the results.
 - [Embedded and HIL implementation roadmap](EMBEDDED_HIL_IMPLEMENTATION_ROADMAP.md)
   — phased target selection, porting, seam verification and hardware validation.
-- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-176 record.
+- [Step history index](STEP_HISTORY_INDEX.md) — navigable Steps 104-178 record.
 - [Technical-reference foundation](reference/README.md) — integrated system,
   firmware, hardware, MEMCAL, theory and migration chapters.
 - [Step 171 whole-image reclosure](STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt) —
@@ -57,3 +57,9 @@ Files named `STEPxxx_*.txt` document what was established at that checkpoint.
 Later corrections are recorded as explicit addenda or later audits. Do not
 silently rewrite an old audit to make it appear that a later fact was already
 known.
+
+## Original-source preservation
+
+[Preservation manifest](ORIGINAL_EVIDENCE_MANIFEST.md) and
+[Step-178 consistency audit](STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md)
+identify archived originals and the recovered 16055375 workbook discrepancy.

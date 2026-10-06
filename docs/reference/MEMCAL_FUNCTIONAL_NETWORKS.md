@@ -173,7 +173,7 @@ as a reconstruction/design-record error, not as the as-built value.
 | Local reconstruction relationship | J4/CAL relationship | As-built / evidence status |
 | --- | --- | --- |
 | J1-J2 | J4 49-CAL51 | 150 kOhm record; photo audit still available |
-| J2-J3 | CAL51-CAL53 | KiCad 1.45 kOhm; nominal model 1.5 kOhm; installed value not yet promoted here |
+| J2-J3 | CAL51-CAL53 | 1.5 kOhm as-built, photo marking `1501`; KiCad 1.45k is a design discrepancy |
 | J3-J4 | CAL53-CAL55 | 130 kOhm record |
 | J4-J5 | CAL55-CAL57 | 0 Ohm routing link |
 | J5-J6 | CAL57-CAL59 | **24 kOhm as-built, photo marking `2402`; LTspice agrees; KiCad 25.5 Ohm is erroneous** |
@@ -232,3 +232,11 @@ inspection, targeted measurements, motherboard connectivity, and
 firmware/theory-of-operation consequences agree. LTspice and KiCad then provide
 valuable explanatory and historical design context rather than overriding the
 physical build.
+
+## Step-178 recovered resistance-table qualification
+
+The original ODS is now preserved. Its full 16055375 terminal-pair table
+conflicts with the documented simplified candidate at several cross-terminal
+pairs, despite close terminal-14 comparisons. Full external-terminal equivalence
+is unconfirmed; see [Step-178 audit](../STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+The 16055376 photo/topology findings are unaffected.

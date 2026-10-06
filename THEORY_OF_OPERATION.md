@@ -120,6 +120,12 @@ architecture. Photograph and direct physical evidence control the as-built
 reconstruction where legible. KiCad, LTspice, measurements, and historical
 notes provide supporting evidence; discrepancies remain visible.
 
+Step 178 preserves the original evidence and recovers a historical 16055375
+terminal-pair table that conflicts with its simplified candidate at several
+cross-terminal pairs. Full terminal equivalence remains unconfirmed; workbook
+measurement conditions require clarification. See the
+[consistency audit](docs/STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
+
 Important established anchors include CAL42 to U11 pin 18 `OSC`, CAL56 to U12
 pin 11 `CYL`, CAL61 to U11 pin 28 `MAP`, CAL59 to VIGN, and the CAL45/CAL46
 common node. These are connection or configuration statements, not licenses to
