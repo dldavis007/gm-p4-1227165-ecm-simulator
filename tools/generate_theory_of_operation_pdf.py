@@ -154,7 +154,7 @@ def draw_body_page(canvas: object, doc: object) -> None:
     canvas.setFont(BODY_FONT, 7.5)
     canvas.setFillColor(colors.HexColor("#52616B"))
     canvas.drawString(doc.leftMargin, height - 0.38 * inch, "GM P4 1227165 ECM Simulator - Theory of Operation")
-    canvas.drawRightString(width - doc.rightMargin, 0.36 * inch, "Revision 1.1  |  Page %d" % doc.page)
+    canvas.drawRightString(width - doc.rightMargin, 0.36 * inch, "Revision 1.2  |  Page %d" % doc.page)
     canvas.restoreState()
 
 
@@ -418,7 +418,7 @@ def build() -> None:
         ])),
         Spacer(1, 0.40 * inch),
         Paragraph("ECM service number 1227165  |  Supplied 9340 image", style_map["subtitle"]),
-        Paragraph("Revision 1.1  |  6 October 2026", style_map["subtitle"]),
+        Paragraph("Revision 1.2  |  6 October 2026", style_map["subtitle"]),
         Spacer(1, 1.15 * inch),
         Paragraph("Firmware authority: evidence/firmware/bua-hac.lst", style_map["subtitle"]),
         Spacer(1, 0.22 * inch),

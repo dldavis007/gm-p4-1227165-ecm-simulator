@@ -168,3 +168,10 @@ operation, firmware operation, complete signal path, fault behavior and evidence
 boundaries. Step-180 VCC/ground and TPS routing findings supersede earlier
 unknown-reference or MAP-signal assumptions. Original measured matrices govern
 replacement resistance targets; photographs govern the earlier as-built prototype.
+
+## Step 182 expansion
+
+Master sections 4.1/4.2 cover power/reset/retention and LIMP connections;
+section 8.1 covers the injector driver. Corresponding detailed lifecycle and
+ignition/injection chapters include the same block treatments. LIMP activation
+rules and the undrawn U12 INJLIMP connection remain explicit evidence gaps.

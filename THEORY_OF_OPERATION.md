@@ -8,7 +8,7 @@
 | Firmware basis | Supplied 9340 image and corrected BUA source/listing provenance |
 | Firmware authority | `evidence/firmware/bua-hac.lst` |
 | Implementation | Strict-C89 behavioral port and deterministic PC simulator |
-| Revision | 1.1 — Step 181, 2026-10-06 |
+| Revision | 1.2 — Step 182, 2026-10-06 |
 | Status | Controlled engineering publication |
 | Detailed authority | Linked reference chapters and hardware/firmware cross-reference |
 
@@ -224,6 +224,114 @@ electrical consequences, unavailable optional code at `$5800`, and vector
 targets at external `$6000` remain F4. The simulator exposes decisions and
 events at F2; it does not claim to reproduce those physical mechanisms.
 
+### 4.1 Power rails, reset and retained-power block
+
+**Schematic location.** Sheet 6, U1 `16034992`, battery-input diodes,
+input/output capacitors, VIGN bias network and reset pull-up; sheet 1 U8/U9/U12
+reset and standby connections; sheet 5 vehicle supply connectors.
+
+**Electrical operation.** BATT# enters two diode-fed paths: VQUAD feeds output
+stages, while VBATT feeds U1 VIN1/pin 11 and VIN2/pin 13 through a 3-ohm
+series resistor and a 4.7-µF bypass capacitor. The diodes provide isolation;
+the drawn suppression devices and capacitors support transient conditioning.
+Their unlabeled characteristics do not establish protection limits. These
+battery-derived rails must not be confused with regulated VCC or switched VIGN.
+
+| U1 connection | Net and externally visible use |
+| --- | --- |
+| VCC1, pin 12 | VCC; logic, converters and MEMCAL supply connections |
+| VCC2, pin 8 | VCC#; vehicle connector reference supply |
+| VCC3, pin 4 | VCCSTANDBY; U8 standby connection and decoupling |
+| RESET, pin 1 | ~RESET, with 3.3-kΩ pull-up; U8, U9 and U12 reset connections |
+| POWERON, pin 2 | Node biased from VIGN through 51 kΩ, with capacitor |
+| POWEROFF, pin 15 | Connected to ~LIMP from U12 pin 20 |
+
+U1 pins 3 and 5 have additional bias/filter networks. Feedback/programming
+resistors connect pins 6, 7, 9 and 10, but their internal roles are undocumented.
+The schematic establishes separate rail connections, not exact regulation
+voltages, dropout thresholds, reset pulse duration or standby switching rules.
+The sheet-6 30-ohm VIGN feed to CAL30 belongs to MEMCAL circuitry and is separate
+from the sheet-4 100-ohm VIGN feed to CAL59.
+
+**Firmware operation.** Startup begins at `$C800`. The emitted sequence initializes
+processor-visible registers and clears volatile RAM, selects factory paths before
+retained-memory recovery, then validates/reinitializes retained error and learning
+state as necessary. `$F3A7` sums retained error bytes `$0005-$0009`; invalid
+retained state invokes the established recovery and IAC park initialization.
+Firmware expects useful retained state across some power cycles; it does not
+prove the physical supply behavior that preserves it.
+
+The odd 12.5-ms path `$D6D1-$D769` recognizes ignition-off state and performs
+housekeeping before terminal shutdown. The even path `$D370-$D3DB` closes and
+parks IAC while the common 6.25-ms service executes motor steps. At the terminal
+key-off timer boundary `LC012=$0385`, execution reaches SWI at `$D6EA`.
+The vector table and software endpoint do not by themselves specify which rail
+then switches off or how a physical restart occurs.
+
+**Complete signal path.** Battery/VIGN and U1 establish rails/reset; reset permits
+U8 startup; firmware validates RAM and enters the scheduler; ignition-off state
+starts cleanup and IAC parking; the terminal software endpoint returns to the
+unresolved physical power/reset boundary. This layered explanation avoids treating
+key-off as instantaneous loss of all ECM power.
+
+**Fault behavior.** Bad input, ground, regulator or reset connections can disturb
+multiple subsystems together. Loss of retained supply could repeatedly force
+startup recovery even when normal running power appears acceptable. These are
+circuit-based troubleshooting hypotheses, not proof of a specific failed part.
+Check VBATT, VCC, VCC# and VCCSTANDBY separately; compare reset and VIGN timing
+with the actual startup/shutdown sequence rather than infer them from the names.
+
+**Evidence boundaries.** Rail routing and software order are established. U1's
+internal control truth table, undervoltage response, retention voltage, current
+capacity and relationship between POWEROFF and actual rail removal remain unknown.
+
+### 4.2 LIMP source, output gating and watchdog boundary
+
+**Schematic location.** Sheet 1 U12 pin 20 `LIMP` with inversion bubble and net
+`~LIMP`; sheet 3 U3/U5 gating; sheet 4 U12 repeated LIMP terminal; sheet 6
+U1 POWEROFF. U11 does not have a directly drawn ~LIMP input on sheet 4.
+
+**Electrical operation.** Sheet 1 identifies U12 pin 20 as the source of this
+external net. The other occurrences of pin 20 are sections of the same U12,
+not separate chips. The net reaches U3 output-enable/gating circuitry, U5 fan
+logic and a U5 resistor/capacitor branch, and U1 POWEROFF. U3's drawn gates
+share the LIMP control for its four driver channels. The fan path combines FAN
+and ~LIMP through NAND/inverting logic; driver and external load polarity still
+matter when translating that to a physical fan state.
+
+The U5 delay branch has 365 kΩ and 2.7 µF, with a parallel 10-kΩ/diode route
+for asymmetric charging/discharging. Nominal RC products are 0.986 s and 0.027 s;
+these are component time scales, not validated limp-entry or reset delays. The
+second gate output is shown without a destination on this sheet, so this branch
+cannot be assigned a complete shutdown/watchdog function from the drawing alone.
+
+**Firmware operation.** The listing exposes watchdog-related service boundaries:
+`$F21A` modifies the FMD/SPI control byte, and emitted writes to `$400B` include
+`$F349-$F34C` during checksum work and `$FD23-$FD28` in factory execution.
+The literal value is `$FF00`. This establishes servicing operations, not the
+watchdog's timeout, its internal implementation or a proven direct path to
+U12 LIMP. Vector entries targeting `$C800` establish software restart destinations;
+exception labels in comments do not independently establish the triggering physics.
+
+**Complete signal path.** Software service and reset/I/O signals interact with
+custom peripherals; U12 presents the external LIMP signal; the signal affects
+output gates and U1. The missing link is the documented U12 rule that turns a
+lost service sequence, reset event or other condition into an asserted LIMP net.
+Neither the firmware nor the external schematic alone closes that link.
+
+**Fault behavior.** A stopped processor/watchdog-service failure is a plausible
+backup-entry cause, but is not confirmed as the only cause or a quantified
+trigger in this repository. Sensor diagnostic codes and ALDL mode do not provide
+proof of an asserted LIMP signal. The owner's DIAG solder repair therefore remains
+a mode-selection fault rather than a verified hardware-limp episode.
+
+**Evidence boundaries.** The physical net source and destinations are established.
+Exact assertion/release conditions, delay, output defaults and power effects
+remain unknown. Useful next bench evidence is a simultaneous trace of U12-20,
+~RESET, the supply rails and injector output during normal startup/key-off and
+an independently controlled loss of processor service. Do not invent a LIMP
+register bit or change the simulator to force hardware fallback from every fault.
+
 ## 5. Runtime scheduler and event model
 
 Ordinary IRQ service has a 6.25-ms cadence. The source alternates odd and even
@@ -330,6 +438,78 @@ injector drive/current control, U11 `INJ/INJLIMP`, Q1, and the external
 injector circuit form the hardware envelope. Firmware calculation and raw
 commands are F0/F2; phase, current limiting, waveform, opening delay, fuel
 pressure, flow, and combustion are F3/F4.
+
+### 8.1 Injector gate drive, current sense and feedback block
+
+**Schematic location.** Sheet 4 U12 injector section, Q1, INJ#, INJGND#,
+INJSENSE#, charge/boost network and INJLOOP; sheet 1 U8/U9 command connections;
+sheet 5 vehicle injector/ground/sense terminals.
+
+**Electrical operation.** Q1 is drawn as a low-side switching transistor: its
+load terminal joins INJ#, and its source-side return joins INJGND#. U12 INJOUT
+pin 2 drives its gate through 1.2 kΩ with clamp/filter components. A separate
+INJ#-to-gate diode/clamp branch includes another 1.2-kΩ resistor. These support
+protected inductive-load switching; clamp voltages and exact avalanche/energy
+behavior cannot be calculated from the unlabeled devices.
+
+| U12 connection | Electrical role visible on sheet 4 |
+| --- | --- |
+| INJS pin 47 | Command from U9 pin 8 |
+| INJA pin 46 | Command from U9 pin 9 and U8 port connection |
+| INJOUT pin 2 | Q1 gate drive |
+| ISENSE+ pin 5 / ISENSE- pin 6 | Differential connection across 0.103-ohm current-sense resistor |
+| ESENSE pin 3 | INJ# voltage feedback through 68.1-kΩ/20.0-kΩ divider |
+| DBL pin 30 / VDBL pin 4 | VIGN-fed diode/capacitor boost network |
+| INJLOOP pin 52 (sheet 1) | Conditioned injector-output feedback |
+| INJLIMP pin 48 | Named terminal; no external connection drawn on sheet 4 |
+
+The 0.103-ohm, 2-W resistor produces 0.103 V per ampere and dissipates
+0.103*I² watts if all measured current passes through it. The 2-W marking does
+not establish the regulated peak/hold current or allowable pulse duty. The
+actual return routing must also be checked at the vehicle harness.
+
+With negligible ESENSE loading, the 68.1-kΩ/20.0-kΩ divider gives
+V_ESENSE = V_INJ * 20/(68.1+20), approximately 0.227*V_INJ. It observes the
+switched injector node, not fuel pressure or fuel flow. The lower INJLOOP branch
+uses 27 kΩ, a diode to VIGN and 180 kΩ into U12; its logic thresholds and input
+bias are undocumented, so a simple unloaded divider equation is insufficient.
+
+The two 1.0-µF capacitors, steering diodes and 1.8-kΩ VIGN feeds are consistent
+with boosted gate-drive supply circuitry. The drawing's DBL/VDBL names do not
+prove an exact doubled voltage, switching frequency or regulation law. Current
+sense plus a boosted gate supply supports an active injector-driver interpretation,
+but a specific peak-and-hold waveform remains unestablished.
+
+**Firmware operation.** Common injector bookkeeping at `$F67B-$F768` is gated
+by bit 6 in status sampled from `$3FFA`, separately from distributor-reference
+bit 3. The synchronous fuel path `$F9D2-$F9E4` limits and writes pulse width
+to `$3FD0`. Asynchronous enrichment includes the `$3FF2` write at `$E4D3` and
+control operations through `$F4C3/$F4CE`. These are processor-visible commands;
+they are not a software reconstruction of U12's current-control loop. Factory
+writes provide an independent cross-check on the injector-timing register roles.
+
+**Complete signal path.** Sensor/reference acquisition -> firmware fuel calculation
+and permitted timing command -> U9 INJS/INJA interfaces -> U12 gate/current
+control -> Q1 -> injector load and ground return. Voltage/current feedback returns
+to U12, while conditioned INJLOOP reaches its discrete-input interface. Electrical
+pulse shape, injector opening delay and fuel delivery remain downstream of the
+firmware timing command.
+
+**Fault behavior.** A good `$3FD0` command does not establish a working output.
+A failed Q1, gate path, return connection or sense circuit can prevent or distort
+actuation while the processor still computes fuel. Feedback faults can make the
+chip see a different electrical state from the commanded state. Injector-open,
+short-load and clamp-failure responses require custom-chip or bench evidence;
+no automatic diagnosis or protection threshold is asserted here.
+
+**Evidence boundaries and backup path.** U11 emits INJLIMP, which sheet 5 routes
+to J3; U12 pin 48 is labeled INJLIMP but has no drawn connection on sheet 4.
+Do not silently connect these names in a replacement schematic or claim the
+fallback handoff is electrically closed by this drawing. A shared net name on a
+wired terminal would be evidence; an unconnected pin label is not sufficient.
+The external evidence supports MEMCAL-configured auxiliary/backup injection,
+but exact selection, missing interconnection and internal U12 routing remain
+unresolved. Verify original-board continuity before choosing a reconstruction.
 
 ## 9. Idle-air control
 
@@ -692,8 +872,8 @@ sixteen-chapter source set.
 
 The theory retains subsystem chapters, with an electrical-to-firmware block
 structure: schematic location, electrical operation, firmware operation, complete
-signal path, fault behavior, and evidence boundaries. Sections 3.1 and 12.1 are
-the first expanded treatments. The index below covers all six schematic sheets
+signal path, fault behavior, and evidence boundaries. Sections 3.1, 4.1, 4.2, 8.1 and 12.1 are
+the expanded treatments. The index below covers all six schematic sheets
 and identifies where further component-level expansion is still needed. A row
 is a coverage entry, not a declaration that the custom chip is fully explained.
 
@@ -702,7 +882,7 @@ is a coverage entry, not a declaration that the custom chip is fully explained.
 | 1: U8 processor, crystal, memory bus | Clock, reset, address/data and J4 EPROM interface | Startup and execution; 2, 4, 5 | Existing overview; expand physical timing |
 | 1: U9 timing/output peripheral | Reference, MAF, VSS, timing and output pins | Register window and event scheduling; 5, 7, 8, 11 | Firmware established; internal circuitry bounded |
 | 1: U10 A/D and SPI | Analog channels, reference rails, MOSI/MISO/SCK/select | Sensor acquisition; 6 | Channel map established; electrical expansion pending |
-| 1: U12 SPI/discrete I/O | Digital inputs, CTS range output, reset and LIMP | Input/output state and exceptional modes; 4, 6, 11, 13 | Pin roles mapped; internal logic bounded |
+| 1: U12 SPI/discrete I/O | Digital inputs, CTS range output, reset and LIMP | Input/output state and exceptional modes; 4, 6, 11, 13 | 4.2 LIMP source traced; internal logic bounded |
 | 2: discrete input conditioning | Pull-ups/downs, series resistors and capacitors | Switch/accessory states; 10 | Existing subsystem coverage; expand each input |
 | 2: VOLT and PUMPVOLT | 33.2-kΩ/8.06-kΩ dividers and filtering | Voltage state/diagnostics; 6, 12 | Existing acquisition; loaded behavior bounded |
 | 2: MAP/MAP2 and TPS | Series filtering and bias paths | TPS learning; MAP factory channels; 6 | Existing acquisition plus 3.1 TPS routing correction |
@@ -714,15 +894,16 @@ is a coverage entry, not a declaration that the custom chip is fully explained.
 | 3: U13 pump driver | PUMP command to PUMP# | Pump request; 10, 11 | Existing output boundary; driver expansion pending |
 | 3: U7 IAC driver | IACA/IACB/IACEN to four winding connections | Step sequencing and regulator; 9, 11 | Existing firmware; winding/load behavior bounded |
 | 3: U3/U6 quad drivers | Output protection, fault feedback and limp gating | Accessory outputs and SES; 10, 11 | Existing staging; expand gate/polarity mapping |
-| 3: U5 fan/limp gates and RC branch | LIMP-conditioned fan/output logic and delay network | Output and exceptional-mode boundaries; 11, 13 | Circuit visible; complete truth table pending |
+| 3: U5 fan/limp gates and RC branch | LIMP-conditioned fan/output logic and delay network | Output and exceptional-mode boundaries; 11, 13 | 4.2 RC scales reviewed; destination incomplete |
 | 3: U2 ALDL transceiver | TX/RX/enable and shared ALDL# line | 160-baud and 8192-baud protocols; 12 | 12.1 payload path; physical transceiver bounded |
 | 4: distributor/reference and EST | Differential conditioning, REF, EST and BYPASS feedback | Reference, RPM, spark and Error 42; 7 | Existing firmware; comparator/feedback expansion pending |
 | 4: U11/MEMCAL configuration | Fixed bias, OSC, sensors and INJLIMP | Auxiliary injection/custom-chip boundary; 3.1, 8 | Expanded; analog equations unknown |
-| 4: U12/Q1 injector output | Gate drive, protection, sense resistor, INJLOOP | Injector timing and feedback; 8, 11 | Existing firmware; loaded driver behavior bounded |
+| 4: U12/Q1 injector output | Gate drive, protection, sense resistor, INJLOOP | Injector timing and feedback; 8, 11 | 8.1 expanded; loaded driver behavior bounded |
 | 5: J1/J2 vehicle and J3/J4 interfaces | Physical routing, supplies, programming and MEMCAL | Cross-reference for all chapters | Routing index; orientation check still physical |
-| 6: U1 power/reset and retained rails | VBATT/VIGN, VCC, standby, reset and LIMP connections | Reset, retention, key-off; 4, 13 | Existing firmware; internal power sequencing bounded |
+| 6: U1 power/reset and retained rails | VBATT/VIGN, VCC, standby, reset and LIMP connections | Reset, retention, key-off; 4, 13 | 4.1/4.2 expanded; internal sequencing bounded |
 
 Detailed chapter destinations and register anchors remain in Appendix B and the
 [hardware/firmware cross-reference](docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md).
-Next expansions should cover power/reset/LIMP activation, the injector driver,
-and the remaining analog conditioning blocks using this same structure.
+Next expansions should cover the remaining analog conditioning and output-driver
+blocks using this same structure. U1/U12 internal LIMP activation remains an
+evidence gap rather than a completed electrical explanation.

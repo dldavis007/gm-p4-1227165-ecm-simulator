@@ -101,3 +101,5 @@ audits remain historical checkpoints; the current conclusion is summarized in
 - [180 — NetRes ECM circuit interpretation](STEP180_NETRES_ECM_INTERPRETATION_AUDIT.md)
 
 - [181 — integrated electrical/firmware schematic-block theory](STEP181_SCHEMATIC_BLOCK_THEORY_AUDIT.md)
+
+- [182 — power/reset/LIMP and injector circuit theory](STEP182_POWER_LIMP_INJECTOR_THEORY_AUDIT.md)

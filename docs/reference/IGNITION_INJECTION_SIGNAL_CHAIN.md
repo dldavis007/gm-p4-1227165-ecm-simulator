@@ -158,3 +158,74 @@ polarity, and electrical current limiting outside the translated firmware.
   `$00B4`.
 - U11's use of reference, sensor, oscillator, and MEMCAL inputs.
 
+### 8.1 Injector gate drive, current sense and feedback block
+
+**Schematic location.** Sheet 4 U12 injector section, Q1, INJ#, INJGND#,
+INJSENSE#, charge/boost network and INJLOOP; sheet 1 U8/U9 command connections;
+sheet 5 vehicle injector/ground/sense terminals.
+
+**Electrical operation.** Q1 is drawn as a low-side switching transistor: its
+load terminal joins INJ#, and its source-side return joins INJGND#. U12 INJOUT
+pin 2 drives its gate through 1.2 kΩ with clamp/filter components. A separate
+INJ#-to-gate diode/clamp branch includes another 1.2-kΩ resistor. These support
+protected inductive-load switching; clamp voltages and exact avalanche/energy
+behavior cannot be calculated from the unlabeled devices.
+
+| U12 connection | Electrical role visible on sheet 4 |
+| --- | --- |
+| INJS pin 47 | Command from U9 pin 8 |
+| INJA pin 46 | Command from U9 pin 9 and U8 port connection |
+| INJOUT pin 2 | Q1 gate drive |
+| ISENSE+ pin 5 / ISENSE- pin 6 | Differential connection across 0.103-ohm current-sense resistor |
+| ESENSE pin 3 | INJ# voltage feedback through 68.1-kΩ/20.0-kΩ divider |
+| DBL pin 30 / VDBL pin 4 | VIGN-fed diode/capacitor boost network |
+| INJLOOP pin 52 (sheet 1) | Conditioned injector-output feedback |
+| INJLIMP pin 48 | Named terminal; no external connection drawn on sheet 4 |
+
+The 0.103-ohm, 2-W resistor produces 0.103 V per ampere and dissipates
+0.103*I² watts if all measured current passes through it. The 2-W marking does
+not establish the regulated peak/hold current or allowable pulse duty. The
+actual return routing must also be checked at the vehicle harness.
+
+With negligible ESENSE loading, the 68.1-kΩ/20.0-kΩ divider gives
+V_ESENSE = V_INJ * 20/(68.1+20), approximately 0.227*V_INJ. It observes the
+switched injector node, not fuel pressure or fuel flow. The lower INJLOOP branch
+uses 27 kΩ, a diode to VIGN and 180 kΩ into U12; its logic thresholds and input
+bias are undocumented, so a simple unloaded divider equation is insufficient.
+
+The two 1.0-µF capacitors, steering diodes and 1.8-kΩ VIGN feeds are consistent
+with boosted gate-drive supply circuitry. The drawing's DBL/VDBL names do not
+prove an exact doubled voltage, switching frequency or regulation law. Current
+sense plus a boosted gate supply supports an active injector-driver interpretation,
+but a specific peak-and-hold waveform remains unestablished.
+
+**Firmware operation.** Common injector bookkeeping at `$F67B-$F768` is gated
+by bit 6 in status sampled from `$3FFA`, separately from distributor-reference
+bit 3. The synchronous fuel path `$F9D2-$F9E4` limits and writes pulse width
+to `$3FD0`. Asynchronous enrichment includes the `$3FF2` write at `$E4D3` and
+control operations through `$F4C3/$F4CE`. These are processor-visible commands;
+they are not a software reconstruction of U12's current-control loop. Factory
+writes provide an independent cross-check on the injector-timing register roles.
+
+**Complete signal path.** Sensor/reference acquisition -> firmware fuel calculation
+and permitted timing command -> U9 INJS/INJA interfaces -> U12 gate/current
+control -> Q1 -> injector load and ground return. Voltage/current feedback returns
+to U12, while conditioned INJLOOP reaches its discrete-input interface. Electrical
+pulse shape, injector opening delay and fuel delivery remain downstream of the
+firmware timing command.
+
+**Fault behavior.** A good `$3FD0` command does not establish a working output.
+A failed Q1, gate path, return connection or sense circuit can prevent or distort
+actuation while the processor still computes fuel. Feedback faults can make the
+chip see a different electrical state from the commanded state. Injector-open,
+short-load and clamp-failure responses require custom-chip or bench evidence;
+no automatic diagnosis or protection threshold is asserted here.
+
+**Evidence boundaries and backup path.** U11 emits INJLIMP, which sheet 5 routes
+to J3; U12 pin 48 is labeled INJLIMP but has no drawn connection on sheet 4.
+Do not silently connect these names in a replacement schematic or claim the
+fallback handoff is electrically closed by this drawing. A shared net name on a
+wired terminal would be evidence; an unconnected pin label is not sufficient.
+The external evidence supports MEMCAL-configured auxiliary/backup injection,
+but exact selection, missing interconnection and internal U12 routing remain
+unresolved. Verify original-board continuity before choosing a reconstruction.

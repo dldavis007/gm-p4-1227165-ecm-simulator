@@ -83,3 +83,11 @@ expanded MEMCAL/U11 and DIAG/ALDL treatments, including the owner's reported
 2023 DIAG-input solder repair. The PDF is regenerated. This begins systematic
 electrical expansion; the index explicitly records unfinished blocks and custom-
 chip boundaries. See [Step-181 audit](STEP181_SCHEMATIC_BLOCK_THEORY_AUDIT.md).
+
+## Step 182 — power/reset/LIMP and injector electrical blocks
+
+Theory of Operation revision 1.2 expands supply/retention/reset, the external
+LIMP source and destinations, watchdog service boundaries and Q1 injector
+drive/sense/feedback. U12 assertion rules and the unconnected INJLIMP pin 48
+remain explicit gaps. PDF regenerated; simulator behavior and resistor
+candidates unchanged. See [audit](STEP182_POWER_LIMP_INJECTOR_THEORY_AUDIT.md).

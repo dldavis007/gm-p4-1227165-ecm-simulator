@@ -330,3 +330,111 @@ Those remain F2/F3/F4 boundaries unless new primary evidence closes them.
 - `src/vector_boundaries.inc.h`
 
 This chapter closes the integrated theory-of-operation slot for startup, shutdown and exceptional modes while preserving the distinction between emitted software behavior and external power/processor/optional-ROM consequences.
+
+### 4.1 Power rails, reset and retained-power block
+
+**Schematic location.** Sheet 6, U1 `16034992`, battery-input diodes,
+input/output capacitors, VIGN bias network and reset pull-up; sheet 1 U8/U9/U12
+reset and standby connections; sheet 5 vehicle supply connectors.
+
+**Electrical operation.** BATT# enters two diode-fed paths: VQUAD feeds output
+stages, while VBATT feeds U1 VIN1/pin 11 and VIN2/pin 13 through a 3-ohm
+series resistor and a 4.7-µF bypass capacitor. The diodes provide isolation;
+the drawn suppression devices and capacitors support transient conditioning.
+Their unlabeled characteristics do not establish protection limits. These
+battery-derived rails must not be confused with regulated VCC or switched VIGN.
+
+| U1 connection | Net and externally visible use |
+| --- | --- |
+| VCC1, pin 12 | VCC; logic, converters and MEMCAL supply connections |
+| VCC2, pin 8 | VCC#; vehicle connector reference supply |
+| VCC3, pin 4 | VCCSTANDBY; U8 standby connection and decoupling |
+| RESET, pin 1 | ~RESET, with 3.3-kΩ pull-up; U8, U9 and U12 reset connections |
+| POWERON, pin 2 | Node biased from VIGN through 51 kΩ, with capacitor |
+| POWEROFF, pin 15 | Connected to ~LIMP from U12 pin 20 |
+
+U1 pins 3 and 5 have additional bias/filter networks. Feedback/programming
+resistors connect pins 6, 7, 9 and 10, but their internal roles are undocumented.
+The schematic establishes separate rail connections, not exact regulation
+voltages, dropout thresholds, reset pulse duration or standby switching rules.
+The sheet-6 30-ohm VIGN feed to CAL30 belongs to MEMCAL circuitry and is separate
+from the sheet-4 100-ohm VIGN feed to CAL59.
+
+**Firmware operation.** Startup begins at `$C800`. The emitted sequence initializes
+processor-visible registers and clears volatile RAM, selects factory paths before
+retained-memory recovery, then validates/reinitializes retained error and learning
+state as necessary. `$F3A7` sums retained error bytes `$0005-$0009`; invalid
+retained state invokes the established recovery and IAC park initialization.
+Firmware expects useful retained state across some power cycles; it does not
+prove the physical supply behavior that preserves it.
+
+The odd 12.5-ms path `$D6D1-$D769` recognizes ignition-off state and performs
+housekeeping before terminal shutdown. The even path `$D370-$D3DB` closes and
+parks IAC while the common 6.25-ms service executes motor steps. At the terminal
+key-off timer boundary `LC012=$0385`, execution reaches SWI at `$D6EA`.
+The vector table and software endpoint do not by themselves specify which rail
+then switches off or how a physical restart occurs.
+
+**Complete signal path.** Battery/VIGN and U1 establish rails/reset; reset permits
+U8 startup; firmware validates RAM and enters the scheduler; ignition-off state
+starts cleanup and IAC parking; the terminal software endpoint returns to the
+unresolved physical power/reset boundary. This layered explanation avoids treating
+key-off as instantaneous loss of all ECM power.
+
+**Fault behavior.** Bad input, ground, regulator or reset connections can disturb
+multiple subsystems together. Loss of retained supply could repeatedly force
+startup recovery even when normal running power appears acceptable. These are
+circuit-based troubleshooting hypotheses, not proof of a specific failed part.
+Check VBATT, VCC, VCC# and VCCSTANDBY separately; compare reset and VIGN timing
+with the actual startup/shutdown sequence rather than infer them from the names.
+
+**Evidence boundaries.** Rail routing and software order are established. U1's
+internal control truth table, undervoltage response, retention voltage, current
+capacity and relationship between POWEROFF and actual rail removal remain unknown.
+
+### 4.2 LIMP source, output gating and watchdog boundary
+
+**Schematic location.** Sheet 1 U12 pin 20 `LIMP` with inversion bubble and net
+`~LIMP`; sheet 3 U3/U5 gating; sheet 4 U12 repeated LIMP terminal; sheet 6
+U1 POWEROFF. U11 does not have a directly drawn ~LIMP input on sheet 4.
+
+**Electrical operation.** Sheet 1 identifies U12 pin 20 as the source of this
+external net. The other occurrences of pin 20 are sections of the same U12,
+not separate chips. The net reaches U3 output-enable/gating circuitry, U5 fan
+logic and a U5 resistor/capacitor branch, and U1 POWEROFF. U3's drawn gates
+share the LIMP control for its four driver channels. The fan path combines FAN
+and ~LIMP through NAND/inverting logic; driver and external load polarity still
+matter when translating that to a physical fan state.
+
+The U5 delay branch has 365 kΩ and 2.7 µF, with a parallel 10-kΩ/diode route
+for asymmetric charging/discharging. Nominal RC products are 0.986 s and 0.027 s;
+these are component time scales, not validated limp-entry or reset delays. The
+second gate output is shown without a destination on this sheet, so this branch
+cannot be assigned a complete shutdown/watchdog function from the drawing alone.
+
+**Firmware operation.** The listing exposes watchdog-related service boundaries:
+`$F21A` modifies the FMD/SPI control byte, and emitted writes to `$400B` include
+`$F349-$F34C` during checksum work and `$FD23-$FD28` in factory execution.
+The literal value is `$FF00`. This establishes servicing operations, not the
+watchdog's timeout, its internal implementation or a proven direct path to
+U12 LIMP. Vector entries targeting `$C800` establish software restart destinations;
+exception labels in comments do not independently establish the triggering physics.
+
+**Complete signal path.** Software service and reset/I/O signals interact with
+custom peripherals; U12 presents the external LIMP signal; the signal affects
+output gates and U1. The missing link is the documented U12 rule that turns a
+lost service sequence, reset event or other condition into an asserted LIMP net.
+Neither the firmware nor the external schematic alone closes that link.
+
+**Fault behavior.** A stopped processor/watchdog-service failure is a plausible
+backup-entry cause, but is not confirmed as the only cause or a quantified
+trigger in this repository. Sensor diagnostic codes and ALDL mode do not provide
+proof of an asserted LIMP signal. The owner's DIAG solder repair therefore remains
+a mode-selection fault rather than a verified hardware-limp episode.
+
+**Evidence boundaries.** The physical net source and destinations are established.
+Exact assertion/release conditions, delay, output defaults and power effects
+remain unknown. Useful next bench evidence is a simultaneous trace of U12-20,
+~RESET, the supply rails and injector output during normal startup/key-off and
+an independently controlled loss of processor service. Do not invent a LIMP
+register bit or change the simulator to force hardware fallback from every fault.
