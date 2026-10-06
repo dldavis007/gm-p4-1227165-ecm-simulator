@@ -250,3 +250,56 @@ J4-39/46/53 are ground, J4-49/58 are VCC. The original measured 376
 MAP is isolated inside this NetRes. Earlier MAP-input assumptions and
 unknown-CAL34/CAL53 descriptions must be read with this correction.
 No undocumented custom-chip equations are established.
+
+## Integrated block review MEMCAL/U11 bias, configuration, and injection block
+
+**Schematic location.** Sheets 4 (Ignition-Injection) and 5 (Connectors),
+U11 `16054995`, U12 `16034984`, J4, and both NetRes packages. Original package
+terminal numbering and complete mappings are in the
+[Step-180 circuit review](../NETRES_ECM_CIRCUIT_INTERPRETATION.md).
+
+**Electrical operation.** For the preferred measured-matrix candidate, 375
+pin 14 is VCC; pins 4 and 8 are ground. The measured 7–8 link grounds U11
+pin 8. The pin-5/6/9 resistor group is a coupled bias network, including the
+267-kΩ branch between U11 pins 2 and 13. The motherboard adds 51.1 kΩ from
+VIGN and 5.49 kΩ to ground at the pin-9/U11-13/26 node, so its voltage is not
+set by the MEMCAL alone. The 88.7-kΩ branch pulls U11 OSC toward VCC; the
+0.033-µF capacitor is on the separately labeled U11 C terminal. An internal
+oscillator equation is not established.
+
+The 376 network provides VCC pull-ups, a 150-kΩ/1.4-kΩ divider, a VIGN-derived
+24.9-kΩ/130-kΩ divider, and a 7.5-kΩ ground return at U12 CYL. Its 8.25-kΩ
+resistor is on the MEMCAL side of the series capacitor leading to U11 pin 16.
+The measured 7–9 link routes conditioned TPS at J4-64 to J4-61/U11 pin 28,
+labeled MAP. Actual conditioned MAP at J4-63 is isolated inside this package.
+This is a mapping deduction pending original-hardware continuity confirmation;
+it does not short external MAP and TPS together.
+
+**Firmware operation.** The NetRes resistors are fixed electrical configuration,
+not programmable EPROM tables. Firmware consumes U9 reference occurrence and
+period state (`$CAC6-$CAD3`, `$CB5A-$CB5D`) and derives RPM at `$CDE6-$CE41`.
+Cylinder/configuration consistency checks at `$F682-$F68B` compare masked
+`$002F` state with `LC225`; Error 41 qualification includes `$E6A1-$E6AA`.
+These paths do not establish U12's analog CYL decoding or equate its resistor
+with the separate normalization constant `LC009`. Ordinary firmware load remains
+VMAF-derived, not a conversion of the NetRes's U11 MAP-labeled terminal.
+
+**Complete signal path.** MEMCAL configuration and motherboard bias act at
+U11/U12; engine references and sensors also reach these chips. U11 emits
+INJ/INJLIMP. U12's reference and injector interfaces connect to U9 and the
+injector output stage. Firmware commands processor-visible timing state; it
+does not directly calculate the undocumented U11 analog transfer function.
+
+**Fault behavior.** Incorrect resistors, missing ground links, or open carrier
+contacts can alter configuration/bias even with a good EPROM. Isolated resistance
+matches do not prove loaded voltages, oscillator timing or backup fueling.
+The `~LIMP` net crosses U12, output gating, and power circuitry. ALDL mode,
+firmware sensor substitutions, and hardware backup operation are separate
+concepts. A MEMCAL-configured backup injection role is strongly supported by
+these external connections; exact entry conditions and fueling equations remain
+unknown. No claim is made that every diagnostic error asserts `~LIMP`.
+
+**Evidence boundaries.** Candidate DC accuracy is established numerically against
+the owner's original measurements; original hidden topology and powered/dynamic
+behavior are not. Do not infer a frequency from 1/(RC), a cylinder count from
+7.5 kΩ alone, or an injector pulse width from unloaded divider voltages.

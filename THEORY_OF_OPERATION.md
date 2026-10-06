@@ -8,7 +8,7 @@
 | Firmware basis | Supplied 9340 image and corrected BUA source/listing provenance |
 | Firmware authority | `evidence/firmware/bua-hac.lst` |
 | Implementation | Strict-C89 behavioral port and deterministic PC simulator |
-| Revision | 1.0 |
+| Revision | 1.1 — Step 181, 2026-10-06 |
 | Status | Controlled engineering publication |
 | Detailed authority | Linked reference chapters and hardware/firmware cross-reference |
 
@@ -116,9 +116,10 @@ assumed to be unused or reserved.
 The MEMCAL is both program/calibration carrier and physical configuration
 hardware. Its 66-contact relationship to motherboard connector J4, EPROM, two
 resistor networks, populated jumpers, and CAL paths are part of the system
-architecture. Photograph and direct physical evidence control the as-built
-reconstruction where legible. KiCad, LTspice, measurements, and historical
-notes provide supporting evidence; discrepancies remain visible.
+architecture. Original owner-confirmed resistance measurements control replacement
+resistance targets. Photographs and direct physical evidence control the earlier
+as-built reconstruction where legible. KiCad, LTspice, and historical notes
+provide supporting evidence; discrepancies remain visible.
 
 Step 179 records the owner's confirmation that the preserved workbook contains
 original NetRes pin-to-pin measurements and defines the resistance target.
@@ -143,6 +144,59 @@ The detailed reconstruction is in
 [MEMCAL architecture](docs/reference/MEMCAL_ARCHITECTURE.md),
 [functional networks](docs/reference/MEMCAL_FUNCTIONAL_NETWORKS.md), and
 [motherboard/firmware paths](docs/reference/MEMCAL_MOTHERBOARD_FIRMWARE_PATHS.md).
+
+### 3.1 MEMCAL/U11 bias, configuration, and injection block
+
+**Schematic location.** Sheets 4 (Ignition-Injection) and 5 (Connectors),
+U11 `16054995`, U12 `16034984`, J4, and both NetRes packages. Original package
+terminal numbering and complete mappings are in the
+[Step-180 circuit review](docs/NETRES_ECM_CIRCUIT_INTERPRETATION.md).
+
+**Electrical operation.** For the preferred measured-matrix candidate, 375
+pin 14 is VCC; pins 4 and 8 are ground. The measured 7–8 link grounds U11
+pin 8. The pin-5/6/9 resistor group is a coupled bias network, including the
+267-kΩ branch between U11 pins 2 and 13. The motherboard adds 51.1 kΩ from
+VIGN and 5.49 kΩ to ground at the pin-9/U11-13/26 node, so its voltage is not
+set by the MEMCAL alone. The 88.7-kΩ branch pulls U11 OSC toward VCC; the
+0.033-µF capacitor is on the separately labeled U11 C terminal. An internal
+oscillator equation is not established.
+
+The 376 network provides VCC pull-ups, a 150-kΩ/1.4-kΩ divider, a VIGN-derived
+24.9-kΩ/130-kΩ divider, and a 7.5-kΩ ground return at U12 CYL. Its 8.25-kΩ
+resistor is on the MEMCAL side of the series capacitor leading to U11 pin 16.
+The measured 7–9 link routes conditioned TPS at J4-64 to J4-61/U11 pin 28,
+labeled MAP. Actual conditioned MAP at J4-63 is isolated inside this package.
+This is a mapping deduction pending original-hardware continuity confirmation;
+it does not short external MAP and TPS together.
+
+**Firmware operation.** The NetRes resistors are fixed electrical configuration,
+not programmable EPROM tables. Firmware consumes U9 reference occurrence and
+period state (`$CAC6-$CAD3`, `$CB5A-$CB5D`) and derives RPM at `$CDE6-$CE41`.
+Cylinder/configuration consistency checks at `$F682-$F68B` compare masked
+`$002F` state with `LC225`; Error 41 qualification includes `$E6A1-$E6AA`.
+These paths do not establish U12's analog CYL decoding or equate its resistor
+with the separate normalization constant `LC009`. Ordinary firmware load remains
+VMAF-derived, not a conversion of the NetRes's U11 MAP-labeled terminal.
+
+**Complete signal path.** MEMCAL configuration and motherboard bias act at
+U11/U12; engine references and sensors also reach these chips. U11 emits
+INJ/INJLIMP. U12's reference and injector interfaces connect to U9 and the
+injector output stage. Firmware commands processor-visible timing state; it
+does not directly calculate the undocumented U11 analog transfer function.
+
+**Fault behavior.** Incorrect resistors, missing ground links, or open carrier
+contacts can alter configuration/bias even with a good EPROM. Isolated resistance
+matches do not prove loaded voltages, oscillator timing or backup fueling.
+The `~LIMP` net crosses U12, output gating, and power circuitry. ALDL mode,
+firmware sensor substitutions, and hardware backup operation are separate
+concepts. A MEMCAL-configured backup injection role is strongly supported by
+these external connections; exact entry conditions and fueling equations remain
+unknown. No claim is made that every diagnostic error asserts `~LIMP`.
+
+**Evidence boundaries.** Candidate DC accuracy is established numerically against
+the owner's original measurements; original hidden topology and powered/dynamic
+behavior are not. Do not infer a frequency from 1/(RC), a cylinder count from
+7.5 kΩ alone, or an injector pulse width from unloaded divider voltages.
 
 ## 4. Reset, startup, and retained state
 
@@ -220,7 +274,8 @@ and normalized `$0082`, VMAF raw `$00ED` and airflow `$00EA:$00EB`, voltage
 
 The supplied image's principal load path is VMAF-derived airflow multiplied by
 reference period `$0095:$0096` at `$D769-$D7A0`. Physical MAP/MAP2 resources
-and CAL61/U11 `MAP` exist, but the evidence does not make them the ordinary
+and the CAL61/U11 terminal labeled `MAP` exist (the measured 376 jumper
+routes TPS to that terminal), but the evidence does not make them the ordinary
 producer of `$0063`. Vehicle speed and distributor reference are discrete/event
 paths, not A/D channels.
 
@@ -352,6 +407,66 @@ Mode 4 becomes active only through the scheduler-facing lifecycle at
 External ALDL transceiver voltage, polarity, collision behavior, precise
 physical bit timing, unavailable memory reads, and scan-tool formatting remain
 F3/F4. Protocol state is not evidence of those electrical properties.
+
+### 12.1 DIAG mode selection and dashboard data block
+
+**Schematic location.** Sheet 2 DIAG# input, sheet 1 U10 AN7/pin 8, sheet 3
+U2 ALDL transceiver, and sheet 5 DIAG#/ALDL# connector paths. DIAG# and ALDL#
+are separate electrical nets: one requests mode; the other carries serial data.
+
+**Electrical operation.** DIAG# has a 10-kΩ pull-up to the logic supply and a
+10-kΩ series path to DIAG/U10 AN7, with a capacitor at the converter node.
+Ignoring converter leakage, an external 10-kΩ resistor to ground makes the
+connector voltage approximately half the pull-up rail. The input series resistor
+and capacitor condition the signal; they do not halve its unloaded steady-state
+voltage again. An open solder joint at U10 pin 8 can disconnect the internal
+converter input from the correctly biased external trace. Its resulting reading
+is not predictable without leakage/internal-device information.
+
+**Firmware operation.** The common A/D routine is `$F1BE-$F1DF`. Segment 3 at
+`$EA28-$EA47` requests selector `$70`, clears `$0035` bits 4/5, and compares the
+sample with literal counts 40, 100 and 152. A count below 40 sets bit 4. Counts
+100 through 151 set bit 5 unless `$0046` bit 3 is already set. Other counts leave
+these two bits clear. These are verified count thresholds, not measured voltages.
+Startup also samples DIAG and has additional factory/exceptional paths.
+
+At `$F8B6-$F8E8`, bits 4/5 select the serial table: ordinary operation uses
+`$C6FE`, whereas diagnostic selection uses `$C70D`. The ordinary table points
+to `LC009`, `$011A`, `$011E`, and `LC70C`; it carries configuration/scaling and
+fuel/distance-related data rather than the ordinary scan-tool list. Emitted
+additions into `$011A` at `$E4EE-$E4F3` and `$F733-$F739` independently support
+its fuel accumulation role. Table comments alone do not define engineering units.
+The ordinary record is commonly observed as five bytes including its mode byte;
+the diagnostic record is the longer 25-byte stream.
+
+**Complete signal path.** DIAG voltage -> U10 sample -> mode flags -> serial
+payload selection and control-mode consumers -> U2/ALDL line -> dashboard or
+scanner. The dashboard needs the normal economy-related record. Replacing it
+with the diagnostic record can remove or corrupt the expected economy updates.
+Range can consequently be affected through the dashboard's economy estimate;
+the dashboard's precise parsing and range algorithm are not in this ECM image.
+
+**Fault behavior.** A false ALDL request can cause high idle alongside an invalid
+MPG display. `$D448-$D450` tests bit 5 and substitutes `$50` (80) into the
+RPM/25 target path; this is 2000 RPM in that particular command path, not proof
+that a faulty engine must physically idle at that speed. Other gates, IAC state,
+and engine airflow determine the resulting speed. Do not describe the observed
+1000-RPM symptom as an unconditional calibrated 1000-RPM ALDL target.
+
+**Reported repair example.** In the owner's June 2023
+[CorvetteForum repair thread](https://www.corvetteforum.com/forums/c4-tech-performance/4746412-1986-corvette-ecm-problem-always-in-10k-mode.html),
+posts under `dldavis` describe roughly 1000-RPM idle, MPG stuck at 1.2, and an
+unrequested change from the short record to the diagnostic record. The June 24
+post reports resoldering A/D pin 8 (DIAG); the June 28 follow-up reports three
+days of correct operation. The owner confirmed the recollection in this session.
+This is firsthand repair history, not a reproduced electrical test. A disconnected
+pin causing erroneous mode samples is an explanation consistent with the repair;
+its actual disconnected voltage was not measured here. This episode is not
+proof of hardware limp-mode activation or an incorrect NetRes.
+
+**Evidence boundaries.** Instructions establish mode selection and payload
+switching. Exact line voltages, dashboard error handling, and the failed joint's
+internal electrical behavior remain hardware or external-document boundaries.
 
 ## 13. Key-off, shutdown, and exceptional modes
 
@@ -572,3 +687,42 @@ sixteen-chapter source set.
 | VIGN | Ignition-switched supply/sense domain. |
 | VMAF | Analog mass-airflow voltage net presented to U10. |
 | VSS | Vehicle-speed signal. |
+
+## Appendix D. Schematic functional-block coverage
+
+The theory retains subsystem chapters, with an electrical-to-firmware block
+structure: schematic location, electrical operation, firmware operation, complete
+signal path, fault behavior, and evidence boundaries. Sections 3.1 and 12.1 are
+the first expanded treatments. The index below covers all six schematic sheets
+and identifies where further component-level expansion is still needed. A row
+is a coverage entry, not a declaration that the custom chip is fully explained.
+
+| Sheet / block | Electrical boundary | Firmware relationship / chapter | Coverage state |
+| --- | --- | --- | --- |
+| 1: U8 processor, crystal, memory bus | Clock, reset, address/data and J4 EPROM interface | Startup and execution; 2, 4, 5 | Existing overview; expand physical timing |
+| 1: U9 timing/output peripheral | Reference, MAF, VSS, timing and output pins | Register window and event scheduling; 5, 7, 8, 11 | Firmware established; internal circuitry bounded |
+| 1: U10 A/D and SPI | Analog channels, reference rails, MOSI/MISO/SCK/select | Sensor acquisition; 6 | Channel map established; electrical expansion pending |
+| 1: U12 SPI/discrete I/O | Digital inputs, CTS range output, reset and LIMP | Input/output state and exceptional modes; 4, 6, 11, 13 | Pin roles mapped; internal logic bounded |
+| 2: discrete input conditioning | Pull-ups/downs, series resistors and capacitors | Switch/accessory states; 10 | Existing subsystem coverage; expand each input |
+| 2: VOLT and PUMPVOLT | 33.2-kΩ/8.06-kΩ dividers and filtering | Voltage state/diagnostics; 6, 12 | Existing acquisition; loaded behavior bounded |
+| 2: MAP/MAP2 and TPS | Series filtering and bias paths | TPS learning; MAP factory channels; 6 | Existing acquisition plus 3.1 TPS routing correction |
+| 2: CTS and MAT | Bias, filtering and CTSHI range circuit | Temperature conversion; 6, 9 | Existing firmware; expand range-switch circuit |
+| 2: O2 and U4 | Differential sensor amplifier and reference supply | O2 filtering/closed-loop fuel; 6, 8 | Existing firmware; amplifier transfer bounded |
+| 2: ESC and KNOCK | Separate analog ESC and U12 digital KNOCK paths | Factory ESC versus U9 knock counter; 6, 7 | Separation established; filter internals bounded |
+| 2: VSS and FMAF | U12 signal conditioning with input bias/filtering | Speed/events and MAF interfaces; 6, 8, 10 | Existing firmware; conversion details bounded |
+| 2/1: DIAG | Pull-up, series resistor, AN7 | Mode decoding and data-table selection; 12.1 | Expanded with firsthand repair example |
+| 3: U13 pump driver | PUMP command to PUMP# | Pump request; 10, 11 | Existing output boundary; driver expansion pending |
+| 3: U7 IAC driver | IACA/IACB/IACEN to four winding connections | Step sequencing and regulator; 9, 11 | Existing firmware; winding/load behavior bounded |
+| 3: U3/U6 quad drivers | Output protection, fault feedback and limp gating | Accessory outputs and SES; 10, 11 | Existing staging; expand gate/polarity mapping |
+| 3: U5 fan/limp gates and RC branch | LIMP-conditioned fan/output logic and delay network | Output and exceptional-mode boundaries; 11, 13 | Circuit visible; complete truth table pending |
+| 3: U2 ALDL transceiver | TX/RX/enable and shared ALDL# line | 160-baud and 8192-baud protocols; 12 | 12.1 payload path; physical transceiver bounded |
+| 4: distributor/reference and EST | Differential conditioning, REF, EST and BYPASS feedback | Reference, RPM, spark and Error 42; 7 | Existing firmware; comparator/feedback expansion pending |
+| 4: U11/MEMCAL configuration | Fixed bias, OSC, sensors and INJLIMP | Auxiliary injection/custom-chip boundary; 3.1, 8 | Expanded; analog equations unknown |
+| 4: U12/Q1 injector output | Gate drive, protection, sense resistor, INJLOOP | Injector timing and feedback; 8, 11 | Existing firmware; loaded driver behavior bounded |
+| 5: J1/J2 vehicle and J3/J4 interfaces | Physical routing, supplies, programming and MEMCAL | Cross-reference for all chapters | Routing index; orientation check still physical |
+| 6: U1 power/reset and retained rails | VBATT/VIGN, VCC, standby, reset and LIMP connections | Reset, retention, key-off; 4, 13 | Existing firmware; internal power sequencing bounded |
+
+Detailed chapter destinations and register anchors remain in Appendix B and the
+[hardware/firmware cross-reference](docs/reference/HARDWARE_FIRMWARE_CROSS_REFERENCE.md).
+Next expansions should cover power/reset/LIMP activation, the injector driver,
+and the remaining analog conditioning blocks using this same structure.

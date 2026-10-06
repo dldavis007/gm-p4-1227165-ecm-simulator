@@ -158,3 +158,13 @@ A chapter is complete only when it:
 - links regression proof or records the missing test;
 - expands acronyms and initialisms on first use;
 - lists unresolved and variant-dependent details without guessing.
+
+## Step 181 — electrical and firmware block structure
+
+The master publication's Appendix D now indexes functional blocks across all
+six schematic sheets and records remaining electrical coverage. Sections 3.1
+and 12.1 expand MEMCAL/U11 and DIAG/ALDL using schematic location, electrical
+operation, firmware operation, complete signal path, fault behavior and evidence
+boundaries. Step-180 VCC/ground and TPS routing findings supersede earlier
+unknown-reference or MAP-signal assumptions. Original measured matrices govern
+replacement resistance targets; photographs govern the earlier as-built prototype.

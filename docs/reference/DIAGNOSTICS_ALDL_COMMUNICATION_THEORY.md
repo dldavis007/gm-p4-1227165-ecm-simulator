@@ -162,3 +162,63 @@ Existing diagnostic, scheduler/serial, Step-115 SCI, Step-116 Mode-4, retained-m
 - Expose additional source-backed ROM bytes to Modes 2/3/4 only when represented by authoritative image data; do not invent arbitrary ROM contents.
 - Keep scan-tool presentation/engineering units separate from raw Mode-4 command bytes unless the firmware itself defines the conversion.
 - Treat optional ROM, SWI/reset electrical consequences and factory hardware behavior in their dedicated theory chapters rather than folding them into ALDL semantics.
+
+## Integrated block review DIAG mode selection and dashboard data block
+
+**Schematic location.** Sheet 2 DIAG# input, sheet 1 U10 AN7/pin 8, sheet 3
+U2 ALDL transceiver, and sheet 5 DIAG#/ALDL# connector paths. DIAG# and ALDL#
+are separate electrical nets: one requests mode; the other carries serial data.
+
+**Electrical operation.** DIAG# has a 10-kΩ pull-up to the logic supply and a
+10-kΩ series path to DIAG/U10 AN7, with a capacitor at the converter node.
+Ignoring converter leakage, an external 10-kΩ resistor to ground makes the
+connector voltage approximately half the pull-up rail. The input series resistor
+and capacitor condition the signal; they do not halve its unloaded steady-state
+voltage again. An open solder joint at U10 pin 8 can disconnect the internal
+converter input from the correctly biased external trace. Its resulting reading
+is not predictable without leakage/internal-device information.
+
+**Firmware operation.** The common A/D routine is `$F1BE-$F1DF`. Segment 3 at
+`$EA28-$EA47` requests selector `$70`, clears `$0035` bits 4/5, and compares the
+sample with literal counts 40, 100 and 152. A count below 40 sets bit 4. Counts
+100 through 151 set bit 5 unless `$0046` bit 3 is already set. Other counts leave
+these two bits clear. These are verified count thresholds, not measured voltages.
+Startup also samples DIAG and has additional factory/exceptional paths.
+
+At `$F8B6-$F8E8`, bits 4/5 select the serial table: ordinary operation uses
+`$C6FE`, whereas diagnostic selection uses `$C70D`. The ordinary table points
+to `LC009`, `$011A`, `$011E`, and `LC70C`; it carries configuration/scaling and
+fuel/distance-related data rather than the ordinary scan-tool list. Emitted
+additions into `$011A` at `$E4EE-$E4F3` and `$F733-$F739` independently support
+its fuel accumulation role. Table comments alone do not define engineering units.
+The ordinary record is commonly observed as five bytes including its mode byte;
+the diagnostic record is the longer 25-byte stream.
+
+**Complete signal path.** DIAG voltage -> U10 sample -> mode flags -> serial
+payload selection and control-mode consumers -> U2/ALDL line -> dashboard or
+scanner. The dashboard needs the normal economy-related record. Replacing it
+with the diagnostic record can remove or corrupt the expected economy updates.
+Range can consequently be affected through the dashboard's economy estimate;
+the dashboard's precise parsing and range algorithm are not in this ECM image.
+
+**Fault behavior.** A false ALDL request can cause high idle alongside an invalid
+MPG display. `$D448-$D450` tests bit 5 and substitutes `$50` (80) into the
+RPM/25 target path; this is 2000 RPM in that particular command path, not proof
+that a faulty engine must physically idle at that speed. Other gates, IAC state,
+and engine airflow determine the resulting speed. Do not describe the observed
+1000-RPM symptom as an unconditional calibrated 1000-RPM ALDL target.
+
+**Reported repair example.** In the owner's June 2023
+[CorvetteForum repair thread](https://www.corvetteforum.com/forums/c4-tech-performance/4746412-1986-corvette-ecm-problem-always-in-10k-mode.html),
+posts under `dldavis` describe roughly 1000-RPM idle, MPG stuck at 1.2, and an
+unrequested change from the short record to the diagnostic record. The June 24
+post reports resoldering A/D pin 8 (DIAG); the June 28 follow-up reports three
+days of correct operation. The owner confirmed the recollection in this session.
+This is firsthand repair history, not a reproduced electrical test. A disconnected
+pin causing erroneous mode samples is an explanation consistent with the repair;
+its actual disconnected voltage was not measured here. This episode is not
+proof of hardware limp-mode activation or an incorrect NetRes.
+
+**Evidence boundaries.** Instructions establish mode selection and payload
+switching. Exact line voltages, dashboard error handling, and the failed joint's
+internal electrical behavior remain hardware or external-document boundaries.

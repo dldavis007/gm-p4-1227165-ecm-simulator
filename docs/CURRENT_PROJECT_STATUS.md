@@ -99,3 +99,11 @@ what was installed on the earlier reconstruction. Behavioral closure is unchange
 VCC/ground references, coupled bias circuits, and the TPS-to-U11-MAP routing.
 [Step-180 audit](STEP180_NETRES_ECM_INTERPRETATION_AUDIT.md) records scope and
 verification. Candidate values and simulator behavior are unchanged.
+
+## Step 181 — combined electrical/firmware theory
+
+Theory of Operation revision 1.1 adds a six-sheet functional-block index and
+expanded MEMCAL/U11 and DIAG/ALDL treatments, including the owner's reported
+2023 DIAG-input solder repair. The PDF is regenerated. This begins systematic
+electrical expansion; the index explicitly records unfinished blocks and custom-
+chip boundaries. See [Step-181 audit](STEP181_SCHEMATIC_BLOCK_THEORY_AUDIT.md).
