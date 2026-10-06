@@ -92,3 +92,10 @@ the workbook as the target for replacement networks. The measured-matrix
 They remain computed DC candidates pending new physical build/measurement.
 The original measured matrices govern resistance targets; photographs govern
 what was installed on the earlier reconstruction. Behavioral closure is unchanged.
+
+## Step 180 — NetRes circuit roles
+
+[ECM schematic interpretation](NETRES_ECM_CIRCUIT_INTERPRETATION.md) identifies
+VCC/ground references, coupled bias circuits, and the TPS-to-U11-MAP routing.
+[Step-180 audit](STEP180_NETRES_ECM_INTERPRETATION_AUDIT.md) records scope and
+verification. Candidate values and simulator behavior are unchanged.

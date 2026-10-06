@@ -179,3 +179,13 @@ F0 firmware-visible register behavior and exposing only raw processor-visible
 stimulus/observation through the HAL. Any future custom-device model should be
 introduced only when new physical measurements or independent device
 documentation closes one of the unresolved transformations above.
+
+## Step 180 — connector-sheet clarification
+
+[NetRes circuit interpretation](../NETRES_ECM_CIRCUIT_INTERPRETATION.md)
+resolves earlier unknown references using ECM sheet 5: J4-34 is VCC,
+J4-39/46/53 are ground, J4-49/58 are VCC. The original measured 376
+7–9 short routes J4-64 TPS to J4-61/U11 pin 28 labeled MAP; J4-63 actual
+MAP is isolated inside this NetRes. Earlier MAP-input assumptions and
+unknown-CAL34/CAL53 descriptions must be read with this correction.
+No undocumented custom-chip equations are established.

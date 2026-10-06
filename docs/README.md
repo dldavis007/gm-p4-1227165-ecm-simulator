@@ -68,3 +68,10 @@ identify archived originals and the recovered 16055375 workbook discrepancy.
 
 [Measured-matrix reconstruction report](NETRES_MEASURED_MATRIX_RECONSTRUCTION.md)
 contains fitted circuits, standard resistor values and pair-error comparisons.
+
+## Step 180 — NetRes circuit roles
+
+[ECM schematic interpretation](NETRES_ECM_CIRCUIT_INTERPRETATION.md) identifies
+VCC/ground references, coupled bias circuits, and the TPS-to-U11-MAP routing.
+[Step-180 audit](STEP180_NETRES_ECM_INTERPRETATION_AUDIT.md) records scope and
+verification. Candidate values and simulator behavior are unchanged.

@@ -163,3 +163,10 @@ Tested numerical environment: NumPy/SciPy/Matplotlib versions are recorded in
 the Step-179 audit. The original ODS hash remains the manifest hash.
 See [model files](../evidence/memcal/fitted_models/README.md) for resistor lists,
 SPICE subcircuits, full comparisons, accuracy table and optimizer results.
+
+## Installed ECM interpretation — Step 180
+
+The [connector/schematic review](NETRES_ECM_CIRCUIT_INTERPRETATION.md) resolves
+375 pin 14 as VCC and identifies the installed grounds and bias loading.
+It also traces the 376 measured jumper to TPS at U11's pin labeled MAP.
+Use that review alongside these isolated-network drawings.

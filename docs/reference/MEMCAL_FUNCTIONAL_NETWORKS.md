@@ -240,3 +240,13 @@ conflicts with the documented simplified candidate at several cross-terminal
 pairs, despite close terminal-14 comparisons. Full external-terminal equivalence
 is unconfirmed; see [Step-178 audit](../STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md).
 The 16055376 photo/topology findings are unaffected.
+
+## Step 180 — connector-sheet clarification
+
+[NetRes circuit interpretation](../NETRES_ECM_CIRCUIT_INTERPRETATION.md)
+resolves earlier unknown references using ECM sheet 5: J4-34 is VCC,
+J4-39/46/53 are ground, J4-49/58 are VCC. The original measured 376
+7–9 short routes J4-64 TPS to J4-61/U11 pin 28 labeled MAP; J4-63 actual
+MAP is isolated inside this NetRes. Earlier MAP-input assumptions and
+unknown-CAL34/CAL53 descriptions must be read with this correction.
+No undocumented custom-chip equations are established.

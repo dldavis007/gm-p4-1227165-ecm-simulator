@@ -97,3 +97,5 @@ audits remain historical checkpoints; the current conclusion is summarized in
 - [178 — original evidence preservation and consistency audit](STEP178_ORIGINAL_EVIDENCE_PRESERVATION_AUDIT.md)
 
 - [179 — original measured-matrix NetRes reconstruction](STEP179_MEASURED_NETRES_RECONSTRUCTION_AUDIT.md)
+
+- [180 — NetRes ECM circuit interpretation](STEP180_NETRES_ECM_INTERPRETATION_AUDIT.md)
