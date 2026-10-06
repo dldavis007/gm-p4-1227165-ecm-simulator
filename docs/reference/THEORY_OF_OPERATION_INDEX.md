@@ -175,3 +175,10 @@ Master sections 4.1/4.2 cover power/reset/retention and LIMP connections;
 section 8.1 covers the injector driver. Corresponding detailed lifecycle and
 ignition/injection chapters include the same block treatments. LIMP activation
 rules and the undrawn U12 INJLIMP connection remain explicit evidence gaps.
+
+## Step 183 expansion
+
+Sections 6.1-6.3 integrate the temperature, TPS/MAF and voltage input circuits
+with firmware acquisition, conversions, consumers and fault boundaries. The
+detailed sensor chapter contains the same treatments. O2, discrete/event input
+conditioning and remaining output drivers are the next coverage expansions.

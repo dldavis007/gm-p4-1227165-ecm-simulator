@@ -103,3 +103,5 @@ audits remain historical checkpoints; the current conclusion is summarized in
 - [181 — integrated electrical/firmware schematic-block theory](STEP181_SCHEMATIC_BLOCK_THEORY_AUDIT.md)
 
 - [182 — power/reset/LIMP and injector circuit theory](STEP182_POWER_LIMP_INJECTOR_THEORY_AUDIT.md)
+
+- [183 — temperature, throttle, airflow and voltage input theory](STEP183_ANALOG_INPUT_THEORY_AUDIT.md)

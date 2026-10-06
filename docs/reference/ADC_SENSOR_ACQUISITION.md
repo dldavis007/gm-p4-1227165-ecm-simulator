@@ -126,7 +126,9 @@ This absence is image-specific evidence, not a universal P4 claim. Possible
 use inside U11/U12, other firmware variants, service procedures, or external
 test interpretation remains unresolved. In particular:
 
-- CAL61 and conditioned MAP meet at U11 pin 28 independently of U10 AN3.
+- U11 pin 28 is labeled MAP, but the measured 376 jumper routes conditioned
+  TPS from J4-64 to J4-61. Actual conditioned MAP at J4-63 is isolated inside
+  this NetRes; see the Step-180 circuit interpretation.
 - CAL29 participates in the analog ESC network, while CAL32 reaches U12
   `KNOCK`; those paths must not be collapsed into AN9 behavior.
 

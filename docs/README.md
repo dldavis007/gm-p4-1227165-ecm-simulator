@@ -91,3 +91,10 @@ LIMP source and destinations, watchdog service boundaries and Q1 injector
 drive/sense/feedback. U12 assertion rules and the unconnected INJLIMP pin 48
 remain explicit gaps. PDF regenerated; simulator behavior and resistor
 candidates unchanged. See [audit](STEP182_POWER_LIMP_INJECTOR_THEORY_AUDIT.md).
+
+## Step 183 — analog sensor electrical/firmware blocks
+
+Theory revision 1.3 adds CTS/MAT bias and conversion, TPS learning and MAF load
+production, and VOLT/PUMPVOLT divider/filter explanations. Corrected the older
+U11-MAP routing statement in the A/D reference. PDF regenerated; no simulator
+behavior or resistor candidates changed. See [audit](STEP183_ANALOG_INPUT_THEORY_AUDIT.md).

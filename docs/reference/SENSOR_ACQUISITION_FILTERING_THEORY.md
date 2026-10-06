@@ -180,3 +180,155 @@ Existing sensor, scheduler, MAF/load, coolant, diagnostic, and factory-test regr
 - Measure U10 reference voltages and analog input transfer networks if electrical-accuracy simulation becomes necessary.
 - Correlate factory-test `$017B-$0186` with controlled channel voltages to verify order, polarity, and scale.
 - Expand the signal-specific documentation for VSS and remaining discrete inputs before assigning exact external polarity or engineering-unit pulse calibration.
+
+### 6.1 CTS and MAT temperature-input blocks
+
+**Schematic location.** Sheet 2 CTS#/CTSHI/CTS and MAT#/MAT networks;
+sheet 1 U12 CTSHI output/pin 49 and U10 AN4/pin 5, AN8/pin 9.
+
+**Electrical operation.** MAT# is biased toward the logic supply through 1.00 kΩ,
+then reaches MAT through 10 kΩ with a capacitor to ground. Assuming a passive
+sensor resistance R to ground, negligible input loading and a stiff supply,
+V_MAT = V_SUPPLY*R/(1000+R). The series resistor has negligible unloaded DC
+drop but isolates the input and contributes to filtering. For an NTC sensor,
+heating lowers resistance and voltage. The sensor curve, ground offset and input
+leakage must be measured or specified before assigning temperatures to voltages.
+
+CTS# joins a 348-ohm resistor to CTSHI; CTSHI itself has a 3.65-kΩ pull-up and
+rail-clamp diodes. CTS# reaches the analog CTS node through 10 kΩ and a filter
+capacitor, then U10 and U11. When CTSHI is high impedance, the visible pull-up
+path is approximately 3.65k+348 = 3.998 kΩ. If CTSHI is actively held near the
+supply, the effective pull-up approaches 348 Ω. The second case depends on
+U12's output behavior; the schematic alone does not specify output resistance.
+Changing bias changes the voltage for the same thermistor and improves useful
+conversion range. A voltage step at a range change need not mean a temperature
+step. Do not replace both ranges with one universal sensor-to-count formula.
+
+**Firmware operation.** Segment 6 requests `$40` at `$F3B9-$F3BB`. At
+`$F3BF-$F3EA`, selection depends on `$0030` bit 0 and `$003C` bit 7; the emitted
+paths use tables `$FEA7` and `$FEB8`. One path adds ten counts with saturation
+before lookup. The result goes to `$005D`. A result greater than 120 sets
+`$0030` bit 0; a result at most 106 clears it; 107 through 120 retain it.
+These exact byte boundaries establish hysteresis. Comments associate the
+thresholds with temperature, but the count/table arithmetic controls the claim.
+The software selection bit is carried through the existing FMD/SPI boundary;
+it is not itself a measurement of CTSHI's electrical level.
+
+MAT acquisition at `$EBB3` requests `$80`; firmware complements the sample,
+stores the complemented byte at `$012B`, produces `$0060` and qualifies Error
+23/25. CTS processing updates coolant state `$005B-$005F` and Error 14/15
+qualification. Complemented MAT, raw A/D and processed temperature are different
+representations. Coolant state participates in commanded idle, warm-up fueling,
+startup enrichment and other temperature gates; MAT enters temperature-dependent
+control. Actual physical engine temperature remains outside the firmware model.
+
+**Complete signal path.** Thermistor and ground -> bias/filter -> U10 -> sample
+and range-dependent conversion -> temperature state -> fuel/idle/control and
+diagnostics. CTS adds a return path from firmware range selection through U12
+CTSHI to the sensor bias circuit. Sensor conversion is therefore a coupled
+hardware/software function, rather than an isolated lookup table.
+
+**Fault behavior.** An open sensor tends toward the bias rail and a short tends
+toward ground under the passive-sensor assumptions. A poor ground shifts the
+reading; a stuck CTS range output makes the voltage inconsistent with the table
+selected by software. Incorrect coolant state can alter idle or fueling without
+proving hardware LIMP activation. Fault substitution and qualification must follow
+the emitted diagnostic paths, not an assumed universal default temperature.
+
+**Evidence boundaries.** Visible resistor values, table selection and byte
+hysteresis are established. Thermistor tolerance, CTSHI drive strength, capacitor
+values where unlabeled, voltage-to-count transfer and actual sensor temperatures
+remain electrical boundaries. Verify both range voltages and learned firmware
+state together when troubleshooting.
+
+### 6.2 TPS and analog MAF input blocks
+
+**Schematic location.** Sheet 2 TPS#/TPS and VMAF#/VMAF; sheet 1 U10 AN5/pin 6
+and AN10/pin 12; sheet 4 U11 TPS; sheet 5 MEMCAL routing. FMAF through U12 is a
+separate digital/event interface, not the analog VMAF input.
+
+**Electrical operation.** TPS# has a 220-kΩ ground return and feeds conditioned
+TPS through 10 kΩ and a capacitor to ground. It is a potentiometer/sensor-voltage
+input, not a passive temperature divider. The weak pull-down biases an open
+external source toward ground, subject to chip loading. U10 receives conditioned
+TPS; U11 pin 20 also receives it, and the measured 376 jumper routes it to
+U11's pin 28 labeled MAP. The analog MAF input VMAF# instead has a 1.00-kΩ
+pull-up and a 10-kΩ series/filter path to VMAF. Source impedance matters: the
+pull-up can load a weak sensor output, so an open VMAF input need not produce
+the same fault polarity as an open TPS input.
+
+**Firmware operation.** Startup `$C999` and common acquisition `$CC24` request
+TPS selector `$50`. Raw counts go to `$0081`; learned closed-throttle state is
+maintained at `$0086/$0087`, normalized throttle at `$0082`, and transient/history
+state at `$00DD/$00DE`. Learning means raw voltage and normalized throttle are
+not interchangeable. TPS affects throttle-following idle demand, transient fuel,
+mode gates and Error 21 qualification.
+
+At `$F7AC-$F7B6`, analog MAF acquisition requests `$A0`, stores raw `$00ED`,
+multiplies by seven, and stores the intermediate at `$00EF`. Subsequent table and
+filter processing produces airflow `$00EA:$00EB`; `$D769-$D7A0` combines airflow
+with reference period to produce load `$0063`. Multiplication by seven is an
+internal scaling step, not a direct grams-per-second conversion. Key-off burn-off
+diagnostics also sample `$A0` at `$EB05`; Error 33/34 qualification uses the
+established MAF diagnostic paths. Do not equate an ordinary airflow sample with
+a direct measurement of burn-off current.
+
+**Complete signal path.** TPS voltage -> filter -> raw count -> learned/normalized
+throttle and transient state -> idle/fuel/gates. Analog MAF voltage -> filter ->
+raw/intermediate -> airflow -> reference-period-dependent load -> fuel calculation.
+The supplied image's main load path is VMAF, while MAP/MAP2 A/D channels have no
+explicit normal conversion request found in the existing listing audit.
+
+**Fault behavior.** TPS noise can appear as throttle motion; incorrect learned
+closed-throttle state can change normalized throttle even with a repeatable raw
+sample. MAF wiring/pull-up faults can corrupt computed airflow and fueling.
+Those mechanisms support troubleshooting hypotheses, not a claim that every
+high idle is TPS-related or every MAF fault invokes U11 fallback. Compare raw
+counts, processed state, mode flags and the actual sensor voltage separately.
+
+**Evidence boundaries.** Firmware storage and scaling are established. Exact
+sensor curves, filter constants with unlabeled capacitors and internal U11
+sensor use remain unknown. Physical MAP and TPS must not be shorted together
+when reconstructing the measured MEMCAL selection jumper.
+
+### 6.3 VOLT and PUMPVOLT divider/filter blocks
+
+**Schematic location.** Sheet 2 VIGN-to-VOLT and PUMPVOLT#-to-PUMPVOLT networks;
+sheet 1 U10 AN1/pin 2 and AN6/pin 7. These measure separate external sources.
+
+**Electrical operation.** Both use 33.2 kΩ above the node and 8.06 kΩ below it.
+With negligible converter loading, V_NODE = V_SOURCE*8.06/(33.2+8.06), or
+approximately 0.195347*V_SOURCE. At an illustrative 12 V source this is 2.344 V;
+it is not a measured operating voltage or an A/D calibration. The Thevenin
+resistance is approximately 6.485 kΩ. VOLT has 1.0 µF to ground, giving nominal
+RC time constant 6.485 ms; PUMPVOLT has 4.7 µF, giving 30.481 ms. Component
+values imply PUMPVOLT responds more slowly under the ideal divider assumptions.
+Capacitor/resistor tolerance, leakage and source impedance affect the real result.
+
+VOLT derives from VIGN on the schematic, even when firmware calls its stored
+value battery voltage. PUMPVOLT derives from the separate vehicle PUMPVOLT#
+connection; it is not the fuel-pressure measurement or automatically the PUMP#
+driver output. Supply/ground drops can make the two channels disagree legitimately.
+
+**Firmware operation.** Selector `$10` samples VOLT during startup and Segment E
+and stores `$007E`. Consumers include voltage qualification, injector voltage
+compensation, dwell/feedback handling and diagnostics. `$E816-$E81B` requests
+`$60` and stores PUMPVOLT at `$007F`; later Error 54 and MAF-diagnostic gates use
+that separate state. Factory entry independently compares battery, pump and
+DIAG samples, so replacing one voltage channel with the other changes behavior.
+
+**Complete signal path.** VIGN or pump-monitor source -> individual divider/RC ->
+U10 -> channel-specific RAM -> compensation or diagnostic/state gates. Divider
+voltage, A/D count and the resulting timing compensation are separate quantities;
+the firmware's tables establish the last transformation, not the first two.
+
+**Fault behavior.** An open lower resistor or faulty ground can raise the node;
+an open upper resistor can make it low under the ideal input assumptions. Leakage
+or a failed capacitor can bias or slow the reading. A bad VOLT reading can distort
+compensation despite healthy battery terminals. A bad PUMPVOLT reading can affect
+pump/MAF diagnostics without proving a failed pump. Check both external source
+and divided node before treating the firmware byte as a verified supply voltage.
+
+**Evidence boundaries.** Ideal divider gain and RC products are computed from
+printed component values. U10 reference accuracy, leakage, filter tolerances,
+actual harness voltages and real transient response are not established here.
