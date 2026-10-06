@@ -1,0 +1,48 @@
+BUA / GM 1227165 STEP 177 - ACCESSIBLE MEMCAL PHOTOGRAPHS AUDIT
+================================================================
+
+Purpose
+-------
+Step 177 makes the two authoritative reconstructed-MEMCAL photographs directly
+viewable in GitHub and ordinary source-code editors. It changes no C source,
+tests, calibration, executable behavior or frozen signature.
+
+Evidence preservation
+---------------------
+The original HEIC files remain unchanged as archival sources:
+
+  evidence/memcal/photos/reverse_engineered_memcal_overview.heic
+  SHA-256 2abc3fd6a456b8e1f3c85b35fd5c210b2f3df0010c1883aa474868c33b3f68de
+
+  evidence/memcal/photos/reverse_engineered_memcal_resistor_board_closeup.heic
+  SHA-256 af6452979fba311816b23fd9a06b5deec9210353b63175ace3783bb5e26bab2d
+
+Accessible copies
+-----------------
+Both source photographs were decoded to full-resolution 4032 x 3024 JPEGs at
+quality 95. Embedded EXIF, GPS and other metadata were removed. Visual review
+confirmed that both copies have the expected orientation, framing and legible
+hardware content.
+
+  evidence/memcal/photos/reverse_engineered_memcal_overview.jpg
+  3,169,032 bytes
+  SHA-256 9a75d06a7995d64ff8683b177a314d187b5645538d3ea9211636adea569d2a75
+
+  evidence/memcal/photos/reverse_engineered_memcal_resistor_board_closeup.jpg
+  2,641,734 bytes
+  SHA-256 39dda90b2aacc10d08393ab5560ccb54142592463440bd1b7084f92b2373919a
+
+Documentation
+-------------
+The MEMCAL evidence README now links to the JPEG copies by default and records
+their relationship to the archival HEIC sources. The evidence register now
+identifies the committed files, sizes and hashes instead of describing their
+import as pending. MEMCAL is expanded as memory/calibration where first defined
+in the relevant evidence and architecture documents.
+
+Verification
+------------
+The unchanged simulator was rebuilt with strict C89 flags and the complete
+make test gate was run. Compiler diagnostics were empty, runtime exit status
+was zero, all gated results and signatures passed, and no genuine FAIL result
+was present.

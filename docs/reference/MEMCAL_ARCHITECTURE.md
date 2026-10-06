@@ -2,8 +2,9 @@
 
 ## Confirmed functional role
 
-The MEMCAL connects the program/calibration EPROM and fixed calibration
-networks to the ECM motherboard through J4. The ECM schematic shows a 66-contact
+The MEMCAL (memory/calibration module) connects the program/calibration EPROM
+and fixed calibration networks to the ECM motherboard through J4. The ECM
+schematic shows a 66-contact
 interface with PROM address/data/control signals, CAL29-CAL61 connections,
 power and ground, and direct MAP/TPS-related contacts near the end of the
 connector.

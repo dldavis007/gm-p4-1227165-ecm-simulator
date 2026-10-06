@@ -92,3 +92,4 @@ audits remain historical checkpoints; the current conclusion is summarized in
 - [174 — embedded/HIL implementation roadmap](STEP174_EMBEDDED_HIL_ROADMAP_AUDIT.txt)
 - [175 — formal theory of operation](STEP175_FORMAL_THEORY_OF_OPERATION_AUDIT.txt)
 - [176 — theory-of-operation publication review](STEP176_THEORY_OF_OPERATION_PUBLICATION_AUDIT.txt)
+- [177 — accessible MEMCAL evidence photographs](STEP177_ACCESSIBLE_MEMCAL_PHOTOGRAPHS_AUDIT.txt)
