@@ -147,6 +147,40 @@ SLICES = [
 ]
 
 
+# LE87A enters with the IAC enabled. Override the PC fixture's A/C and
+# steering inputs explicitly so each load transition has a known origin.
+FOLLOWER_CASES = [
+    ("fan request below threshold", {0xF4: 1, 0x10E: 9}),
+    ("fan anticipation complete", {0xF4: 1, 0x10E: 10}),
+    ("cold request below threshold", {0x3B: 64, 0x10E: 9}),
+    ("cold anticipation complete", {0x3B: 64, 0x10E: 10}),
+    ("combined stall and DFCO offsets", {0x84: 20, 0x3D: 16, 0xC5: 2, 0x43: 2}),
+    ("stall offset overflow", {0x84: 250, 0x3D: 16, 0xC5: 1}),
+    ("DFCO offset overflow", {0x84: 250, 0x43: 2}),
+    ("decel enleanment", {0x84: 35, 0x3E: 128}),
+    ("power steering with AC", {0xF2: 1, 0x37: 8, 0x84: 12}),
+    ("AC learned offset at maximum", {0xF2: 0, 0x2D: 32, 0x84: 90}),
+    ("AC learned offset above maximum", {0xF2: 0, 0x2D: 33, 0x84: 12}),
+    ("AC learned offset below minimum", {0xF2: 0, 0x2D: 0, 0x84: 12}),
+    ("park throttle follower", {0xF3: 136, 0x84: 90}),
+    ("moving drive throttle follower", {0x67: 7, 0x84: 30}),
+    ("load removed at target", {0xF2: 193, 0x84: 20, 0x105: 30}),
+    ("small closing correction", {0x84: 20, 0x105: 32}),
+    ("128-step closing correction", {0x84: 20, 0x105: 158}),
+    ("large closing correction", {0x84: 20, 0x105: 240}),
+    ("opening at travel limit", {0x84: 20, 0x2C: 145}),
+    ("throttle release", {0x84: 2, 0x85: 4, 0x105: 1}),
+    ("idle speed above target", {0x58: 60, 0x102: 50}),
+    ("idle speed returns to target", {0xF2: 130, 0x58: 50, 0x102: 50}),
+    ("Mode 4 idle inhibit", {0x35: 8, 0x154: 2, 0x155: 0}),
+    ("Mode 4 idle enable", {0x35: 8, 0x154: 2, 0x155: 2, 0xF2: 132}),
+]
+for name, overrides in FOLLOWER_CASES:
+    inputs = {0xF3: 8, 0xF2: 128, 0x37: 0, 0xF4: 0, 0x3B: 0, 1: 0, 0x34: 0}
+    inputs.update(overrides)
+    SLICES.append((name, "follower", 0xE87A, 0xFFFE, inputs))
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -190,6 +224,42 @@ def slices(make_cpu, rom, lib):
             failures.append(str(err))
     if failures:
         raise AssertionError("\n".join(failures))
+
+
+def follower_motion(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    for addr, value in {0x34: 128, 0x37: 0, 0x7E: 124, 0x2C: 40, 0xF2: 132,
+                        0xF3: 8, 0x105: 0, 0x101: 0, 0x104: 1}.items():
+        cpu.mem[addr] = ram[addr] = value
+    writes = []
+
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    # Seed only the input TPS. Position, outstanding demand and phase counters
+    # persist across every motor and request service in each implementation.
+    for tick in range(97):
+        cpu.sp = 0x1FF
+        cpu.pc = 0xF4DF
+        writes.clear()
+        assert cpu.run(until_pc=0xF67B, max_steps=2000) == "until_pc"
+        lib.probe_motor()
+        check_state(f"follower motor tick {tick}", cpu, lib)
+        assert writes == ordered_writes(lib)
+        if tick == 32:
+            assert ram[0x105] == 18 and ram[0x2C] == 58
+        if tick % 2 == 0:
+            cpu.mem[0x84] = ram[0x84] = 12 if tick < 32 else 0
+            writes.clear()
+            cpu.call(0xE87A, max_steps=2000)
+            assert cpu.pc == 0xFFFE
+            lib.probe_follower()
+            check_state(f"follower request tick {tick}", cpu, lib)
+            assert writes == ordered_writes(lib)
+    assert ram[0x105] < 18 and ram[0x2C] < 58
+    print("IAC throttle opening and release: 97 motor and 49 request services matched")
 
 
 def serial(make_cpu, rom, lib):

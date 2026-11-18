@@ -1454,7 +1454,7 @@ static BuaIacTfDesiredStep39 bua_iac_tf_desired_step39(bua_u8 tps_raw,
 {
     BuaIacTfDesiredStep39 r;
     unsigned int a;
-    unsigned int prod;
+    unsigned long prod;
     r.tps_effective=tps_raw;
     r.throttle_steps=0u;
     r.ac_steps=0u;
@@ -1465,7 +1465,7 @@ static BuaIacTfDesiredStep39 bua_iac_tf_desired_step39(bua_u8 tps_raw,
        executable performs TPS*192, then ASLD; the high byte is therefore
        floor(TPS*1.5), saturated and then limited by LC663=75. */
     if (tps_raw>STEP39_TF_TPS_THRESHOLD) {
-        prod=(unsigned int)tps_raw*STEP39_TF_GAIN*2u;
+        prod=(unsigned long)tps_raw*STEP39_TF_GAIN*2u;
         a=prod>>8;
         if (a>255u) a=255u;
         if (a>STEP39_TF_MAX) a=STEP39_TF_MAX;

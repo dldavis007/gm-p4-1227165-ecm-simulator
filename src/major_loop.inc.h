@@ -1,21 +1,74 @@
-/* LE87A..LEA25, idle branch after fan and cold-start anticipation. */
+/* LE87A..LEA25, fan, cold-start and throttle-follower motor requests. */
 static void bua_idle_motor_request(void)
 {
     bua_u8 control = RAM8(0xF2u);
+    bua_u8 steer, ac, small_close, request;
+    BuaFollower46 follower;
+    BuaIacTfDesiredStep39 demand;
     if (!(RAM8(0xF3u) & 8u))
         return;
-    if ((!(ENGINE_MODE_WORD & 8u) && RAM8(0xF4u)) ||
-        (!(MODE_WORD1 & 0x40u) && (RAM8(0x3Bu) & 0x40u)))
-        return; /* Fan/cold anticipation has its own step producer. */
+    if (!(ENGINE_MODE_WORD & 8u) && RAM8(0xF4u)) {
+        if (RAM8(0x10Eu) < 10u) { /* twice LC632 */
+            RAM8(0x101u) = 2u;
+            RAM8(0xF2u) = (bua_u8)((control | 8u) & ~16u);
+            return;
+        }
+        ENGINE_MODE_WORD |= 8u;
+        RAM8(0x10Bu) = 20u; /* LC676 */
+    } else if (!(MODE_WORD1 & 0x40u) && (RAM8(0x3Bu) & 0x40u)) {
+        if (RAM8(0x10Eu) < 10u) { /* twice LC633 */
+            RAM8(0x101u) = 0x82u;
+            RAM8(0xF2u) = (bua_u8)((control | 8u) & ~16u);
+            return;
+        }
+        MODE_WORD1 |= 0x40u;
+        RAM8(0x3Bu) &= (bua_u8)~0x40u;
+        RAM8(0x10Bu) = 20u; /* LC677 */
+    }
     control &= (bua_u8)~8u;
     RAM8(0xF2u) = control;
     RAM8(0x10Eu) = 0u;
-    if ((RAM8(0xF3u) & 0x20u) || RAM8(0x84u) > 3u || RAM8(0x105u) ||
-        (control & 0x50u) || (RAM8(0x37u) & 8u) ||
-        (AF_MODE_WORD & 2u) || ((AIR_MODE_WORD & 16u) && RAM8(0xC5u)))
+    if (RAM8(0xF3u) & 0x20u)
         return;
-    if (RAM8(0x85u) > 3u)
+    follower = bua_dfco_follower_step46(RAM8(0x84u), AIR_MODE_WORD,
+                                        RAM8(0xC5u), AF_MODE_WORD);
+    RAM8(0xC5u) = follower.duration_left;
+    steer = RAM8(0x37u) & 8u;
+    if (follower.virtual_tps <= STEP39_TF_TPS_THRESHOLD &&
+        RAM8(0x85u) > STEP39_TF_TPS_THRESHOLD)
         RAM8(0x10Bu) = 30u;
+    if (follower.virtual_tps > STEP39_TF_TPS_THRESHOLD || (control & 0x50u) ||
+        steer || RAM8(0x105u)) {
+        /* LE961 is bypassed when power steering owns the load. */
+        ac = (bua_u8)(!steer && !(control & 0x80u));
+        demand = bua_iac_tf_desired_step39(follower.virtual_tps, RAM8(0xF3u) & 0x80u,
+                                           RAM8(0x67u), ac, RAM8(0x2Du), steer);
+        if (demand.ac_learn_reset) {
+            RAM8(0x2Du) = demand.ac_steps;
+            AIR_MODE_WORD |= 0x40u;
+        }
+        if (steer)
+            control = (bua_u8)((control | 0x40u) & ~1u);
+        else if ((control & 0xC0u) == 0xC0u)
+            control |= 0x20u;
+        control |= 0x10u;
+        request = bua_tf_pack_request_step66(demand.desired_steps, RAM8(0x105u), &small_close);
+        RAM8(0x101u) = request;
+        if (small_close)
+            RAM8(0x10Bu) = 30u;
+        if (request & 0x7Fu) {
+            if ((request & 0x80u) || RAM8(0x2Cu) < 145u) {
+                RAM8(0xF2u) = control;
+                return;
+            }
+            control &= (bua_u8)~0x10u;
+        } else {
+            control &= (bua_u8)~0x30u;
+            if ((control & 0x80u) && !steer)
+                control &= (bua_u8)~0x41u;
+        }
+    }
+    RAM8(0xF2u) = control;
     if ((MINOR_MODE_WORD2 & 8u) && (RAM8(0x154u) & 2u)) {
         control &= (bua_u8)~4u;
         if (!(RAM8(0x155u) & 2u))
@@ -24,7 +77,7 @@ static void bua_idle_motor_request(void)
         return;
     }
     if (!(control & 4u)) {
-        bua_u8 request = 0u;
+        request = 0u;
         if (!RAM8(0x67u) && RAM8(0x84u) < 3u) {
             if (RPM_DIV12P5 > RAM8(0x102u)) {
                 request = 0x82u;

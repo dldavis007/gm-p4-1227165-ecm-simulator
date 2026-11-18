@@ -13,6 +13,7 @@ BLOCKS = {
     0xDEE5: "EGR", 0xE10F: "RPM/VSS ratio", 0xE4F7: "fault qualification",
     0xE75D: "purge", 0xEDA3: "segment 1 outputs", 0xEF04: "diagnostics",
     0xEFCC: "field service", 0xF10E: "code flash", 0xF4DF: "IAC service",
+    0xE87A: "IAC motor request",
     0xF67B: "injector service", 0xF76A: "airflow service",
     0xFA91: "SCI receive", 0xFBBB: "SCI transmit", 0xFCA2: "factory test",
 }

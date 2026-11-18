@@ -16,9 +16,9 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 155 |
+| Observed on the IRQ path | 156 |
 | Static IRQ path, unobserved in this scenario | 38 |
-| Outside the IRQ call graph | 105 |
+| Outside the IRQ call graph | 104 |
 
 The observed set includes both spark lookups, advance sum, knock attack and
 major-segment recovery, Mode-4 blend, LD1F6 output, EST finish, stall-saver
@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, routine slices and SCI | 863 | 68.17% |
+| Targeted segments, IAC motion, routine slices and SCI | 1,020 | 70.55% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -103,9 +103,17 @@ decay and inhibit paths, and single-pass Error 41 and 43 inputs. A separate
 52-service Segment D replay checks Error 21 persistence, retained checksum,
 and the active-low lamp command. Other input combinations remain untested.
 
-Of 6,598 listing instructions, 2,100 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $E87A (152), $DA2D
-(131) and $CDE6 (104). A hit records execution under the scenario inputs.
+The IAC request routine at $E87A reaches 204 of its 211 instructions.
+The seven remaining instructions handle saturation. In this image the steering
+addends are zero, throttle demand is capped at 75, learned A/C adds at most 32,
+and moving in drive adds five. The maximum request before subtracting the
+current follower position is 112, below the positive 127-step clamp. Tests
+also cover negative deltas, fan and cold anticipation, and Mode 4. A retained
+throttle-opening and release trace compares non-stack RAM, MPU state and
+ordered MPU writes after each of 97 motor and 49 request services.
+
+Of 6,598 listing instructions, 1,943 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $DA2D (131), $CDE6 (104) and $D86B (81). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

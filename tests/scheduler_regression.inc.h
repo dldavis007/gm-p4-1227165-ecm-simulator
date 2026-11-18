@@ -67,24 +67,26 @@ static void run_step92_minor_cadence_test(void)
     RAM8(0x007Eu) = 124u;
     RAM8(0x002Cu) = 50u;
     RAM8(0x010Au) = 10u;
-    RAM8(0x00F3u) |= 8u; /* Startup delay complete. */
+    RAM8(0x00F3u) |= 0x28u; /* Startup complete, PID owns the pending request. */
     RAM8(0x00F2u) |= 4u; /* Unpaced pending motor request. */
     RAM8(0x0101u) = 0x84u;
     sim_iac_motor_on = 1u;
     air0=stats.air_fuel_loops; spark0=stats.spark_vss_loops;
     iac0=stats.iac_minor_services; steps0=stats.iac_steps_consumed;
     for(i=0u;i<16u;++i) majors0[i]=stats.major_segment_calls[i];
-    for(i=0u;i<16u;++i) irq_6p25ms();
+    for(i=0u;i<3u;++i) irq_6p25ms();
+    STEP92_CHECK(RAM8(0x0101u)==0x81u,"motor retains the closing direction with one commanded step left");
+    irq_6p25ms();
+    STEP92_CHECK(stats.iac_steps_consumed-steps0==4u,"persistent packed L0101 request consumes one IAC step per 6.25-ms service");
+    STEP92_CHECK(RAM8(0x002Cu)==46u,"four closing steps move literal L002C present position 50 -> 46");
+    STEP92_CHECK(RAM8(0x010Au)==6u,"four closing steps move literal L010A running counter 10 -> 6");
+    for(i=4u;i<16u;++i) irq_6p25ms();
     STEP92_CHECK(stats.irq_ticks==16u,"16 calls produce 16 ordinary 6.25-ms IRQ services");
     STEP92_CHECK(stats.iac_minor_services-iac0==16u,"LF4DF/IAC service is entered on every ordinary IRQ before minor split");
     STEP92_CHECK(stats.air_fuel_loops-air0==8u,"odd minor counts execute Air/Fuel exactly eight times in 16 IRQs");
     STEP92_CHECK(stats.spark_vss_loops-spark0==8u,"even minor counts execute Spark/O2/VSS exactly eight times in 16 IRQs");
     { int allone=1; for(i=0u;i<16u;++i) if(stats.major_segment_calls[i]-majors0[i]!=1u) allone=0;
       STEP92_CHECK(allone,"low nibble dispatch executes each major segment once per 16 IRQs"); }
-    STEP92_CHECK(stats.iac_steps_consumed-steps0==4u,"persistent packed L0101 request consumes one IAC step per 6.25-ms service");
-    STEP92_CHECK(RAM8(0x002Cu)==46u,"four closing steps move literal L002C present position 50 -> 46");
-    STEP92_CHECK(RAM8(0x010Au)==6u,"four closing steps move literal L010A running counter 10 -> 6");
-    STEP92_CHECK(RAM8(0x0101u)==0x80u,"DEC L0101 preserves direction bit after four requested closing steps");
     STEP92_CHECK((MINOR_COUNT&1u)==0u,"after 16 IRQs odd/even phase returns to its starting parity");
     STEP92_CHECK((stats.air_fuel_loops+stats.spark_vss_loops)==16u,"exactly one 12.5-ms-side branch is selected on every IRQ");
     STEP92_CHECK(stats.iac_minor_services==stats.irq_ticks,"normal test path has one IAC service for every ordinary IRQ");
