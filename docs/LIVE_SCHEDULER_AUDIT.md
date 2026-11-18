@@ -16,7 +16,7 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 156 |
+| Observed on the IRQ path | 157 |
 | Static IRQ path, unobserved in this scenario | 38 |
 | Outside the IRQ call graph | 104 |
 
@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, routine slices and SCI | 1,020 | 70.55% |
+| Targeted segments, IAC motion, warm fuel, routine slices and SCI | 1,166 | 72.76% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -112,8 +112,16 @@ also cover negative deltas, fan and cold anticipation, and Mode 4. A retained
 throttle-opening and release trace compares non-stack RAM, MPU state and
 ordered MPU writes after each of 97 motor and 49 request services.
 
-Of 6,598 listing instructions, 1,943 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $DA2D (131), $CDE6 (104) and $D86B (81). A hit records execution under the scenario inputs.
+In the fuel region starting at $DA2D the suite executes 370 of 377 instructions.
+For 128 successive 12.5 ms fuel services, the replay supplies a lean and then
+rich ADC input, and sets the slow O2 sample produced outside the routine.
+The integrator moves from 128 to 130 and then to 127. Non-stack RAM, MPU
+state, and ordered writes including the injector pulse word at $3FD0 match
+after every service. Separate cases check feedback inhibits, slow O2
+deadband, proportional-step suppression, and invalid retained BLM recovery.
+
+Of 6,598 listing instructions, 1,797 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $CDE6 (104), $D86B (81) and $EDA3 (77). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
@@ -123,7 +131,7 @@ in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are 6E4775A7, 86B8CDB5 and B12D3084 respectively. These are C regression
+are 02BA4EA7, 86B8CDB5 and B12D3084 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
 Simulation boundaries include invalid capture

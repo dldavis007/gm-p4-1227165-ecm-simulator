@@ -81,6 +81,8 @@ void probe_cold_boot(void)
 
 int probe_map(void) { return mem.io5000; }
 
+int probe_feedback(void) { count = 0; return bua_live_o2_feedback(); }
+void probe_blm_select(void) { count = 0; bua_scheduler_blm_select_step103(); }
 void probe_afr(void) { count = 0; bua_select_live_afr(); }
 void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
 void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }
@@ -103,6 +105,7 @@ int probe_frame(const bua_u8 *data, unsigned int length)
 }
 int probe_response_length(void) { return bua_sci115.output_count; }
 int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_o2_input(unsigned int sample) { sim_o2_adc = (bua_u8)sample; }
 void probe_warm_fuel(void) { count = 0; bua_odd_normal_fuel_after_load_12p5ms(); }
 void probe_blm_tail(void) { count = 0; bua_odd_50ms_tail_lddc2(); }
 void probe_road(unsigned int mph)

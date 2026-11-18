@@ -181,6 +181,45 @@ for name, overrides in FOLLOWER_CASES:
     SLICES.append((name, "follower", 0xE87A, 0xFFFE, inputs))
 
 
+# LDB35 takes filtered samples. The paired fast/slow readings choose the
+# rich, lean or disagreement path without sampling a host ADC mid-replay.
+FEEDBACK_CASES = [
+    ("rising fast O2 in window", {0xEA: 0, 0x6F: 107, 0xC8: 106}),
+    ("steady fast O2 in window", {0xEA: 0, 0x6F: 107, 0xC8: 107}),
+    ("cold delay saturation", {0x6F: 0, 0x71: 78, 0xEA: 0, 0x5B: 1}),
+    ("lean integrator count", {0x6F: 0, 0x71: 0, 0xC4: 0}),
+    ("lean integrator step", {0x6F: 0, 0x71: 0}),
+    ("rich integrator step", {0x6F: 255, 0x71: 255}),
+    ("cold idle delay", {0x6F: 0, 0x71: 0, 0x5B: 1, 0x82: 0}),
+    ("moving idle throttle", {0x6F: 0, 0x71: 0, 0x67: 5, 0x82: 0}),
+    ("lean maximum integrator", {0x6F: 0, 0x71: 0, 0xC9: 180}),
+    ("rich minimum integrator", {0x6F: 255, 0x71: 255, 0xC9: 40}),
+    ("lean correction overflow", {0x6F: 0, 0x71: 0, 0xC9: 254}),
+    ("rich correction underflow", {0x6F: 255, 0x71: 255, 0xC9: 1}),
+    ("persistent opposite samples", {0x6F: 0, 0x71: 140, 0xC7: 254, 0x46C: 29}),
+    ("slow O2 deadband", {0x44: 160, 0x6F: 0, 0x71: 105}),
+    ("high airflow and RPM", {0xEA: 96, 0x56: 190, 0x71: 255, 0x6F: 255}),
+    ("transient fuel inhibit", {0x38: 128}),
+    ("deceleration lean reset", {0x63: 40, 0x57: 29, 0x6F: 0}),
+    ("deceleration below neutral", {0x3E: 128, 0x6F: 0, 0xC9: 127}),
+    ("deceleration rich feedback", {0x3E: 128, 0x6F: 255}),
+]
+for name, overrides in FEEDBACK_CASES:
+    inputs = {0x44: 128, 0x43: 0, 0x3E: 0, 0x63: 80, 0x82: 10, 0xC4: 255,
+              0x5B: 170, 0xC9: 128, 0xBE: 30}
+    inputs.update(overrides)
+    SLICES.append((name, "feedback", 0xDB35, 0xDD29, inputs))
+
+SLICES.extend([
+    ("invalid retained BLM", "blm_select", 0xDA73, 0xDB35,
+     {0xBF: 0, 0x57: 0, 0xEA: 0, 0x1C: 0, 0x0A: 33, 0x0C: 44}),
+    ("PE below-neutral BLM", "blm_select", 0xDA73, 0xDB35,
+     {0xBF: 0, 0x57: 0, 0xEA: 0, 0x1C: 120, 0x43: 32}),
+    ("high flow BLM cell", "blm_select", 0xDA73, 0xDB35,
+     {0xBF: 0, 0x57: 150, 0xEA: 100}),
+])
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -202,9 +241,11 @@ def slices(make_cpu, rom, lib):
         if reason != "until_pc":
             failures.append(f"{name}: stopped at ${cpu.pc:04X} ({reason})")
             continue
-        getattr(lib, "probe_" + fn)()
+        result = getattr(lib, "probe_" + fn)()
         try:
             check_state(name, cpu, lib)
+            if fn == "feedback":
+                assert result == cpu.mem[cpu.sp + 1], (name, "fuel proportional step")
             actual = ordered_writes(lib)
             assert writes == actual, (name, writes, actual)
             if fn == "blm_tail":
@@ -224,6 +265,40 @@ def slices(make_cpu, rom, lib):
             failures.append(str(err))
     if failures:
         raise AssertionError("\n".join(failures))
+
+
+def warm_fuel_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    inputs = {0x34: 128, 0x44: 0x82, 0x5B: 170, 0x63: 110, 0x1A: 1,
+              0x1B: 30, 0xBF: 2, 0x57: 60, 0x58: 120, 0x95: 4, 0xEA: 12, 0xCB: 64, 3: 32}
+    for addr, value in inputs.items():
+        ram[addr] = cpu.mem[addr] = value
+    writes = []
+
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    endpoints = []
+    for phase, sample in enumerate((20, 230)):
+        lib.probe_o2_input(sample)
+        # $71 is the slow O2 sample produced outside this routine. The
+        # fast sample comes through the actual ADC read inside the replay.
+        ram[0x71] = cpu.mem[0x71] = sample
+        for tick in range(64):
+            ram[0] = cpu.mem[0] = (1 + 2 * (64 * phase + tick)) % 160
+            cpu.pc, cpu.sp = 0xD86B, 0x1FD
+            writes.clear()
+            assert cpu.run(until_pc=0xCCAC, max_steps=10000) == "until_pc"
+            lib.probe_warm_fuel()
+            label = f"Warm fuel ADC {sample}, pass {tick + 1}"
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+            assert [addr for addr, _ in writes if addr in (0x3FD0, 0x3FD1)] == [0x3FD0, 0x3FD1], label
+        endpoints.append(ram[0xC9])
+    assert endpoints[0] > 128 and endpoints[1] < endpoints[0], endpoints
+    print(f"128 warm fuel passes: lean/rich integrator endpoints {endpoints}, RAM and MPU writes matched")
 
 
 def follower_motion(cpu, rom, lib):

@@ -30,7 +30,7 @@ test: $(TARGET) test-rom
 	$(CC) $(CFLAGS) tests/rom_calibration.c -o build/rom_calibration
 	build/rom_calibration
 	$(TARGET) > $(OUTPUT)
-	grep -q "Step-104 normal-operation behavioral signature: 6E4775A7" $(OUTPUT)
+	grep -q "Step-104 normal-operation behavioral signature: 02BA4EA7" $(OUTPUT)
 	grep -q "step-104 baseline-freeze regression result: PASS (10/10)" $(OUTPUT)
 	grep -q "Step-105 transmission trace signature: 86B8CDB5" $(OUTPUT)
 	grep -q "step-105 transmission-aware regression result: PASS (12/12)" $(OUTPUT)

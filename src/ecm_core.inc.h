@@ -2278,6 +2278,7 @@ typedef struct {
     bua_u8 slow_rich;
     bua_u8 limited_error;
     bua_u8 prop_width;
+    bua_u8 prop_suppressed;
     bua_u8 prop_step;
     bua_u8 integrator;
     bua_u8 int_timer;
@@ -2370,9 +2371,7 @@ static bua_u8 bua_o2_slow_error_ldc05(bua_u8 airflow_arg,
             *slow_rich_out = 0u;
         } else {
             error = 0u;
-            /* LDC2B jumps directly to LDC69 without changing b5.  For the
-             * zero-error case direction is immaterial to the arithmetic. */
-            *slow_rich_out = 0u;
+            /* LDC2B jumps to LDC69, retaining the previous rich/lean bit. */
         }
     }
     factor = bua_lookup_spacing16(cal_o2_error_reduction, 9u, airflow_arg);
@@ -2387,6 +2386,7 @@ static bua_u8 bua_o2_slow_error_ldc05(bua_u8 airflow_arg,
     return error;
 }
 static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
+                                                     bua_u8 previous_slow_rich,
                                                      bua_u8 fast_rich,
                                                      bua_u8 slow_o2,
                                                      bua_u8 lean_offset,
@@ -2413,6 +2413,7 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
     arg = bua_o2_airflow_argument(airflow_word);
     idle = (tps_axis <= (bua_u8)CAL_O2_IDLE_TPS && vss_scaled == 0u) ? 1u : 0u;
     r.fast_rich = fast_rich;
+    r.slow_rich = previous_slow_rich;
     r.limited_error = bua_o2_slow_error_ldc05(arg, slow_o2, lean_offset,
                                                air_diverter_active, idle,
                                                &r.slow_rich);
@@ -2458,10 +2459,10 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
         if (delay <= r.int_timer) {
             r.int_timer = 0u;
             if (r.slow_rich != 0u) {
-                if (r.integrator > (bua_u8)CAL_O2_INT_MIN)
+                if (r.integrator != (bua_u8)CAL_O2_INT_MIN)
                     r.integrator = (bua_u8)(r.integrator - 1u);
             } else {
-                if (r.integrator < (bua_u8)CAL_O2_INT_MAX)
+                if (r.integrator != (bua_u8)CAL_O2_INT_MAX)
                     r.integrator = (bua_u8)(r.integrator + 1u);
             }
             ++stats.fuel_o2_integrator_updates;
@@ -2473,9 +2474,10 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
     }
     /* LDC9C/LDD01 suppresses proportional action once the same rich/lean
      * condition has persisted longer than the computed width. */
-    if ((r.fast_rich != r.slow_rich ||
-         r.limited_error <= (bua_u8)CAL_O2_MIN_INT_ERROR) &&
-        duration_counter > r.prop_width) {
+    r.prop_suppressed = (bua_u8)((r.fast_rich != r.slow_rich ||
+                         r.limited_error <= CAL_O2_MIN_INT_ERROR) &&
+                         duration_counter > r.prop_width);
+    if (r.prop_suppressed) {
         r.prop_step = 0u;
     } else {
         prop_error = (bua_u8)(r.limited_error << 1);
@@ -2516,7 +2518,7 @@ static BuaO2ControlResult bua_closed_loop_o2_step24(bua_u16 airflow_word,
                                       previous_fast_o2,lean_offset,
                                       air_diverter_active,&ready);
     (void)ready;
-    return bua_closed_loop_o2_core_step103(airflow_word,fast_rich,slow_o2,
+    return bua_closed_loop_o2_core_step103(airflow_word,0u,fast_rich,slow_o2,
                     lean_offset,air_diverter_active,tps_axis,vss_scaled,
                     rpm_special,coolant,duration_counter,integrator,int_timer);
 }

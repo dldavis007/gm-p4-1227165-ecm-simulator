@@ -188,7 +188,11 @@ static void bua_scheduler_blm_select_step103(void)
     AIR_MODE_WORD=r.air_mode_word;
     ++stats.scheduler_blm_select_calls;
     if(r.changed!=0u) ++stats.scheduler_blm_cell_changes;
-    if(r.reinitialized!=0u) ++stats.scheduler_blm_reinitializations;
+    if(r.reinitialized!=0u) {
+        ram16be_set(0x0Au, 0x8000u); /* LF434 also restores both SAM words. */
+        ram16be_set(0x0Cu, 0x8000u);
+        ++stats.scheduler_blm_reinitializations;
+    }
 }
 
 /* LDB35..LDB9B executes before the closed-loop gate, so O2-ready production
@@ -434,15 +438,48 @@ static int bua_o2_feedback_enabled(void)
     return 0;
 }
 
-static void bua_odd_normal_fuel_after_load_12p5ms(void)
+/* LDB35..LDD29. The returned step remains on the ROM stack for base fuel. */
+static bua_u8 bua_live_o2_feedback(void)
 {
     BuaO2ControlResult o2;
+    bua_u8 fast_rich, prop_step;
+    O2_LOOKUP_AIRFLOW = bua_o2_airflow_argument(ram16be_get(AIRFLOW_WORD_ADDR));
+    fast_rich=bua_scheduler_fast_o2_front_step103();
+    prop_step = 0u;
+    if (bua_o2_feedback_enabled()) {
+        o2 = bua_closed_loop_o2_core_step103(ram16be_get(AIRFLOW_WORD_ADDR),
+                                       (bua_u8)((AF_MODE_WORD2 & 0x20u) != 0u),
+                                       fast_rich,O2_FILTERED_SLOW,O2_LEAN_OFFSET,
+                                       (bua_u8)((RAM8(0x003Eu)&0x02u)!=0u),
+                                       TPS_LOAD_AXIS, VSS_SCALED, RPM_SPECIAL,
+                                       COOLANT, CLOSED_LOOP_DURATION,
+                                       CLOSED_LOOP_INTEGRATOR,
+                                       CLOSED_LOOP_INT_TIMER);
+        CLOSED_LOOP_INTEGRATOR = o2.integrator;
+        CLOSED_LOOP_INT_TIMER = o2.int_timer;
+        CLOSED_LOOP_PW_CORR = o2.closed_corr;
+        O2_ERROR_LIMITED = o2.limited_error;
+        if (!o2.prop_suppressed) /* LDD01 skips the LDD0F scratch write. */
+            O2_PROPORTIONAL_STEP = o2.prop_step;
+        AF_MODE_WORD2 = (bua_u8)(AF_MODE_WORD2 & (bua_u8)~0x20u);
+        if (o2.slow_rich != 0u) AF_MODE_WORD2 |= 0x20u;
+        prop_step = o2.prop_step;
+    } else {
+        CLOSED_LOOP_INTEGRATOR = 128u;
+        CLOSED_LOOP_PW_CORR = 128u;
+        CLOSED_LOOP_INT_TIMER = 0u;
+    }
+
+    return prop_step;
+}
+
+static void bua_odd_normal_fuel_after_load_12p5ms(void)
+{
     bua_u16 filtered_o2;
     bua_u16 corrected;
     bua_u8 prop_step;
     bua_u8 ae_factor;
     bua_u8 ae_flags;
-    bua_u8 fast_rich;
 
     bua_odd_transient_front_12p5ms();
 
@@ -459,31 +496,7 @@ static void bua_odd_normal_fuel_after_load_12p5ms(void)
     /* LDA73..LDB35 selects/validates the current BLM before O2 and BPW use. */
     bua_scheduler_blm_select_step103();
 
-    O2_LOOKUP_AIRFLOW = bua_o2_airflow_argument(ram16be_get(AIRFLOW_WORD_ADDR));
-    fast_rich=bua_scheduler_fast_o2_front_step103();
-    prop_step = 0u;
-    if (bua_o2_feedback_enabled()) {
-        o2 = bua_closed_loop_o2_core_step103(ram16be_get(AIRFLOW_WORD_ADDR),
-                                       fast_rich,O2_FILTERED_SLOW,O2_LEAN_OFFSET,
-                                       (bua_u8)((RAM8(0x003Eu)&0x02u)!=0u),
-                                       TPS_LOAD_AXIS, VSS_SCALED, RPM_SPECIAL,
-                                       COOLANT, CLOSED_LOOP_DURATION,
-                                       CLOSED_LOOP_INTEGRATOR,
-                                       CLOSED_LOOP_INT_TIMER);
-        CLOSED_LOOP_INTEGRATOR = o2.integrator;
-        CLOSED_LOOP_INT_TIMER = o2.int_timer;
-        CLOSED_LOOP_PW_CORR = o2.closed_corr;
-        O2_ERROR_LIMITED = o2.limited_error;
-        O2_PROPORTIONAL_STEP = o2.prop_step;
-        AF_MODE_WORD2 = (bua_u8)(AF_MODE_WORD2 & (bua_u8)~0x20u);
-        if (o2.slow_rich != 0u) AF_MODE_WORD2 |= 0x20u;
-        prop_step = o2.prop_step;
-    } else {
-        CLOSED_LOOP_INTEGRATOR = 128u;
-        CLOSED_LOOP_PW_CORR = 128u;
-        CLOSED_LOOP_INT_TIMER = 0u;
-    }
-
+    prop_step = bua_live_o2_feedback();
     corrected = bua_fuel_base_and_corrections_step23(prop_step);
     ae_factor = ACCEL_LOAD_FACTOR;
     ae_flags = RAM8(0x0038u);
