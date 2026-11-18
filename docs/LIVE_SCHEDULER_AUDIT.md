@@ -39,8 +39,8 @@ The comparison uses the Python HC11 instruction emulator at the following pin.
 git clone https://github.com/anarkiwi/m68hc11 ../m68hc11
 git -C ../m68hc11 checkout 9856198c1a8c5ce5e3c2428a4c332808307998a4
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py
-PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq --check-outputs
-PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq --check-outputs
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq
 ```
 
 - Running spark. Both implementations retain their own state for 16 ticks
@@ -62,24 +62,41 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq --check-out
   signal. It matches all ordered MPU writes on 256/256 ticks. Both set the
   running flag on tick 116. On every tick of both scenarios the fuel words
   $C2 and $D9, FMD byte selector and serial interrupt flags also match.
-- Remove `--check-outputs` to require all non-stack RAM bytes to match as
-  well. This stricter diagnostic fails on both traces. The first stopped tick
-  differs at $64 (SPI scratch), $F3 and $010F (IAC state). At the last tick
-  four RAM bytes differ in the stopped scenario and thirteen in the drive
-  scenario. Other inputs, warm transmission behavior and physical bus timing
-  remain outside these results.
+- Both full IRQ scenarios compare every byte below $0500 except the CPU
+  stack window $01C0–$01FF, including the ADC receive scratch at $64.
+  LF651 base bias, warm park, the startup motor trajectory, commanded idle,
+  COP2 and Error 43 now agree across these traces. The emulator adapter
+  corrects FDIV overflow to return $FFFF per M68HC11RM. This matters on
+  drive tick 99 ($0999 divided by $06FE). Other idle PID operating regions,
+  physical bus timing and warm transmission behavior need separate traces.
 
 ## C regression and calibration coverage
 
-`make test` compares the 49 compiled `cal_*` byte tables with fixed addresses
+`make test` compares 51 compiled calibration tables with fixed addresses
 in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are 9F75141D, 9D8873B6 and BC5F5E86 respectively. These are C regression
+are F56CA262, C8414C20 and B12D3084 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
 Simulation boundaries include the host period-valid flag, invalid capture
 sentinels in RPM/dwell and the SWI wait. Reference capture and ASLD now wrap
 to 16 bits. FMD transactions use the processor-facing byte boundary. SPI bus
 timing, stack traffic and physical ignition timing remain unverified.
+
+### First divergent stores in the original drive comparison
+
+| First tick | RAM | ROM store(s) on that tick | Cause |
+|---:|---|---|---|
+| 1 | $64 | $F1CE | ADC transfer scratch and the order of MAF and TPS reads |
+| 1 | $F3, $010F | $F5B0, $F678 | Park/neutral state and signed IAC base bias |
+| 2 | $30 | LF21A toggle before the LF1E5 selector update | COP2 bit 1 |
+| 12 | $A4 | $EB96 | Error 43 sample counter |
+| 17 | $0109, $010C | $ECE6, $ECDE | Warm-park interpolation rounding |
+| 99, 109 | $0127, $0128 | $D814 (word) | Emulator FDIV overflow quotient |
+| 117 | $2C, $0101, $0104, $010A | $F604, $F5EC, $F5AD, $F5F6 | Startup IAC target and motor service |
+| 122 | $F2, $FF, $0102 | $D470, $D6CC, $D450 | Idle-speed command and RPM history |
+| 172 | $02 | $EB8D | Error 43 test-in-progress bit |
+
+To inspect a regression, add `--trace-tick N` to the IRQ scenario. It prints the ROM writes on that tick for RAM addresses still unequal at the end of the tick.

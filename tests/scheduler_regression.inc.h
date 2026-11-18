@@ -67,6 +67,8 @@ static void run_step92_minor_cadence_test(void)
     RAM8(0x007Eu) = 124u;
     RAM8(0x002Cu) = 50u;
     RAM8(0x010Au) = 10u;
+    RAM8(0x00F3u) |= 8u; /* Startup delay complete. */
+    RAM8(0x00F2u) |= 4u; /* Unpaced pending motor request. */
     RAM8(0x0101u) = 0x84u;
     sim_iac_motor_on = 1u;
     air0=stats.air_fuel_loops; spark0=stats.spark_vss_loops;

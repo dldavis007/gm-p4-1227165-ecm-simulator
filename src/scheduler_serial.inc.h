@@ -169,6 +169,14 @@ static void bua_reference_state_12p5ms(void)
 static void spark_vss_12p5ms(void)
 {
     ++stats.spark_vss_loops;
+    /* LCC7B..LCC92, Mode 4 can bypass the LF21A watchdog transfer. */
+    RAM8(0x3Bu) &= (bua_u8)~8u;
+    if ((MINOR_MODE_WORD2 & 8u) && (RAM8(0x154u) & 128u)) {
+        RAM8(0x3Bu) |= 8u;
+        RAM8(0x36u) |= 1u;
+    } else {
+        RAM8(0x30u) ^= 2u;
+    }
     bua_lcd05_diagnostic_merge();
     bua_slow_o2_filter_12p5ms();
     if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) &&
@@ -950,12 +958,12 @@ static void irq_6p25ms(void)
         bua_normal_fmd_refresh_step158();
     /* LCC21 calls LF4DF before the odd/even minor-loop dispatch. */
     bua_iac_motor_service_6p25ms();
-    /* LCC21 reads/normalizes TPS and updates its transient filter. */
-    bua_common_tps_6p25ms();
     /* LF67B services an MPU-reported injection before falling into LF76A. */
     bua_common_injector_service_6p25ms();
     /* LF76A completes before LCC65 selects the odd/even minor path. */
     bua_common_maf_6p25ms();
+    /* LCC21 reads/normalizes TPS and updates its transient filter. */
+    bua_common_tps_6p25ms();
     if ((count & 1u) != 0u)
         air_fuel_12p5ms();
     else

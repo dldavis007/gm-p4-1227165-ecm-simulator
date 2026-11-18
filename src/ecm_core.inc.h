@@ -1,3 +1,4 @@
+#include <stdlib.h>
 /*
  * BUA / ECM 1227165 - PC harness, current integration step 110
  * C89-compatible.
@@ -1321,7 +1322,7 @@ static void bua_write_control_low(bua_u8 low)
     mpu16be_set(MPU_CPU_CONTROL_ADDR,
                 (bua_u16)((csr & 0xFF00u) | 0xFB02u | (low & 0xFEu)));
 }
-static bua_u8 hw_adc(bua_u8 channel)
+static bua_u8 adc_sample(bua_u8 channel)
 {
     switch (channel & 0xF0u) {
         case 0x00u: return sim_map2_adc;
@@ -1337,6 +1338,14 @@ static bua_u8 hw_adc(bua_u8 channel)
         case 0xA0u: return sim_maf_adc;
         default:    return 0u;
     }
+}
+
+static bua_u8 hw_adc(bua_u8 channel)
+{
+    /* LF1CE saves the first received SPI byte. The host ADC supplies the
+     * selected channel on both transfers. */
+    RAM8(0x64u) = adc_sample(channel);
+    return RAM8(0x64u);
 }
 
 /*
@@ -3304,12 +3313,34 @@ static void one_second_event(void)
     bua_mode4_timeout_step116();
     ++stats.one_second_events;
 }
-/* Step 92: scheduler-facing LF4DF/LF5DF IAC motor service subset.
- * The source enters LF4DF on every ordinary 6.25-ms IRQ before the odd/even
- * fuel/spark split.  This wrapper deliberately implements only the already
- * proven LF5DF motor-consumption/bookkeeping portion.  Open-loop trajectory,
- * PID command production, Mode-4 forcing, and physical coil writes remain in
- * their translated helpers/HAL until the following reconciliation passes. */
+/* LD3DE and LF5CD encode a position error as sign and magnitude. */
+static bua_u8 iac_position_request(unsigned int target)
+{
+    int delta = (int)RAM8(0x2Cu) - (int)target;
+    int magnitude = abs(delta);
+    return (bua_u8)((magnitude > 127 ? 127 : magnitude) |
+                    (delta >= 0 ? 128 : 0));
+}
+
+/* LF573..LF5AD reload the throttle follower's inter-step delay. */
+static bua_u8 iac_step_delay(void)
+{
+    unsigned int delay = 5u;
+    if (!(RAM8(0xF3u) & 128u)) {
+        bua_u8 speed = RAM8(0x65u);
+        bua_u8 scale = (bua_u8)((speed < 32u ? speed : 255u) << 3);
+        delay = 4u + scale * 10u / 256u;
+    }
+    if (!(RAM8(0xF2u) & 4u)) {
+        bua_u8 error = (bua_u8)(RAM8(0x58u) - RAM8(0x102u));
+        delay *= 2u;
+        if (error < 64u)
+            delay += (255u - 4u * error) * 16u / 256u;
+    }
+    return (bua_u8)(delay > 255u ? 255u : delay);
+}
+
+/* LF4DF..LF678, ordinary motor service. */
 static void bua_iac_motor_service_6p25ms(void)
 {
     bua_u8 command;
@@ -3318,23 +3349,55 @@ static void bua_iac_motor_service_6p25ms(void)
     bua_u8 running;
     bua_u8 control;
     ++stats.iac_minor_services;
+    RAM8(0xF3u) = (bua_u8)((RAM8(0xF3u) & 0x7Fu) |
+                               ((RAM8(0x37u) & 1u) << 7));
+    if ((RAM8(0x4Eu) & 1u) ||
+        (!(RAM8(0x33u) & 0x10u) && !(RAM8(0xF3u) & 4u))) {
+        if (!(ENGINE_MODE_WORD & ENGINE_RUNNING_BIT)) {
+            if (MINOR_MODE_WORD2 & 0x10u)
+                RAM8(0x101u) = 0x81u;
+        } else if (RAM8(0x7Eu) <= 0x5Au || RAM8(0x7Eu) > 0xABu) {
+            sim_iac_motor_on = 0u;
+            goto base_bias;
+        } else if (!(RAM8(0xF3u) & 8u)) {
+            unsigned int target = 32u + RAM8(0x10Cu);
+            if (!(RAM8(0x37u) & 0x80u))
+                target += 10u;
+            if (target > 255u)
+                target = 255u;
+            RAM8(0x101u) = iac_position_request(target);
+            if (++RAM8(0x104u) > 160u) {
+                RAM8(0xF3u) |= 8u;
+                RAM8(0x104u) = iac_step_delay();
+            }
+        } else if (!(RAM8(0xF3u) & 0x20u)) {
+            control = RAM8(0xF2u);
+            if ((control & 0x10u) || !(control & 8u)) {
+                if (((control & 0x10u) || !(control & 4u)) &&
+                    (RAM8(0x101u) & 128u) && !(control & 0x20u) &&
+                    --RAM8(0x104u))
+                    return; /* LF56F goes directly to injector service. */
+                RAM8(0x104u) = iac_step_delay();
+            }
+        }
+    }
+    RAM8(0xF3u) &= (bua_u8)~1u;
+    if ((MINOR_MODE_WORD2 & 8u) && (RAM8(0x158u) & 3u) == 1u) {
+        RAM8(0x101u) = iac_position_request(RAM8(0x159u));
+        RAM8(0xF3u) |= 1u;
+    }
     command = RAM8(0x0101u);
     mag = (bua_u8)(command & 0x7Fu);
     control = RAM8(0x00F2u);
-    /* LF514..LF521 shuts the motor off outside the useful battery window
-     * while running.  Keep the hardware-enable state explicit. */
-    if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u &&
-        (RAM8(0x007Eu) <= 0x5Au || RAM8(0x007Eu) > 0xABu)) {
-        sim_iac_motor_on = 0u;
-        return;
+    if (mag == 0u) {
+        sim_iac_motor_on = 1u;
+        goto motor_hold;
     }
-    if (mag == 0u)
-        return;
     /* LF5DF: an off motor is enabled first; the pending step survives until
      * the following 6.25-ms service. */
     if (sim_iac_motor_on == 0u) {
         sim_iac_motor_on = 1u;
-        return;
+        goto base_bias;
     }
     RAM8(0x0101u) = (bua_u8)(command - 1u);
     ++stats.iac_steps_consumed;
@@ -3356,7 +3419,25 @@ static void bua_iac_motor_service_6p25ms(void)
     }
     RAM8(0x002Cu) = position;
     RAM8(0x010Au) = running;
+motor_hold:
     if ((control & 0x08u) != 0u)
         ++RAM8(0x010Eu);
+base_bias:
+    {
+        unsigned int sum = RAM8(0x109u) + RAM8(0x105u);
+        bua_u8 bias, result;
+        if (sum > 255u)
+            sum = 255u;
+        bias = RAM8(0x10Eu);
+        /* PULA leaves N from ASLA ($3B bit 6). */
+        if (RAM8(0x3Bu) & 0x40u)
+            bias = (bua_u8)(0u - bias);
+        result = (bua_u8)(RAM8(0x2Cu) - (bua_u8)(sum + bias));
+        if (RAM8(0x2Cu) < result && result <= 128u)
+            result = 129u;
+        else if (RAM8(0x2Cu) >= result && result >= 128u)
+            result = 127u;
+        RAM8(0x10Fu) = result;
+    }
 }
 /* Step-94 implementations follow the already-translated MAF/fuel helpers. */

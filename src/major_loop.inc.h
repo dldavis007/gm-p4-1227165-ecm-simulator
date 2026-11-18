@@ -1,3 +1,30 @@
+/* LD3F0..LD450 and LD6CA. The commanded idle update runs every eighth
+ * minor loop. LD468 compares A after the Mode-4 option tests. */
+static void bua_running_idle_speed(void)
+{
+    BuaIacCommandStep36 target;
+    bua_u8 compare;
+    RAM8(0x85u) = RAM8(0x84u);
+    if (RAM8(0x82u) != RAM8(0x84u))
+        RAM8(0x84u) = RAM8(0x82u);
+    if (RAM8(0x3Fu) & 0x24u)
+        RAM8(0x84u) = 2u * 3u;
+    if (MINOR_COUNT & 7u)
+        return;
+    RAM8(0xF3u) &= (bua_u8)~0x20u;
+    target = bua_iac_command_step36(COOLANT, RAM8(0xF3u), RAM8(0xF2u),
+                                    RAM8(0x3Au), MINOR_MODE_WORD2);
+    compare = RAM8(0x102u) = target.command_raw;
+    if (MINOR_MODE_WORD2 & 8u) {
+        compare = RAM8(0x158u);
+        if ((compare & 3u) == 3u)
+            compare = RAM8(0x102u) = RAM8(0x159u);
+    }
+    if (compare < RAM8(0x58u))
+        RAM8(0xF2u) |= 2u;
+    ram16be_set(0xFFu, ram16be_get(0x58u));
+}
+
 /* ---------------------------------------------------------------------- */
 /* Step 90: scheduler-facing wiring for Segments 1/5/6/A/E.               */
 /*                                                                        */
@@ -120,10 +147,33 @@ static void seg6_coolant_adc(void)
     RAM8(0x003Cu)=(bua_u8)(RAM8(0x003Cu)&0x7Fu);
 }
 
+static void bua_error43_service(void)
+{
+    /* LEB5B..LEBB3. Error 43 is enabled in LC1D2 of the BUA image. */
+    if (MINOR_COUNT == 26u && !(MODE_WORD2 & 0x40u)) {
+        if (MODE_WORD2 & 1u) {
+            MODE_WORD2 &= (bua_u8)~1u;
+            if (COOLANT > CAL_ERR43_TEST_MIN_COOLANT)
+                MODE_WORD2 |= 0xC0u;
+        } else if (!RAM8(0xB0u) && RAM8(0x63u) >= 170u) {
+            MODE_WORD2 |= 1u;
+        }
+    }
+    if (++RAM8(0xA4u) == 39u) {
+        bua_u8 sample = (bua_u8)(mpu16be_get(0x3FCAu) >> 8);
+        RAM8(0xA4u) = 0u;
+        RAM8(0x3Bu) &= (bua_u8)~0x20u;
+        if ((bua_u8)(sample - RAM8(0xA3u)) >= 235u)
+            RAM8(0x3Bu) |= 0x20u;
+        RAM8(0xA3u) = sample;
+    }
+}
+
 static void segA_mat_variables(void)
 {
     BuaMat84 r;
     bua_knock_recovery_segment_a();
+    bua_error43_service();
     r=bua_mat84_step(hw_adc(0x80u),ram16be_get(0x001Au),RAM8(0x0065u),
                      RAM8(0x00ACu),RAM8(0x00ADu),RAM8(0x0043u),
                      RAM8(0x0040u),RAM8(0x004Cu),RAM8(0x004Du));

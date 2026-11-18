@@ -7,12 +7,24 @@ import tempfile
 
 from m68hc11 import HC11
 
+
+class BuaCPU(HC11):
+    """Correct FDIV overflow in the pinned emulator (M68HC11RM, FDIV)."""
+
+    def step(self):
+        overflow = self.mem[self.pc] == 0x03 and self.d >= self.x
+        instruction = super().step()
+        if overflow:
+            self.x = 0xFFFF
+            self.z = False
+        return instruction
+
 ROOT = Path(__file__).resolve().parents[1]
 ROM = ROOT / "evidence/firmware/bua-hac.bin"
 
 
 def compare(lib):
-    cpu = HC11()
+    cpu = BuaCPU()
     cpu.load(ROM.read_bytes(), 0xC000)
     lib.probe_reset()
     lib.probe_ram.restype = ctypes.POINTER(ctypes.c_ubyte)
@@ -81,9 +93,29 @@ def compare(lib):
     print(f"{tick} running spark ticks matched RAM and ordered MPU writes")
 
 
-def compare_irq(lib, drive=False, check_outputs=False):
+def compare_error43(lib):
+    cpu = BuaCPU()
+    cpu.load(ROM.read_bytes(), 0xC000)
+    lib.probe_reset()
+    ram, mpu = lib.probe_ram(), lib.probe_mpu()
+    # Cross both modulo-39 boundaries, including a wrapping counter sample,
+    # and exercise the start and finish gates on separate invocations.
+    for call in range(1, 79):
+        sample = 235 if call <= 39 else 213
+        for address, value in ((0, 26 if call in (1, 41) else 10),
+                               (0x63, 170), (0x5B, 174)):
+            cpu.mem[address] = ram[address] = value
+        cpu.mem[0x3FCA] = mpu[10] = sample
+        cpu.pc = 0xEB5B
+        assert cpu.run(until_pc=0xEBB3, max_steps=80) == "until_pc"
+        lib.probe_error43()
+        for address in (2, 0x3B, 0xA3, 0xA4):
+            assert ram[address] == cpu.mem[address], (call, hex(address))
+
+
+def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
     """Diagnostic full scheduler comparison, reporting detail on the first unequal tick."""
-    cpu = HC11()
+    cpu = BuaCPU()
     cpu.load(ROM.read_bytes(), 0xC000)
     cpu.on_read(0x4008, 0x4008, lambda addr: 1)  # timer IRQ
     cpu.on_read(0x4001, 0x4001, lambda addr: 128)  # SPI complete
@@ -111,12 +143,25 @@ def compare_irq(lib, drive=False, check_outputs=False):
         writes.append((addr, value))
         cpu.mem[addr] = value
     cpu.on_write(0x3FC0, 0x3FFF, log_write)
+    ram_writes = []
+    writer_pc = None
+    def trace_step():
+        nonlocal writer_pc
+        writer_pc = cpu.pc
+        return BuaCPU.step(cpu)
+    def trace_ram(addr, value):
+        if tick == trace_tick:
+            ram_writes.append((writer_pc, addr, cpu.mem[addr], value))
+        cpu.mem[addr] = value
     failed = 0
     output_failures = 0
     state_failures = 0
     running = [None, None]
     injection_count = 0
     for tick in range(1, 257 if drive else 33):
+        if tick == trace_tick:
+            cpu.step = trace_step
+            cpu.on_write(0, 0x4FF, trace_ram)
         writes.clear()
         # The two serial cell interrupts return to the wait loop before the
         # next minor-loop interrupt. Execute their ROM bodies when armed.
@@ -148,6 +193,12 @@ def compare_irq(lib, drive=False, check_outputs=False):
                 running[i] = tick
         diffs = [(i, cpu.mem[i], ram[i]) for i in range(0x500)
                  if not 0x1C0 <= i <= 0x1FF and cpu.mem[i] != ram[i]]
+        if tick == trace_tick:
+            differing = {addr for addr, _, _ in diffs}
+            for pc, addr, old, new in ram_writes:
+                if addr in differing:
+                    print(f"${pc:04X} wrote ${addr:04X}: {old:02X} -> {new:02X}")
+            print(f"Tick {tick}: {len(differing)} non-stack RAM differences")
         actual = [(lib.probe_address(i), lib.probe_value(i))
                   for i in range(lib.probe_trace_size())]
         if writes != actual:
@@ -189,7 +240,12 @@ if __name__ == "__main__":
     parser.add_argument("--drive-irq", action="store_true")
     parser.add_argument("--check-outputs", action="store_true",
                         help="check ordered MPU writes and fuel/FMD/serial state")
+    parser.add_argument("--trace-tick", type=int, help="show ROM stores to differing RAM bytes")
     args = parser.parse_args()
+    if args.trace_tick is not None and not (
+        (args.drive_irq or args.full_irq) and 1 <= args.trace_tick <= (256 if args.drive_irq else 32)
+    ):
+        parser.error("--trace-tick requires a tick in the selected IRQ scenario")
     if args.check_outputs and not (args.full_irq or args.drive_irq):
         parser.error("--check-outputs requires an IRQ scenario")
     with tempfile.TemporaryDirectory() as temp:
@@ -198,6 +254,7 @@ if __name__ == "__main__":
                         str(ROOT / "tests/spark_rom_probe.c"), "-o", str(bridge)], check=True)
         lib = ctypes.CDLL(str(bridge))
         if args.full_irq or args.drive_irq:
-            compare_irq(lib, args.drive_irq, args.check_outputs)
+            compare_irq(lib, args.drive_irq, args.check_outputs, args.trace_tick)
         else:
             compare(lib)
+            compare_error43(lib)

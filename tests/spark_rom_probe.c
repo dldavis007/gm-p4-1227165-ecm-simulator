@@ -39,7 +39,7 @@ void probe_irq_setup(void)
     ecm_reset();
     sim_normal_fmd_enabled = 1u;
 }
-int probe_adc(unsigned int channel) { return hw_adc((bua_u8)channel); }
+int probe_adc(unsigned int channel) { return adc_sample((bua_u8)channel); }
 int probe_fmd(unsigned int command)
 {
     return (command & 128u) ? sim_normal_fmd_byte2 : sim_normal_fmd_byte1;
@@ -48,6 +48,8 @@ int probe_filter(unsigned int old, unsigned int value, unsigned int coef)
 {
     return bua_lag_filter_8_8((bua_u16)old, (bua_u8)value, (bua_u8)coef);
 }
+
+void probe_error43(void) { bua_error43_service(); }
 
 void probe_rpm(unsigned int rpm) { sim_set_ecm_reference_rpm(rpm); }
 int probe_capture(void) { return sim_ecm_ref.period_reg; }

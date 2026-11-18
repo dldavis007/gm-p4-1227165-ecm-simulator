@@ -9,6 +9,8 @@ static const struct {
     size_t length;
     unsigned int address, stride;
 } tables[] = {
+    {"warm park", step57_warm_park, sizeof(step57_warm_park), 0xC691u, 1u},
+    {"idle target", step36_iac_target_rpm, sizeof(step36_iac_target_rpm), 0xC637u, 1u},
     {"cal_o2_fast_threshold", cal_o2_fast_threshold, sizeof(cal_o2_fast_threshold), 0xC579u, 1u},
     {"cal_o2_int_delay_airflow", cal_o2_int_delay_airflow, sizeof(cal_o2_int_delay_airflow), 0xC582u, 1u},
     {"cal_o2_error_reduction", cal_o2_error_reduction, sizeof(cal_o2_error_reduction), 0xC594u, 1u},

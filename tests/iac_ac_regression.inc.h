@@ -36,13 +36,7 @@ static bua_u8 bua_coolant_warmup_step57(double sec)
 }
 static bua_u8 bua_warm_park_step57(bua_u8 coolant)
 {
-    unsigned int idx=(unsigned int)(coolant>>5);
-    unsigned int frac=(unsigned int)(coolant&31u);
-    unsigned int a,b;
-    if (idx>=8u) return step57_warm_park[8];
-    a=step57_warm_park[idx]; b=step57_warm_park[idx+1u];
-    if (b>=a) return (bua_u8)(a+((b-a)*frac)/32u);
-    return (bua_u8)(a-((a-b)*frac)/32u);
+    return bua_lookup_spacing32(step57_warm_park, 9u, coolant);
 }
 static void bua_closed_idle_init_step57(BuaClosedIdle57 *s)
 {
