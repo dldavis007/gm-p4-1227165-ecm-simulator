@@ -16,7 +16,7 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 157 |
+| Observed on the IRQ path | 161 |
 | Static IRQ path, unobserved in this scenario | 38 |
 | Outside the IRQ call graph | 104 |
 
@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, routine slices and SCI | 1,166 | 72.76% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,250 | 74.04% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -120,8 +120,16 @@ state, and ordered writes including the injector pulse word at $3FD0 match
 after every service. Separate cases check feedback inhibits, slow O2
 deadband, proportional-step suppression, and invalid retained BLM recovery.
 
-Of 6,598 listing instructions, 1,797 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $CDE6 (104), $D86B (81) and $EDA3 (77). A hit records execution under the scenario inputs.
+The $CDE6 region reaches 497 of 517 instructions. Running-reference cases
+exercise high RPM, dwell clipping, hot restart, highway spark, Error 43
+knock feedback and power enrichment. The even spark path calls LFA1E and
+services the TCC pass-by counter. With the stock $FFFF qualification delay,
+the counter wraps and cannot start a hold. A separate four-service replay
+preloads an active hold and checks voltage inhibition, the $DFFF write to
+$3FD6, hold expiry and the next qualifying pass.
+
+Of 6,598 listing instructions, 1,713 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $D86B (81), $EDA3 (77) and $FDED (75). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
@@ -131,12 +139,12 @@ in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are 02BA4EA7, 86B8CDB5 and B12D3084 respectively. These are C regression
+are 02BA4EA7, 5636155D and B12D3084 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
-Simulation boundaries include invalid capture
-sentinels in RPM/dwell and the SWI wait. Reference capture and ASLD now wrap
-to 16 bits. FMD transactions use the processor-facing byte boundary. SPI bus
+The running RPM and dwell paths follow ROM arithmetic for $0000 and $FFFF
+reference captures. Reference capture and ASLD wrap to 16 bits. The SWI
+wait remains a simulator boundary. FMD transactions use the processor-facing byte boundary. SPI bus
 timing, stack traffic and physical ignition timing remain unverified.
 
 ### First divergent stores in the original drive comparison

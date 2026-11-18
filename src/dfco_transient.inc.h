@@ -190,16 +190,29 @@ static bua_u8 bua_load_ae_factor_step96(bua_u8 delta_above_min)
     return bua_interp_u8_lf2d6(table[index],table[(bua_u8)(index+1u)],fraction);
 }
 
+static void bua_tps_accel_trigger(void)
+{
+    BuaTpsAeTriggerResult t;
+    bua_u16 addr;
+    t=bua_tps_ae_lfa1e(TPS_LOAD_AXIS,RAM8(0x00DDu),RAM8(0x003Fu),
+                        RAM8(0x0038u),RAM8(0x00D4u),RAM8(0x00DFu));
+    if(t.triggered!=0u) {
+        for(addr=0x018Eu;addr<0x01AEu;addr=(bua_u16)(addr+2u))
+            RAM8(addr)=0u;
+    }
+    RAM8(0x0038u)=t.flags;
+    RAM8(0x00D4u)=t.stored_diff;
+    RAM8(0x00DFu)=t.async_count;
+}
+
 static void bua_odd_transient_front_12p5ms(void)
 {
     BuaDecelEnlean45 e;
     BuaDfcoState45 d;
-    BuaTpsAeTriggerResult t;
     bua_u8 delta;
     bua_u8 factor;
     bua_u16 product;
     bua_u16 doubled;
-    bua_u16 addr;
     unsigned int sum;
 
     /* LD86B arms the single-fire toggle only when single fire is active. */
@@ -243,15 +256,7 @@ static void bua_odd_transient_front_12p5ms(void)
     RAM8(0x008Au)=d.stall_ae_pulses;
     RAM8(0x00C5u)=d.stall_tf_count;
 
-    t=bua_tps_ae_lfa1e(TPS_LOAD_AXIS,RAM8(0x00DDu),RAM8(0x003Fu),
-                        RAM8(0x0038u),RAM8(0x00D4u),RAM8(0x00DFu));
-    if(t.triggered!=0u) {
-        for(addr=0x018Eu;addr<0x01AEu;addr=(bua_u16)(addr+2u))
-            RAM8(addr)=0u;
-    }
-    RAM8(0x0038u)=t.flags;
-    RAM8(0x00D4u)=t.stored_diff;
-    RAM8(0x00DFu)=t.async_count;
+    bua_tps_accel_trigger();
 
     /* LD97C..LD99E: the C0 fault mask or negative load delta clears E2.
      * Otherwise subtract LC33C, interpolate C33D, apply E7, double, and

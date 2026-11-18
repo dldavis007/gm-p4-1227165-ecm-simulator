@@ -9,8 +9,8 @@ writes. The cold power-on entries also agree at the scheduler handoff.
 
 Run `make test` in Codespaces or CI. To see instruction coverage by routine
 address, run `PYTHONPATH=build/m68hc11 python3 tools/compare_spark_rom.py --all --coverage`
-afterward. The complete suite executes **4,801 of 6,598 instructions
-(72.76%)**. This includes targeted routine replays and serial packet tests.
+afterward. The complete suite executes **4,885 of 6,598 instructions
+(74.04%)**. This includes targeted routine replays and serial packet tests.
 The audit describes which state each comparison checks.
 
 - [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)

@@ -1451,13 +1451,6 @@ static void bua_calculate_rpm_from_reference(void)
     bua_u8 rpm12p5_new;
     bua_u16 filtered;
     ref_period = ram16be_get(REF_PERIOD_ADDR);
-    /* Simulator-only invalid capture sentinel. */
-    if (ref_period == 0u || ref_period == 0xFFFFu) {
-        RPM_SPECIAL = 0u;
-        RPM_DIV25 = 0u;
-        ram16be_set(0x0058u, 0u);
-        return;
-    }
     ram16be_set(0x0468u, ref_period);
     doubled_period = (bua_u16)(ref_period << 1);
     q = bua_fractional_divide(307u, doubled_period);
@@ -3211,9 +3204,6 @@ static void bua_compute_dwell_12p5ms(void)
     bua_u8 load_delta;
     bua_u8 batt_deficit;
     ref_period = ram16be_get(REF_PERIOD_ADDR);
-    /* Simulator-only invalid capture sentinel, also used by RPM. */
-    if (ref_period == 0u || ref_period == 0xFFFFu)
-        return;
     dynamic = ram16be_get(DYNAMIC_DWELL_ADDR);
     /* LCEB3..LCECB. A is intentionally $FF before the 8-bit load
      * subtraction. A sufficiently large positive load step therefore

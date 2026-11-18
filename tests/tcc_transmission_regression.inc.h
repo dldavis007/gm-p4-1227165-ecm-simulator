@@ -261,60 +261,10 @@ static void run_step68_tcc_nv_test(void)
  * ratio/delay qualification is satisfied.  This helper preserves that branch
  * without assigning stronger gear semantics to b4 than the executable proves.
  * -------------------------------------------------------------------------- */
-#define STEP69_PASSBY_TPS_MIN       255u
-#define STEP69_PASSBY_VSS_MIN       28u
-#define STEP69_PASSBY_VSS_MAX       32u
-#define STEP69_PASSBY_RPM25_MIN     255u
-#define STEP69_PASSBY_DELAY         65535u
-#define STEP69_PASSBY_HOLD          240u
-#define STEP69_PASSBY_NOISE_BIT     0x08u
 #define STEP69_OD_BRANCH_BIT        0x10u
 #define STEP69_OD_NV_THRESHOLD      35u
 #define STEP69_FIRST_DELAY          0u
 #define STEP69_DOWN_INHIBIT         0u
-typedef struct BuaPassby69 {
-    bua_u16 delay;
-    bua_u16 hold;
-    bua_u8 status37;
-    bua_u8 minor36;
-    bua_u8 mode04;
-    bua_u16 output_counter;
-} BuaPassby69;
-static bua_u8 bua_passby_quals69(bua_u8 tps,bua_u8 mph,bua_u8 rpm25)
-{
-    if(tps<STEP69_PASSBY_TPS_MIN) return 0u;
-    if(mph<=STEP69_PASSBY_VSS_MIN) return 0u;
-    if(mph>STEP69_PASSBY_VSS_MAX) return 0u;
-    if(rpm25<STEP69_PASSBY_RPM25_MIN) return 0u;
-    return 1u;
-}
-static void bua_passby_tick69(BuaPassby69 *s,bua_u8 tps,bua_u8 mph,
-                              bua_u8 rpm25,bua_u16 delay_cal)
-{
-    if(s->hold!=0u) {
-        --s->hold;
-        if(s->hold==0u) {
-            s->mode04=(bua_u8)(s->mode04|0x81u);
-            s->minor36=(bua_u8)(s->minor36&~STEP69_PASSBY_NOISE_BIT);
-            return;
-        }
-        s->output_counter=STEP67_TCC_OUTPUT_ON;
-        s->status37=(bua_u8)(s->status37|STEP67_TCC_STATUS_BIT);
-        s->minor36=(bua_u8)(s->minor36|STEP69_PASSBY_NOISE_BIT);
-        return;
-    }
-    if(!bua_passby_quals69(tps,mph,rpm25)) {
-        s->delay=0u;
-        return;
-    }
-    /* Exact unsigned CPX/BHI decision: start hold only if delay > calibration. */
-    if(s->delay>delay_cal) {
-        s->hold=STEP69_PASSBY_HOLD;
-        s->delay=0u;
-        return;
-    }
-    s->delay=(bua_u16)(s->delay+1u);
-}
 typedef struct BuaOdNv69 {
     bua_u8 mode04;
     bua_u8 first_delay;
@@ -348,13 +298,13 @@ static void run_step69_tcc_passby_test(void)
     S69(bua_passby_quals69(255u,28u,255u)==0u);
     S69(bua_passby_quals69(255u,33u,255u)==0u);
     p.delay=65535u;
-    bua_passby_tick69(&p,255u,29u,255u,STEP69_PASSBY_DELAY);
+    bua_passby_tick69(&p,255u,29u,255u,124u,STEP69_PASSBY_DELAY);
     S69(p.delay==0u); S69(p.hold==0u);
     /* Regression-only smaller delay proves the dormant branch arithmetic. */
     memset(&p,0,sizeof(p)); p.delay=4u;
-    bua_passby_tick69(&p,255u,29u,255u,3u);
+    bua_passby_tick69(&p,255u,29u,255u,124u,3u);
     S69(p.hold==240u); S69(p.delay==0u);
-    bua_passby_tick69(&p,255u,29u,255u,3u);
+    bua_passby_tick69(&p,255u,29u,255u,124u,3u);
     S69((p.status37&STEP67_TCC_STATUS_BIT)!=0u);
     S69(p.output_counter==STEP67_TCC_OUTPUT_ON);
     memset(&o,0,sizeof(o)); o.mode04=STEP68_MODE_OD_ACTIVE;

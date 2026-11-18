@@ -51,9 +51,80 @@ static void bua_slow_o2_filter_12p5ms(void)
                                    O2_FILTERED_FAST, final_coef));
     ++stats.slow_o2_filter_calls;
 }
-/* LCD4B..LCDDD: reference qualification / engine-running portion of the
- * even 12.5-ms spark path.  Spark-feedback, stall-saver hardware writes,
- * and the later dwell/spark tables remain for subsequent translation. */
+#define STEP69_PASSBY_TPS_MIN       255u
+#define STEP69_PASSBY_VSS_MIN       28u
+#define STEP69_PASSBY_VSS_MAX       32u
+#define STEP69_PASSBY_RPM25_MIN     255u
+#define STEP69_PASSBY_DELAY         65535u
+#define STEP69_PASSBY_HOLD          240u
+#define STEP69_PASSBY_NOISE_BIT     0x08u
+typedef struct BuaPassby69 {
+    bua_u16 delay;
+    bua_u16 hold;
+    bua_u8 status37;
+    bua_u8 minor36;
+    bua_u8 mode04;
+    bua_u16 output_counter;
+} BuaPassby69;
+static bua_u8 bua_passby_quals69(bua_u8 tps,bua_u8 mph,bua_u8 rpm25)
+{
+    if(tps<STEP69_PASSBY_TPS_MIN) return 0u;
+    if(mph<=STEP69_PASSBY_VSS_MIN) return 0u;
+    if(mph>STEP69_PASSBY_VSS_MAX) return 0u;
+    if(rpm25<STEP69_PASSBY_RPM25_MIN) return 0u;
+    return 1u;
+}
+/* LCF1A..LCF85. Return true for every commanded MPU write, including
+ * repeated writes of the same value while the hold timer runs. */
+static int bua_passby_tick69(BuaPassby69 *s, bua_u8 tps, bua_u8 mph,
+                             bua_u8 rpm25, bua_u8 battery, bua_u16 delay_cal)
+{
+    if (s->hold) {
+        if (--s->hold == 0u) {
+            s->mode04 |= 0x81u;
+            s->minor36 &= (bua_u8)~STEP69_PASSBY_NOISE_BIT;
+            return 0;
+        }
+    } else {
+        if (!bua_passby_quals69(tps, mph, rpm25)) {
+            s->delay = 0u;
+            return 0;
+        }
+        if (s->delay <= delay_cal) {
+            ++s->delay;
+            return 0;
+        }
+        s->hold = STEP69_PASSBY_HOLD;
+        s->delay = 0u;
+    }
+    if (battery >= 171u)
+        return 0;
+    s->output_counter = 0xDFFFu;
+    s->status37 |= 0x20u;
+    s->minor36 |= STEP69_PASSBY_NOISE_BIT;
+    return 1;
+}
+
+static void bua_passby_service(void)
+{
+    BuaPassby69 s;
+    s.delay = ram16be_get(0x123u);
+    s.hold = ram16be_get(0x125u);
+    s.status37 = RAM8(0x37u);
+    s.minor36 = RAM8(0x36u);
+    s.mode04 = RAM8(4u);
+    if (bua_passby_tick69(&s, TPS_LOAD_AXIS, VSS_MPH_HI, RPM_DIV25,
+                          BATTERY_AD, STEP69_PASSBY_DELAY))
+        mpu16be_set(0x3FD6u, s.output_counter);
+    ram16be_set(0x123u, s.delay);
+    ram16be_set(0x125u, s.hold);
+    RAM8(0x37u) = s.status37;
+    RAM8(0x36u) = s.minor36;
+    RAM8(4u) = s.mode04;
+}
+
+static void bua_tps_accel_trigger(void);
+
 static void bua_running_spark_12p5ms(void)
 {
     bua_u8 load, main_raw, cool_raw, highway, hot, test, magnitude;
@@ -61,6 +132,7 @@ static void bua_running_spark_12p5ms(void)
     bua_calculate_rpm_from_reference();
     bua_stall_saver_update(RAM8(0x58u), RAM8(0x5Au));
     bua_compute_dwell_12p5ms();
+    bua_passby_service();
     load = FILTERED_LOAD;
     if ((MODE_WORD1 & 0x40u) == 0u) {
         if (COOLANT >= 113u || (COOLANT >= STARTUP_COOLANT &&
@@ -83,11 +155,17 @@ static void bua_running_spark_12p5ms(void)
     test = bua_knock_test_spark_eval(hot);
     bua_spark_sum_ld096(main_raw, cool_raw, highway, hot, test,
                         bua_aldl_added_spark_eval(), bua_startup_spark_sum_byte());
+    bua_tps_accel_trigger(); /* LD0D1 calls LFA1E before sampling knock. */
     counter = mpu16be_get(0x3FCAu);
     delta = (bua_u16)(counter - ram16be_get(0xA1u));
     ram16be_set(0xA1u, counter);
     bua_knock_attack_eval(delta > 255u ? 255u : (bua_u8)delta);
     bua_spark_relative_to_reference_pre_mode4();
+    if (delta != 0u) { /* LD16D consumes the saved knock-event count. */
+        if (MODE_WORD2 & MODE2_ERR43_TEST_BIT)
+            MODE_WORD2 = (bua_u8)((MODE_WORD2 & ~MODE2_ERR43_TEST_BIT) | 0x40u);
+        MODE_WORD2 &= (bua_u8)~MODE2_ERR43_FAIL_BIT;
+    }
     magnitude = bua_spark_mode4_blend_ld192();
     bua_spark_timing_output_ld1f6(magnitude);
     bua_est_output_finish_ld25x();

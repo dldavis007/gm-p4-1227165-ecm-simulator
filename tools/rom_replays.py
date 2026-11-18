@@ -220,6 +220,36 @@ SLICES.extend([
 ])
 
 
+# LCD4B takes one reference sample through RPM, dwell, TCC pass-by,
+# spark advance, knock, timing output and the final FMD read.
+SPARK_CASES = [
+    ("zero reference capture", {0x96: 0}),
+    ("maximum reference capture", {0x95: 255, 0x96: 255}),
+    ("hot restart at cranking speed", {0x5B: 210, 0x5F: 210, 0x63: 250, 0x95: 7, 0x96: 208, 0xA5: 200}),
+    ("high RPM dwell margin", {0x96: 100, 0x7E: 60}),
+    ("highway qualification", {0: 0, 0xA6: 10}),
+    ("qualified highway advance", {0xA6: 11}),
+    ("warm load and coolant clamps", {0x63: 220, 0x5B: 220}),
+    ("hot restart active", {0x5F: 180, 0x1B: 24}),
+    ("hot restart expires", {0x5F: 180, 0x1B: 25}),
+    ("stall hysteresis falling", {0x95: 11, 0x96: 150, 0x58: 41, 0x5A: 50}),
+    ("spark diagnostic override", {0x41: 128, 0x35: 36}),
+    ("power enrichment knock limit", {0x43: 32, 0xA5: 250, 0xA1: 255}),
+    ("knock diagnostic pulse", {0x30: 4, 2: 1, 0x5B: 190, 0xA2: 250}),
+    ("pass-by counter increment", {0x82: 255, 0x65: 29, 0x124: 4}),
+    ("pass-by counter wrap", {0x82: 255, 0x65: 32, 0x123: 255, 0x124: 255}),
+    ("pass-by speed too high", {0x82: 255, 0x65: 33, 0x124: 4}),
+    ("pass-by hold active", {0x126: 3}),
+    ("pass-by high voltage", {0x126: 2, 0x7E: 171}),
+    ("pass-by hold expires", {0x126: 1, 0x36: 8}),
+]
+for name, overrides in SPARK_CASES:
+    inputs = {0x34: 128, 0x35: 4, 0x95: 0, 0x96: 150, 0x5B: 150,
+              0x63: 80, 0x7E: 126, 1: 64}
+    inputs.update(overrides)
+    SLICES.append((name, "tick", 0xCD4B, 0xD36A, inputs))
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -265,6 +295,37 @@ def slices(make_cpu, rom, lib):
             failures.append(str(err))
     if failures:
         raise AssertionError("\n".join(failures))
+
+
+def passby_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    # LC29C is $FFFF. A seeded hold exercises the countdown independently
+    # of the stock qualification timer, which wraps before it can start one.
+    for addr, value in {0x34: 128, 0x95: 0, 0x96: 150, 0x65: 29,
+                        0x82: 255, 0x126: 3, 0x5B: 190}.items():
+        ram[addr] = cpu.mem[addr] = value
+    writes = []
+
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for tick, battery in enumerate((171, 170, 170, 170), 1):
+        ram[0x7E] = cpu.mem[0x7E] = battery
+        ram[0x35] = cpu.mem[0x35] = 4
+        cpu.pc, cpu.sp = 0xCD4B, 0x1FF
+        writes.clear()
+        assert cpu.run(until_pc=0xD36A, max_steps=5000) == "until_pc"
+        lib.probe_tick()
+        label = f"pass-by hold tick {tick}"
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        tcc = [(a, v) for a, v in writes if a in (0x3FD6, 0x3FD7)]
+        assert tcc == ([(0x3FD6, 0xDF), (0x3FD7, 0xFF)] if tick == 2 else []), label
+        assert ram[0x126] == max(3 - tick, 0), label
+    assert ram[4] & 0x81 == 0x81 and ram[0x124] == 1
+    print("TCC hold: voltage inhibit, lock write, expiry and requalification matched")
 
 
 def warm_fuel_cycle(cpu, rom, lib):
