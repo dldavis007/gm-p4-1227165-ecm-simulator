@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import segments, slices, serial, reset_vector, attach_spi
+from rom_replays import diagnostic_transitions, segments, slices, serial, reset_vector, attach_spi
 
 
 class BuaCPU(HC11):
@@ -245,6 +245,7 @@ if __name__ == "__main__":
                         help="check ordered MPU writes and fuel/FMD/serial state")
     parser.add_argument("--trace-tick", type=int, help="show ROM stores to differing RAM bytes")
     parser.add_argument("--coverage", action="store_true", help="report unique executed instruction starts by listing region")
+    group.add_argument("--faults", action="store_true", help="replay diagnostic qualification transitions")
     group.add_argument("--segments", action="store_true")
     group.add_argument("--reset-vector", action="store_true")
     args = parser.parse_args()
@@ -266,11 +267,12 @@ if __name__ == "__main__":
             "drive": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick),
             "road": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick, road=True),
             "reset": lambda lib: reset_vector(BuaCPU(), ROM.read_bytes(), lib),
+            "faults": lambda lib: diagnostic_transitions(BuaCPU, ROM.read_bytes(), lib),
             "targeted": lambda lib: (segments(BuaCPU, ROM.read_bytes(), lib),
                                      slices(BuaCPU, ROM.read_bytes(), lib),
                                      serial(BuaCPU, ROM.read_bytes(), lib)),
         }
-        selected = ("reset" if args.reset_vector else "targeted" if args.segments
+        selected = ("faults" if args.faults else "reset" if args.reset_vector else "targeted" if args.segments
                     else "road" if args.road_irq else "drive" if args.drive_irq else "stopped" if args.full_irq else "spark")
         for name in scenarios if args.all else [selected]:
             # A separate loaded image gives every scenario fresh C static state.

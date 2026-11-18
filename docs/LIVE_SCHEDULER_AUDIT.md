@@ -94,10 +94,17 @@ at their ROM address. Repeated ticks do not increase the count.
 | Running spark and arithmetic, stopped, crank-to-idle | 3,000 | 45.47% |
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
-| Targeted segments, routine slices and SCI | 866 | 65.41% |
+| Diagnostic qualification and retained-code logging | 185 | 55.09% |
+| Targeted segments, routine slices and SCI | 863 | 68.17% |
 
-Of 6,598 listing instructions, 2,282 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $E4F7 (163), $E87A (152), $DA2D
+The suite executes all 275 instruction starts in the $E4F7 qualification routine.
+Run `--faults` to check the pre-latch and latch passes of nine faults, counter
+decay and inhibit paths, and single-pass Error 41 and 43 inputs. A separate
+52-service Segment D replay checks Error 21 persistence, retained checksum,
+and the active-low lamp command. Other input combinations remain untested.
+
+Of 6,598 listing instructions, 2,100 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $E87A (152), $DA2D
 (131) and $CDE6 (104). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 

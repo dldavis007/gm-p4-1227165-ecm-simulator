@@ -231,3 +231,84 @@ def serial(make_cpu, rom, lib):
         expected = [lib.probe_response(i) for i in range(lib.probe_response_length())]
         assert tx == expected, (data[0], tx, expected)
         print(f"SCI Mode {data[0]}: {len(tx)} transmitted bytes matched")
+
+
+# Each row exercises the last counting pass and the first qualifying pass.
+# The last tuple is (latch address, mask). A fresh fixture isolates faults
+# which would otherwise inhibit one another in the same qualification chain.
+FAULT_TRANSITIONS = [
+    (13, {0x1B: 120, 0x6F: 100, 0x3F: 16, 0x5B: 147, 0x82: 14, 0xAA: 30}, (0x4C, 0x40)),
+    (21, {0x81: 129, 0xB6: 11, 0xA7: 20}, (0x4C, 0x04)),
+    (24, {0x3F: 8, 0x56: 41, 0x37: 0, 0x82: 0, 0x63: 0, 0xAB: 2}, (0x4D, 0x80)),
+    (32, {0x2E: 32, 0x5B: 173, 0x112: 134, 0x82: 16, 0xAE: 10}, (0x4D, 0x08)),
+    (33, {0x7F: 101, 0xB6: 46, 0xB0: 8}, (0x4D, 0x04)),
+    (34, {0x56: 24, 0x82: 16, 0xB5: 1}, (0x4D, 0x02)),
+    (42, {0x34: 64, 0x56: 5, 0x36: 0}, (0x01, 0x80)),
+    (44, {0x3F: 8, 0x44: 128, 0x73: 44, 0xA8: 20}, (0x4E, 0x08)),
+    (45, {0x3F: 8, 0x44: 128, 0x73: 159, 0x82: 6, 0xA9: 50}, (0x4E, 0x04)),
+]
+
+
+def diagnostic_transitions(make_cpu, rom, lib):
+    def fixture(inputs):
+        cpu = make_cpu()
+        ram, _, _ = hardware(cpu, rom, lib)
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        cpu.timer_writes = []
+
+        def write(addr, value):
+            cpu.mem[addr] = value
+            cpu.timer_writes.append((addr, value))
+
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        return cpu, ram
+
+    def service(cpu, label, segment=False):
+        cpu.timer_writes.clear()
+        cpu.sp = 0x1FF
+        entry = cpu.read16(0xCCE4 + 2 * 13) if segment else 0xE4F7
+        cpu.call(entry, max_steps=3000)
+        assert cpu.pc == 0xFFFE, label
+        if segment:
+            lib.probe_major(13)
+        else:
+            lib.probe_qualification()
+        check_state(label, cpu, lib)
+        assert cpu.timer_writes == ordered_writes(lib), (label, cpu.timer_writes, ordered_writes(lib))
+
+    for code, inputs, (address, mask) in FAULT_TRANSITIONS:
+        cpu, ram = fixture(inputs)
+        assert not ram[address] & mask
+        for count in (1, 2):
+            label = f"Error {code}, qualification pass {count}"
+            service(cpu, label)
+            assert bool(ram[address] & mask) == (count == 2), label
+        print(f"Error {code}: latched on the second qualifying service")
+
+    # Recovery, one-shot inputs, and the two lower saturation boundaries.
+    for name, inputs, expected in [
+        ("O2 low-load decay", {0x41:64, 0x6F:100, 0x3F:16, 0x5B:147, 0xAA:2}, {0xAA:1}),
+        ("EGR timer decay", {0x2E:32, 0x5B:173, 0xAF:3}, {0xAF:1}),
+        ("EGR timer floor", {0x2E:32, 0x5B:173, 0xAF:1}, {0xAE:0, 0xAF:0}),
+        ("Error 41 pulse", {0x40:1}, {0x40:0, 0x4E:0x40}),
+        ("EST recovery", {0x34:64, 0x56:5, 0x3F:1, 0xB4:1}, {0x3F:0, 0xB4:0}),
+        ("Error 43 knock input", {0x3B:32}, {0x4E:16}),
+        ("rich O2 at low TPS", {0x44:128, 0x73:159, 0x82:5, 0xA9:50}, {0xA9:0}),
+    ]:
+        cpu, ram = fixture(inputs)
+        service(cpu, name)
+        for addr, value in expected.items():
+            assert ram[addr] == value, (name, hex(addr), ram[addr], value)
+        print(f"{name}: RAM and MPU matched")
+
+    # Keep the two machines independent through qualification, confirmation,
+    # retained-code checksum and the service-engine lamp transition.
+    cpu, ram = fixture({0x34:128, 0x81:129, 0xA7:20, 0xB6:11})
+    for count in range(1, 53):
+        label = f"Segment D high TPS, pass {count}"
+        service(cpu, label, segment=True)
+        assert bool(ram[5] & 4) == (count == 52), label
+        assert bool(cpu.mem[0x3FFD] & 8) == (count < 52), label
+    assert ram[0x18] * 256 + ram[0x19] == 1 + sum(ram[5:10])
+    print("Segment D: retained Error 21, checksum and lamp matched over 52 services")

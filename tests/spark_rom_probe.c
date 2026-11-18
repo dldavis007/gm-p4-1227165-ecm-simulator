@@ -60,6 +60,8 @@ int probe_product(unsigned int a, unsigned int b)
     return bua_mul_u16_u16_lf2f0((bua_u16)a, (bua_u16)b, 0);
 }
 
+void probe_qualification(void) { count = 0; bua_diag_qualification_step108(); }
+
 void probe_major(unsigned int segment)
 {
     count = 0;
