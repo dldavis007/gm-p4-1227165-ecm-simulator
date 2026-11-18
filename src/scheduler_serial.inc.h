@@ -54,6 +54,45 @@ static void bua_slow_o2_filter_12p5ms(void)
 /* LCD4B..LCDDD: reference qualification / engine-running portion of the
  * even 12.5-ms spark path.  Spark-feedback, stall-saver hardware writes,
  * and the later dwell/spark tables remain for subsequent translation. */
+static void bua_running_spark_12p5ms(void)
+{
+    bua_u8 load, main_raw, cool_raw, highway, hot, test, magnitude;
+    bua_u16 counter, delta;
+    bua_calculate_rpm_from_reference();
+    bua_stall_saver_update(RAM8(0x58u), RAM8(0x5Au));
+    bua_compute_dwell_12p5ms();
+    load = FILTERED_LOAD;
+    if ((MODE_WORD1 & 0x40u) == 0u) {
+        if (COOLANT >= 113u || (COOLANT >= STARTUP_COOLANT &&
+            COOLANT - STARTUP_COOLANT >= 27))
+            RAM8(0x3Bu) |= 0x40u;
+        load = 208u;
+    }
+    main_raw = bua_lookup_main_spark_raw(RPM_SPECIAL, load > 208u ? 208u : load);
+    cool_raw = bua_lookup_coolant_spark_raw(COOLANT, FILTERED_LOAD);
+    highway = bua_highway_spark_eval(FILTERED_LOAD, COOLANT, RPM_SPECIAL,
+                                     RAM8(0), RAM8(0xA6u), &RAM8(0xA6u));
+    hot = bua_hot_restart_retard_eval(MODE_WORD1, STARTUP_COOLANT,
+                                      RAM8(0x1Bu), &MODE_WORD1);
+    RAM8(0x045Du) = main_raw;
+    RAM8(0x045Eu) = cool_raw;
+    RAM8(0x045Fu) = highway;
+    RAM8(0x0460u) = hot;
+    RAM8(0x3Au) = (bua_u8)((RAM8(0x3Au) & 0xCFu) |
+                       (highway ? 0x10u : 0u) | (hot ? 0x20u : 0u));
+    test = bua_knock_test_spark_eval(hot);
+    bua_spark_sum_ld096(main_raw, cool_raw, highway, hot, test,
+                        bua_aldl_added_spark_eval(), bua_startup_spark_sum_byte());
+    counter = mpu16be_get(0x3FCAu);
+    delta = (bua_u16)(counter - ram16be_get(0xA1u));
+    ram16be_set(0xA1u, counter);
+    bua_knock_attack_eval(delta > 255u ? 255u : (bua_u8)delta);
+    bua_spark_relative_to_reference_pre_mode4();
+    magnitude = bua_spark_mode4_blend_ld192();
+    bua_spark_timing_output_ld1f6(magnitude);
+    bua_est_output_finish_ld25x();
+    (void)bua_read_fmd_byte2();
+}
 static void bua_reference_state_12p5ms(void)
 {
     bua_u16 ref_period;
@@ -67,6 +106,7 @@ static void bua_reference_state_12p5ms(void)
         ref_period >= CAL_STARTUP_REF_PERIOD) {
         MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
         STARTUP_COUNTER = 0u;
+        bua_low_rpm_spark_reset_ld306();
         return;
     }
     if ((MINOR_MODE_WORD2 & REF_SEEN_BIT) != 0u) {
@@ -82,25 +122,29 @@ static void bua_reference_state_12p5ms(void)
         if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) == 0u) {
             if ((IGN_MODE_WORD & SECOND_REF_VALID_BIT) == 0u) {
                 IGN_MODE_WORD |= SECOND_REF_VALID_BIT;
+                bua_low_rpm_spark_reset_ld306();
                 return;
             }
             if (STARTUP_COUNTER < CAL_STARTUP_LOOPS) {
                 STARTUP_COUNTER = (bua_u8)(STARTUP_COUNTER + 1u);
+                bua_low_rpm_spark_reset_ld306();
                 return;
             }
             ENGINE_MODE_WORD |= ENGINE_RUNNING_BIT;
             RAM8(0x003Bu) &= (bua_u8)~0x02u;
             RAM8(0x00B0u) = 0u;
+            if ((IGN_MODE_WORD & 0x10u) == 0u && ram16be_get(0xEFu) < 85u)
+                RAM8(0x3Fu) |= 0x40u;
             RAM8(0x0001u) |= 0x08u;
             ++stats.engine_run_transitions;
         }
         /* LCDDD is reached after startup qualification as well as during
          * ordinary running.  The RPM calculation is therefore an every-even-
-         * loop operation once ENGINE RUNNING is set, not only a new-edge task. */
+         * loop operation once ENGINE RUNNING is set. period_valid is a
+         * simulator-only guard until the host has captured two edges. */
         if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u &&
             sim_ecm_ref.period_valid != 0u) {
-            bua_calculate_rpm_from_reference();
-            bua_compute_dwell_12p5ms();
+            bua_running_spark_12p5ms();
         }
         return;
     }
@@ -109,15 +153,17 @@ static void bua_reference_state_12p5ms(void)
      * but deliberately do not invent the interrupt-side recovery yet. */
     if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u) {
         if (NO_REF_MINOR_COUNT >= CAL_NO_REF_WAIT_LOOPS) {
+            mpu16be_set(0x3FC0u, 0xFFFFu);
             ++stats.reference_wait_events;
             bua_vector_note_swi_step119(0xCDCDu);
             return;
         }
         NO_REF_MINOR_COUNT = (bua_u8)(NO_REF_MINOR_COUNT + 1u);
         if (sim_ecm_ref.period_valid != 0u) {
-            bua_calculate_rpm_from_reference();
-            bua_compute_dwell_12p5ms();
+            bua_running_spark_12p5ms();
         }
+    } else {
+        bua_low_rpm_spark_reset_ld306();
     }
 }
 static void spark_vss_12p5ms(void)

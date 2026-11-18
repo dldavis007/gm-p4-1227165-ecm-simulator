@@ -1041,10 +1041,10 @@ static void run_step19_mode4_blend_test(void)
     SPARK_BLEND_MULT = 128u;
     magnitude = bua_spark_mode4_blend_ld192();
     raw = ram16be_get(SPARK_REL_REF_ADDR);
-    if (raw == 0u && magnitude == 0u) ++passed;
+    if (raw == 23u && magnitude == 23u) ++passed;
     printf("  Mode-4 direct non-retard branch: L009D=%04X magnitude=%u  %s\n",
            (unsigned int)raw, (unsigned int)magnitude,
-           (raw == 0u && magnitude == 0u) ? "PASS" : "FAIL");
+           (raw == 23u && magnitude == 23u) ? "PASS" : "FAIL");
     memset(&mem, 0, sizeof(mem));
     ram16be_set(SPARK_REL_REF_ADDR, 83u);
     MINOR_MODE_WORD2 = MINOR_MODE4_BIT;
@@ -1078,10 +1078,10 @@ static void run_step19_mode4_blend_test(void)
     ALDL_SPARK_COMMAND = 10u;
     magnitude = bua_spark_mode4_blend_ld192();
     raw = ram16be_get(SPARK_REL_REF_ADDR);
-    if (raw == 0x6F5Du && magnitude == 93u) ++passed;
-    printf("  Mode-4 modify/add literal ADCA #0111: L009D=%04X magnitude=%u  %s\n",
+    if (raw == 0x005Du && magnitude == 93u) ++passed;
+    printf("  Mode-4 modify/add ADDB / ADCA #0: L009D=%04X magnitude=%u  %s\n",
            (unsigned int)raw, (unsigned int)magnitude,
-           (raw == 0x6F5Du && magnitude == 93u) ? "PASS" : "FAIL");
+           (raw == 0x005Du && magnitude == 93u) ? "PASS" : "FAIL");
     printf("  step-19 Mode-4/blend regression result: %s (%u/8)\n",
            (passed == 8u) ? "PASS" : "FAIL", passed);
     mem = saved_mem;

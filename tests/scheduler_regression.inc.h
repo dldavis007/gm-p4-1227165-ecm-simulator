@@ -523,8 +523,9 @@ static void run_step98_injector_bookkeeping_test(void)
                  stats.running_injector_bookkeeping==10u && RAM8(0x018Du)==10u,
                  "all ten physical services clock one common and one running bookkeeping pass");
     STEP98_CHECK(ram16be_get(0x0010u)==90u &&
-                 ram16be_get(STARTUP_SPARK_DELAY_ADDR)==90u,
-                 "ten services decrement both startup delays by ten, independent of IRQ count");
+                 (SPARK_MODE_WORD & SPARK_BLEND_BIT) != 0u &&
+                 ram16be_get(STARTUP_SPARK_DELAY_ADDR)==100u,
+                 "ten services decrement the fuel delay while live EST blending holds the spark delay");
     printf("  step-98 injector-bookkeeping regression result: %s (%u/%u)\n",
            (passed==total)?"PASS":"FAIL",passed,total);
 #undef STEP98_CHECK
