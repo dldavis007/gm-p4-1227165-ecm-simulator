@@ -2,7 +2,8 @@
 
 The [live scheduler audit](LIVE_SCHEDULER_AUDIT.md) supersedes the Step-171
 whole-image assessment. Running spark has a passing ROM differential. Full
-IRQ replay finds outstanding RAM and MPU differences. The sections below
+IRQ replay matches ordered MPU writes in both test scenarios. Internal RAM
+differences remain. The sections below
 describe the earlier behavioral-port milestones.
 
 ## What this establishes

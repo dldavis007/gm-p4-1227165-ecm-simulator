@@ -44,6 +44,43 @@ static void segB_egr(void)
     RAM8(0x0112u)=r.pw112;
 }
 
+/* LE816..LE879: pump diagnostics and injector voltage compensation. */
+static const bua_u8 cal_injector_voltage_offset[17] =
+    {21,21,21,227,227,95,59,41,30,21,16,11,10,8,7,6,5};
+static void bua_update_injector_voltage_offset(void)
+{
+    bua_u8 mode = RAM8(0x40u);
+    bua_u8 pump = hw_adc(0x60u);
+    bua_u8 timer;
+    RAM8(0x7Fu) = pump;
+    if (!(mode & 0x10u) && (mode & 8u) && RAM8(0x7Eu) >= 20u) {
+        if (mode & 0x40u) {
+            if (ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) {
+                if (pump < 20u) {
+                    RAM8(0x4Fu) |= 0x20u;
+                    mode |= 0x20u;
+                } else {
+                    mode &= (bua_u8)~0x20u;
+                }
+            }
+        } else {
+            timer = (bua_u8)(RAM8(0x80u) + 1u);
+            if (timer) RAM8(0x80u) = timer;
+            if (timer >= 15u)
+                mode |= 0x10u;
+            else if (pump >= 20u)
+                mode = (bua_u8)((mode | 0x40u) & ~0x20u);
+        }
+    }
+    if (mode & 0x10u) {
+        RAM8(0x4Fu) |= 0x20u;
+        mode |= 0x20u;
+    }
+    RAM8(0x40u) = (bua_u8)((mode & 0xF3u) | ((mode & 4u) << 1));
+    RAM8(0xCBu) = bua_lookup_spacing16(cal_injector_voltage_offset, 17u,
+                                       (mode & 0x20u) ? RAM8(0x7Eu) : pump);
+}
+
 static void segC_canister_purge(void)
 {
     BuaPurge83 c;
@@ -61,6 +98,7 @@ static void segC_canister_purge(void)
     RAM8(0x003Bu)=c.status3b;
     RAM8(0x0113u)=c.pw113;
     RAM8(0x0114u)=c.min114;
+    bua_update_injector_voltage_offset();
 }
 
 /* Step 128: make the explicit hardware abstraction boundary part of the

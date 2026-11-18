@@ -140,8 +140,7 @@ static bua_u8 bua_iac_move_to_park_step111(bua_u8 position)
         magnitude=(bua_u8)(position-STEP111_IAC_PARK_POSITION);
         if(magnitude>127u)
             magnitude=127u;
-        if(magnitude!=0u)
-            magnitude=(bua_u8)(magnitude|0x80u);
+        magnitude=(bua_u8)(magnitude|0x80u);
         return magnitude;
     }
     return (bua_u8)(STEP111_IAC_PARK_POSITION-position);

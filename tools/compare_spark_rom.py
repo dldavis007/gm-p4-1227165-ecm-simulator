@@ -18,6 +18,8 @@ def compare(lib):
     lib.probe_ram.restype = ctypes.POINTER(ctypes.c_ubyte)
     lib.probe_mpu.restype = ctypes.POINTER(ctypes.c_ubyte)
     ram, mpu = lib.probe_ram(), lib.probe_mpu()
+    for a, b in [(445, 735), (445, 288), (445, 295), (128, 1), (65535, 65535)]:
+        assert cpu.call(0xF2F0, d=a, x=b).d == lib.probe_product(a, b)
     for old in [0, 0x1234, 0xFFFF]:
         for value in [0, 123, 255]:
             for coef in [0, 1, 127, 128, 255]:
@@ -79,7 +81,7 @@ def compare(lib):
     print(f"{tick} running spark ticks matched RAM and ordered MPU writes")
 
 
-def compare_irq(lib):
+def compare_irq(lib, drive=False, check_outputs=False):
     """Diagnostic full scheduler comparison, reporting detail on the first unequal tick."""
     cpu = HC11()
     cpu.load(ROM.read_bytes(), 0xC000)
@@ -110,7 +112,11 @@ def compare_irq(lib):
         cpu.mem[addr] = value
     cpu.on_write(0x3FC0, 0x3FFF, log_write)
     failed = 0
-    for tick in range(1, 33):
+    output_failures = 0
+    state_failures = 0
+    running = [None, None]
+    injection_count = 0
+    for tick in range(1, 257 if drive else 33):
         writes.clear()
         # The two serial cell interrupts return to the wait loop before the
         # next minor-loop interrupt. Execute their ROM bodies when armed.
@@ -120,16 +126,41 @@ def compare_irq(lib):
                 cpu.write16(0x1FE, 0xCCC6)
                 if cpu.run(until_pc=0xCCC6, max_steps=20000) != "until_pc":
                     raise SystemExit(f"serial IRQ stopped at ${cpu.pc:04X}")
+        if drive:
+            # Both implementations receive the same peripheral stimulus. Only
+            # host-generated capture/events cross over, never computed ECM RAM.
+            lib.probe_rpm(0 if tick <= 32 else (300 if tick <= 96 else 1100))
+            cpu.mem[0x3FF8:0x3FFA] = (2000).to_bytes(2, "big")  # valid VATS period
+            mpu = lib.probe_mpu()
+            mpu[0x38], mpu[0x39] = divmod(2000, 256)
+        lib.probe_irq()
+        if drive:
+            injections = lib.probe_injections()
+            cpu.mem[0x3FFA] = 8 * lib.probe_reference_seen() | (64 if injections != injection_count else 0)
+            injection_count = injections
+            cpu.mem[0x3FC0:0x3FC2] = lib.probe_capture().to_bytes(2, "big")
         cpu.pc, cpu.sp = cpu.read16(0xFFF2), 0x1F6
         reason = cpu.run(until_pc=0xCCC6, max_steps=20000)
         if reason != "until_pc":
             raise SystemExit(f"IRQ {tick}: ROM stopped at ${cpu.pc:04X} ({reason})")
-        lib.probe_irq()
+        for i, flags in enumerate((cpu.mem[0x34], ram[0x34])):
+            if flags & 128 and running[i] is None:
+                running[i] = tick
         diffs = [(i, cpu.mem[i], ram[i]) for i in range(0x500)
                  if not 0x1C0 <= i <= 0x1FF and cpu.mem[i] != ram[i]]
         actual = [(lib.probe_address(i), lib.probe_value(i))
                   for i in range(lib.probe_trace_size())]
+        if writes != actual:
+            output_failures += 1
+            if output_failures == 1:
+                print(f"First unequal MPU writes at IRQ {tick}: ROM={writes}, C={actual}")
+        # Monitor the specific IRQ state covered by the output regression.
+        addresses = (0x46, 0xC2, 0xC3, 0xD9, 0xDA)
+        if any(cpu.mem[a] != ram[a] for a in addresses) or (cpu.mem[0x30] ^ ram[0x30]) & 0x80:
+            state_failures += 1
         if diffs or writes != actual:
+            if check_outputs:
+                continue
             print(f"IRQ {tick}: {len(diffs)} RAM differences, "
                   f"{len(writes)} ROM and {len(actual)} C MPU byte writes")
             failed += 1
@@ -139,17 +170,34 @@ def compare_irq(lib):
                 print(f"  ${addr:04X} ROM={rom:02X} C={model:02X}")
             if writes != actual:
                 print(f"  MPU writes ROM={writes}, C={actual}")
-    print(f"{failed} of {tick} full IRQ ticks differed")
-    if failed:
+    if not check_outputs:
+        print(f"{failed} of {tick} full IRQ ticks differed")
+    print(f"Ordered MPU writes matched on {tick - output_failures}/{tick} ticks")
+    if drive:
+        print(f"First running tick ROM={running[0]}, C={running[1]}")
+    print(f"Fuel state, FMD selector and serial flags matched on {tick - state_failures}/{tick} ticks")
+    if drive and (None in running or running[0] != running[1]):
+        raise SystemExit("engine running transition differed or was never observed")
+    failures = (output_failures + state_failures) if check_outputs else failed
+    if failures:
         raise SystemExit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--full-irq", action="store_true")
+    parser.add_argument("--drive-irq", action="store_true")
+    parser.add_argument("--check-outputs", action="store_true",
+                        help="check ordered MPU writes and fuel/FMD/serial state")
     args = parser.parse_args()
+    if args.check_outputs and not (args.full_irq or args.drive_irq):
+        parser.error("--check-outputs requires an IRQ scenario")
     with tempfile.TemporaryDirectory() as temp:
         bridge = Path(temp) / "probe.so"
         subprocess.run(["cc", "-std=c89", "-shared", "-fPIC",
                         str(ROOT / "tests/spark_rom_probe.c"), "-o", str(bridge)], check=True)
-        (compare_irq if args.full_irq else compare)(ctypes.CDLL(str(bridge)))
+        lib = ctypes.CDLL(str(bridge))
+        if args.full_irq or args.drive_irq:
+            compare_irq(lib, args.drive_irq, args.check_outputs)
+        else:
+            compare(lib)

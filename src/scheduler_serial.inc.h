@@ -1,8 +1,8 @@
+static void bua_write_lf92a(bua_u16 pulse_width);
 static void bua_common_maf_6p25ms(void);
 static void bua_common_tps_6p25ms(void);
 static void bua_common_injector_service_6p25ms(void);
 static void bua_odd_fuel_chain_12p5ms(void);
-static void bua_step94_fuel_state_reset(void);
 static void bua_odd_transient_front_12p5ms(void);
 static void bua_odd_50ms_tail_lddc2(void);
 static bua_u8 bua_ignition_shutdown_odd_step111(void);
@@ -171,7 +171,14 @@ static void spark_vss_12p5ms(void)
     ++stats.spark_vss_loops;
     bua_lcd05_diagnostic_merge();
     bua_slow_o2_filter_12p5ms();
+    if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) &&
+        (MINOR_MODE_WORD2 & REF_SEEN_BIT) == 0u &&
+        NO_REF_MINOR_COUNT >= CAL_NO_REF_WAIT_LOOPS) {
+        bua_reference_state_12p5ms();
+        return;
+    }
     bua_reference_state_12p5ms();
+    bua_write_lf92a(ram16be_get(0x00C2u));
     if(sim_legacy_ignition_shutdown_freeze==0u)
         bua_iac_shutdown_homing_even_step111();
 }
@@ -798,14 +805,12 @@ static void ecm_reset(void)
     sim_factory_fmd_byte2_117 = 0u;
     sim_factory_swi_reason117 = FACTORY117_SWI_NONE;
     sim_soft_powerdown_latched = 0u;
-    sim_timer8 = 0u;
     sim_iac_motor_on = 1u;
     sim_maf_adc = 128u;
     sim_o2_adc = 128u;
     sim_tps_adc = 35u;
     sim_diag_adc = 200u;
     bua_factory_reset_step118();
-    bua_step94_fuel_state_reset();
     sim_vss_abs_ticks = 0ul;
     sim_vss_next_edge = 0ul;
     sim_vss_capture_reg = 0u;
@@ -835,6 +840,67 @@ static void ecm_reset(void)
     bua_startup_apply_normal_step112();
     /* Cold reset leaves ENGINE RUNNING clear; LCD4B..LCD8F qualifies it. */
 }
+/* Finish the preceding cell's timer compares, then arm this minor loop. */
+static void bua_serial_timer_irq(bua_u32 tick)
+{
+    bua_u32 start = tick * SERIAL_T_CELL;
+    bua_u8 low;
+    if (SERIAL_MODE_WORD & SERIAL_FLAG_FIRST) {
+        mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 143u);
+        SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
+        {
+            int bit = bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
+            if (bit == 0 || (bit < 0 && ALCL_TABLE_INDEX != 0u))
+                bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+        }
+    }
+    if (SERIAL_MODE_WORD & SERIAL_FLAG_SECOND) {
+        mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);
+        SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_SECOND;
+        bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+        serial_line_high_at(start - SERIAL_T_CELL + SERIAL_T_SECOND);
+        if ((MINOR_MODE_WORD2 & 0x20u) && ALCL_TABLE_INDEX == 25u &&
+            ALCL_BIT_COUNT == 0u) {
+            RAM8(0x012Eu) = 9u;
+            SERIAL_MODE_WORD |= 4u;
+            mem.io4000[7] = 0x27u;
+            mpu16be_set(MPU_CPU_CONTROL_ADDR, mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u);
+        }
+    }
+    TIMER_SNAPSHOT = mem.io4000[6];
+    if (SERIAL_MODE_WORD & 4u) {
+        if ((SERIAL_MODE_WORD & 8u) || --RAM8(0x012Eu) != 0u) {
+            mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);
+            return;
+        }
+        SERIAL_MODE_WORD &= (bua_u8)~4u;
+    }
+    SERIAL_MODE_WORD |= SERIAL_FLAG_FIRST | SERIAL_FLAG_SECOND;
+    low = (bua_u8)mpu16be_get(MPU_CPU_CONTROL_ADDR);
+    bua_write_control_low((bua_u8)(low & 0xFBu));
+    serial_line_low_at(start);
+    mem.io4000[7] = 1u;
+    mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 11u);
+}
+/* LCB1D..LCB5A, VATS is enabled in the BUA calibration. */
+static void bua_vats_reference_check(void)
+{
+    bua_u16 capture, delta;
+    if (MODE_WORD3 & FUEL_VATS_OK_BIT)
+        return;
+    RAM8(7u) |= 2u;
+    ram16be_set(0x18u, bua_error_word_checksum_step113());
+    capture = mpu16be_get(0x3FF8u);
+    delta = (bua_u16)(capture - ram16be_get(0x121u));
+    if (delta != 0u) {
+        ram16be_set(0x121u, capture);
+        if (delta >= 1638u && delta <= 3277u) {
+            MODE_WORD3 |= FUEL_VATS_OK_BIT;
+            RAM8(7u) &= (bua_u8)~2u;
+            ram16be_set(0x18u, bua_error_word_checksum_step113());
+        }
+    }
+}
 static void irq_6p25ms(void)
 {
     bua_u8 count;
@@ -844,9 +910,31 @@ static void irq_6p25ms(void)
         bua_factory_irq_step117();
         return;
     }
+    bua_serial_timer_irq(stats.irq_ticks);
     ++stats.irq_ticks;
     sim_advance_dash_signals_6p25ms();
     sim_advance_ecm_reference_6p25ms();
+    RAM8(0xA0u) = sim_ecm_ref.injector_services_pending ? 0x40u : 0u;
+    if (sim_ecm_ref.pulse_since_irq) {
+        RAM8(0xA0u) |= 8u;
+        COLD_START_REF_COUNT = bua_cold_start_ref_count_step44(COLD_START_REF_COUNT,
+            ram16be_get(ENGINE_RUN_TIME_ADDR), TPS_LOAD_AXIS);
+        if ((SPARK_INPUT_MODE_WORD & EST_ENABLE_BIT) && !(RAM8(0x9Du) & 0x80u)) {
+            if (SPARK_BLEND_MULT > 253u) {
+                SPARK_BLEND_MULT = 255u;
+                SPARK_MODE_WORD &= (bua_u8)~SPARK_BLEND_BIT;
+            } else {
+                SPARK_BLEND_MULT += 2u;
+            }
+        }
+        if (!(RAM8(0x3Bu) & 2u) && !(ENGINE_MODE_WORD & ENGINE_RUNNING_BIT)) {
+            RAM8(0x3Bu) |= 2u;
+            RAM8(0x472u) = 0u;
+        }
+    }
+    if (IGN_MODE_WORD & 0x10u)
+        MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
+    bua_vats_reference_check();
     sim_advance_vss_6p25ms();
     bua_vss_capture_check_6p25ms();
     /* $CB5F..$CBB4 consumes the completed SCI mode before count dispatch. */
@@ -857,7 +945,7 @@ static void irq_6p25ms(void)
         count = 0u;
     }
     MINOR_COUNT = count;
-    TIMER_SNAPSHOT = hw_timer8();
+
     if(sim_normal_fmd_enabled!=0u)
         bua_normal_fmd_refresh_step158();
     /* LCC21 calls LF4DF before the odd/even minor-loop dispatch. */

@@ -539,7 +539,7 @@ static bua_u8 sim_legacy_mode4_lifecycle_freeze = 0u;
 /* HAL-visible endpoint corresponding to the source's software-interrupt loop. */
 static bua_u8 sim_soft_powerdown_latched = 0u;
 static bua_u8 sim_iac_motor_on = 1u;
-static bua_u8 sim_timer8;
+
 static bua_u8 sim_map2_adc = 0u;
 static bua_u8 sim_volt_adc = 128u;
 static bua_u8 sim_o2_adc = 128u;
@@ -1314,6 +1314,13 @@ static void mpu16be_set(bua_u16 a, bua_u16 v)
     mem.mpu[off] = (bua_u8)(v >> 8);
     mem.mpu[(bua_u16)(off + 1u)] = (bua_u8)v;
 }
+/* Shared LF49A/LF4A8 tail at LF4B2, after modifying the low byte. */
+static void bua_write_control_low(bua_u8 low)
+{
+    bua_u16 csr = mpu16be_get(MPU_CPU_CONTROL_ADDR);
+    mpu16be_set(MPU_CPU_CONTROL_ADDR,
+                (bua_u16)((csr & 0xFF00u) | 0xFB02u | (low & 0xFEu)));
+}
 static bua_u8 hw_adc(bua_u8 channel)
 {
     switch (channel & 0xF0u) {
@@ -1331,11 +1338,7 @@ static bua_u8 hw_adc(bua_u8 channel)
         default:    return 0u;
     }
 }
-static bua_u8 hw_timer8(void)
-{
-    sim_timer8 = (bua_u8)(sim_timer8 + 205u);
-    return sim_timer8;
-}
+
 /*
  * Equivalent of the arithmetic performed by LF250 for the usages in this
  * port: old is 8.8 fixed point, new_value is an 8-bit whole-number sample,
@@ -1975,7 +1978,8 @@ static bua_u16 bua_mul_u16_u16_lf2f0(bua_u16 multiplier,
 {
     bua_u32 product;
     bua_u16 middle;
-    product = (bua_u32)multiplier * (bua_u32)multiplicand;
+    /* LF2F0 rounds the low x low partial product with MUL / ADCA #0. */
+    product = (bua_u32)multiplier * (bua_u32)multiplicand + 128ul;
     if (upper_out != 0)
         *upper_out = (bua_u16)(product >> 16);
     middle = (bua_u16)(product >> 8);
@@ -2149,10 +2153,10 @@ static bua_u16 bua_crank_pw_step43(bua_u8 coolant,
     tps_raw=bua_crank_tps_mult_step43(tps_axis);
     {
         bua_u32 scaled;
-        scaled=((bua_u32)tps_raw*(bua_u32)pw)>>7;
-        if (scaled > 32767ul)
+        scaled=((bua_u32)tps_raw*(bua_u32)pw)>>6;
+        if (scaled > 65535ul)
             return 65535u;
-        return (bua_u16)((bua_u16)scaled<<1);
+        return (bua_u16)scaled;
     }
 }
 static int bua_crank_rpm_blend_enabled_step43(void)
@@ -3163,6 +3167,7 @@ static BuaStallSaverResult bua_stall_saver_update(bua_u8 rpm12p5,
     }
     return r;
 }
+static void bua_iac_restart_ld335_step111(void);
 static void bua_low_rpm_spark_reset_ld306(void)
 {
     ram16be_set(0x0468u, 0xFFFFu);
@@ -3174,7 +3179,11 @@ static void bua_low_rpm_spark_reset_ld306(void)
     ram16be_set(ACCEL_FUEL_ADDR, 0u);
     ACCEL_LOAD_FACTOR = 0u;
     LOWRPM_AUX_VALUE = 0u;
+    if ((RAM8(0xF3u) & 4u) == 0u)
+        bua_iac_restart_ld335_step111();
+    bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) & 0xEFu));
     SPARK_INPUT_MODE_WORD &= (bua_u8)~EST_ENABLE_BIT;
+    (void)bua_read_fmd_byte2();
     ++stats.low_rpm_spark_resets;
 }
 /* ---------------------------------------------------------------------- */
@@ -3273,7 +3282,9 @@ static void bua_mode4_timeout_step116(void);
 static void bua_normal_fmd_refresh_step158(void)
 {
     bua_u8 status;
+    SPARK_INPUT_MODE_WORD &= 0x7Fu;
     RAM8(0x002Eu)=sim_normal_fmd_byte1;
+    SPARK_INPUT_MODE_WORD |= 0x80u;
     RAM8(0x002Fu)=sim_normal_fmd_byte2;
     status=(bua_u8)((bua_u8)~sim_normal_fmd_byte1&0xDFu);
     status=(bua_u8)(status|(RAM8(0x0037u)&0x20u));

@@ -27,6 +27,7 @@ static const struct {
     {"cal_startup_repeat_step48", cal_startup_repeat_step48, sizeof(cal_startup_repeat_step48), 0xC402u, 1u},
     {"cal_startup_decay_step48", cal_startup_decay_step48, sizeof(cal_startup_decay_step48), 0xC410u, 1u},
     {"cal_open_loop_coolant_step48", cal_open_loop_coolant_step48, sizeof(cal_open_loop_coolant_step48), 0xC41Fu, 1u},
+    {"cal_injector_voltage_offset", cal_injector_voltage_offset, sizeof(cal_injector_voltage_offset), 0xC3ABu, 1u},
     {"cal_small_pw_offset", cal_small_pw_offset, sizeof(cal_small_pw_offset), 0xC3BCu, 1u},
     {"cal_fuel_limit_coolant", cal_fuel_limit_coolant, sizeof(cal_fuel_limit_coolant), 0xC331u, 1u},
     {"cal_async_bpwpct", cal_async_bpwpct, sizeof(cal_async_bpwpct), 0xC315u, 1u},

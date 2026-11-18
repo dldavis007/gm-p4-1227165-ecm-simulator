@@ -4,8 +4,8 @@
 
 The live 12.5 ms running path drives the spark and EST outputs. A differential
 against the assembled BUA ROM matches 16 consecutive running spark ticks.
-The full IRQ differential finds differences on the first tick and all 31
-following ticks. Whole-image behavioral equivalence remains open.
+The full IRQ matches all ordered MPU writes on a 32-tick stopped-engine
+replay and a 256-tick crank-to-run replay. RAM differences remain. Whole-image behavioral equivalence remains open.
 
 - [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)

@@ -1,3 +1,10 @@
+static void seed_live_maf(bua_u16 flow)
+{
+    unsigned i;
+    for (i = 0; i < 4; ++i)
+        ram16be_set((bua_u16)(0x75u + 2u * i), flow);
+    ram16be_set(AIRFLOW_WORD_ADDR, flow);
+}
 static void run_step89_scheduler_wiring_test(void)
 {
     BuaMemory saved_mem;
@@ -187,7 +194,8 @@ static void run_step94_odd_fuel_path_test(void)
     o2_after_odd=ram16be_get(0x006Fu);
     STEP94_CHECK(stats.common_maf_calls==1u,"first IRQ executes LF76A common MAF before branch selection");
     STEP94_CHECK(stats.odd_fuel_chain_calls==1u,"first odd IRQ executes one LD6D1 normal fuel chain");
-    STEP94_CHECK(ram16be_get(AIRFLOW_WORD_ADDR)>CAL_MAF_MIN_FLOW_Q8_8,
+    STEP94_CHECK(ram16be_get(AIRFLOW_WORD_ADDR)==CAL_MAF_MIN_FLOW_Q8_8 &&
+                 ram16be_get(0x77u)==0x3F39u,
                  "common analog-MAF producer updates source RAM L00EA");
     STEP94_CHECK(o2_after_odd!=(bua_u16)(100u<<8),"odd LD9A9 fast-O2 filter updates L006F");
     STEP94_CHECK(ram16be_get(TOTAL_AFR_ADDR)==445u,"closed-loop normal AFR selection writes stoichiometric L00CE=445");
@@ -214,7 +222,7 @@ static void run_step94_odd_fuel_path_test(void)
     ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     FILTERED_LOAD=128u; TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u;
     CLOSED_LOOP_PW_CORR=128u; sim_maf_adc=64u;
-    bua_maf_filter_seed(&step94_maf_state,
+    seed_live_maf(
                         bua_maf_analog_unlimited_lf7ac(sim_maf_adc,0,0,0,0));
     irq_6p25ms();
     flow_low=ram16be_get(AIRFLOW_WORD_ADDR); fuel_low=mpu16be_get(0x3FD0u);
@@ -222,7 +230,7 @@ static void run_step94_odd_fuel_path_test(void)
     ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     FILTERED_LOAD=128u; TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u;
     CLOSED_LOOP_PW_CORR=128u; sim_maf_adc=160u;
-    bua_maf_filter_seed(&step94_maf_state,
+    seed_live_maf(
                         bua_maf_analog_unlimited_lf7ac(sim_maf_adc,0,0,0,0));
     irq_6p25ms();
     flow_high=ram16be_get(AIRFLOW_WORD_ADDR); fuel_high=mpu16be_get(0x3FD0u);
@@ -268,7 +276,7 @@ static void run_step95_load_producer_test(void)
     ENGINE_MODE_WORD|=ENGINE_RUNNING_BIT; MODE_WORD3|=FUEL_VATS_OK_BIT;
     ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u; CLOSED_LOOP_PW_CORR=128u;
-    bua_maf_filter_seed(&step94_maf_state,
+    seed_live_maf(
                         bua_maf_analog_unlimited_lf7ac(sim_maf_adc,0,0,0,0));
     irq_6p25ms();
     load_after_odd=FILTERED_LOAD;
@@ -363,7 +371,7 @@ static void run_step96_transient_front_test(void)
     RAM8(0x005Au)=100u; VSS_MPH_HI=30u; TPS_LOAD_AXIS=0u;
     RAM8(0x00DDu)=0u; RAM8(0x00D3u)=0u; COOLANT=160u;
     BLM=128u; CLOSED_LOOP_PW_CORR=128u;
-    bua_maf_filter_seed(&step94_maf_state,CAL_MAF_MIN_FLOW_Q8_8);
+    seed_live_maf(CAL_MAF_MIN_FLOW_Q8_8);
     irq_6p25ms();
     STEP96_CHECK((AF_MODE_WORD&0x02u)!=0u && mpu16be_get(0x3FD0u)==0u,
                  "same odd pass enters DFCO before LF92A and therefore writes zero fuel");
@@ -441,7 +449,7 @@ static void run_step97_50ms_tail_test(void)
     RPM_DIV25=96u; RPM_DIV12P5=192u; RAM8(0x005Au)=192u;
     VSS_MPH_HI=30u; COOLANT=160u; BLM=128u; CLOSED_LOOP_PW_CORR=128u;
     TPS_LOAD_AXIS=90u; RAM8(0x00DDu)=90u; sim_maf_adc=150u;
-    bua_maf_filter_seed(&step94_maf_state,
+    seed_live_maf(
                         bua_maf_analog_unlimited_lf7ac(sim_maf_adc,0,0,0,0));
     tail0=stats.odd_50ms_tail_calls; filter0=stats.transient_filter_updates;
     for(i=0u;i<16u;++i) irq_6p25ms();

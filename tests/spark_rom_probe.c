@@ -48,3 +48,13 @@ int probe_filter(unsigned int old, unsigned int value, unsigned int coef)
 {
     return bua_lag_filter_8_8((bua_u16)old, (bua_u8)value, (bua_u8)coef);
 }
+
+void probe_rpm(unsigned int rpm) { sim_set_ecm_reference_rpm(rpm); }
+int probe_capture(void) { return sim_ecm_ref.period_reg; }
+int probe_reference_seen(void) { return sim_ecm_ref.pulse_since_irq; }
+int probe_injections(void) { return (int)stats.physical_injector_services; }
+
+int probe_product(unsigned int a, unsigned int b)
+{
+    return bua_mul_u16_u16_lf2f0((bua_u16)a, (bua_u16)b, 0);
+}

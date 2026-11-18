@@ -219,22 +219,32 @@ static bua_u8 bua_scheduler_fast_o2_front_step103(void)
     AF_MODE_WORD2=new_word;
     return rich;
 }
-static BuaMafFilterState step94_maf_state;
-
-static void bua_step94_fuel_state_reset(void)
-{
-    memset(&step94_maf_state, 0, sizeof(step94_maf_state));
-    step94_maf_state.filtered = CAL_MAF_MIN_FLOW_Q8_8;
-}
-
+/* LF7AC..LF87F, analog MAF selected by LC014. Filter history and
+ * the previous, limited airflow are processor-visible RAM. */
 static void bua_common_maf_6p25ms(void)
 {
-    BuaMafResult r;
-    bua_u8 raw;
-    raw = hw_adc(0xA0u);
-    RAM8(0x00EDu) = raw;
-    r = bua_maf_step30_analog(&step94_maf_state, raw, RPM_DIV25);
-    ram16be_set(AIRFLOW_WORD_ADDR, r.final_q8_8);
+    BuaMafFilterState state;
+    BuaMafResult result;
+    bua_u8 i, slot;
+    bua_u8 raw = hw_adc(0xA0u);
+    RAM8(0xEDu) = raw;
+    ram16be_set(0xEFu, (bua_u16)(raw * 7u));
+    RAM8(0xECu) = 0u;
+    if (RAM8(0x3Fu) & 0xC0u) {
+        bua_u16 flow = bua_maf_default_lf7c1(RPM_SPECIAL, TPS_LOAD_AXIS, RAM8(0x2Cu));
+        ram16be_set(AIRFLOW_WORD_ADDR, bua_maf_apply_limits_lf862(flow, RPM_DIV25));
+    } else {
+        for (i = 0; i < 4u; ++i)
+            state.samples[i] = ram16be_get((bua_u16)(0x75u + 2u * i));
+        state.filtered = ram16be_get(AIRFLOW_WORD_ADDR);
+        ++RAM8(0x7Du);
+        slot = RAM8(0x7Du) & 3u;
+        state.next = slot;
+        result = bua_maf_step30_analog(&state, raw, RPM_DIV25);
+        RAM8(0xB6u) = (bua_u8)(result.unlimited_q8_8 >> 8);
+        ram16be_set((bua_u16)(0x75u + 2u * slot), result.unlimited_q8_8);
+        ram16be_set(AIRFLOW_WORD_ADDR, result.final_q8_8);
+    }
     ++stats.common_maf_calls;
 }
 
@@ -333,20 +343,23 @@ static void bua_odd_load_producer_12p5ms(void)
     ++stats.odd_load_producer_calls;
 }
 
-static void bua_odd_write_lf92a(bua_u16 pulse_width)
+static void bua_write_lf92a(bua_u16 pulse_width)
 {
     BuaFuelOutputResult out;
     out = bua_fuel_output_lf92a(pulse_width, MODE_WORD3, IGN_MODE_WORD,
                                 AF_MODE_WORD, ENGINE_MODE_WORD,
                                 INJECT_MODE_WORD, VSS_MPH_HI,
                                 ram16be_get(REF_PERIOD_ADDR), RAM8(0x00CBu));
+    if (out.fuel_cut) {
+        ram16be_set(ACCEL_FUEL_ADDR, 0u);
+        ram16be_set(0x00C2u, 0u);
+    }
     AF_MODE_WORD = out.af_mode_word;
     IGN_MODE_WORD = out.ign_mode_word;
     ram16be_set(0x011Cu, out.pending_pw);
     mpu16be_set(0x3FD0u, out.hardware_pw);
     if ((INJECT_MODE_WORD & 0xC0u) != 0xC0u)
         ram16be_set(0x0466u, out.hardware_pw);
-    ++stats.odd_mpu_fuel_writes;
 }
 
 /* Step 101: LD7B1..LD865 scheduler-facing cranking branch.  C35B is all
@@ -366,9 +379,8 @@ static void bua_odd_crank_fuel_12p5ms(void)
         ref_period=ram16be_get(REF_PERIOD_ADDR);
         doubled=(bua_u16)(ref_period<<1);
         if(doubled==0u || doubled<ref_period)
-            quotient=0xFFFFu;
-        else
-            quotient=bua_fractional_divide(2457u,doubled);
+            doubled=0xFFFFu;
+        quotient=bua_fractional_divide(2457u,doubled);
         filtered=bua_lag_filter_8_8(ram16be_get(CRANK_RPM_FILTER_ADDR),
                                      (bua_u8)(quotient>>8),
                                      (bua_u8)CAL_CRANK_RPM_COEF);
@@ -376,7 +388,8 @@ static void bua_odd_crank_fuel_12p5ms(void)
         /* C35B's selected byte is always zero in 9340. */
         CRANK_FF_COUNTER=0u;
     }
-    bua_odd_write_lf92a(pw);
+    bua_write_lf92a(pw);
+    ++stats.odd_mpu_fuel_writes;
     ++stats.odd_crank_fuel_calls;
     bua_odd_50ms_tail_lddc2();
 }
@@ -408,6 +421,8 @@ static void bua_odd_normal_fuel_after_load_12p5ms(void)
                                 RAM8(0x00CDu), AF_MODE_WORD, INJECT_MODE_WORD,
                                 MINOR_MODE_WORD2, ALDL_FUNC_MOD_ENABLE,
                                 RAM8(0x015Au));
+    if (afr.source == 0u && !(AF_MODE_WORD2 & AF_CLOSED_LOOP_BIT))
+        RAM8(0x046Au) = afr.afr.load_change;
     AF_MODE_WORD = afr.af_mode_word;
     INJECT_MODE_WORD = afr.single_fire;
     ram16be_set(TOTAL_AFR_ADDR, afr.afr.afr_code);
@@ -445,7 +460,8 @@ static void bua_odd_normal_fuel_after_load_12p5ms(void)
     RAM8(0x0038u) = ae_flags;
     ram16be_set(0x00C2u, corrected);
 
-    bua_odd_write_lf92a(corrected);
+    bua_write_lf92a(corrected);
+    ++stats.odd_mpu_fuel_writes;
     /* LDD9C executable order: LF901/LF92A, LE436, then LDDC2. */
     bua_scheduler_async_le436_step102();
     ++stats.odd_normal_fuel_calls;

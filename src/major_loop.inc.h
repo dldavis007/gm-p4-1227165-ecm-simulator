@@ -137,6 +137,55 @@ static void segA_mat_variables(void)
     RAM8(0x004Du)=r.err25_latched4d;
 }
 
+/* LE10F..LE2B9 cold automatic-transmission path after shifter sampling. */
+static void bua_cold_tcc_after_shifter(void)
+{
+    BuaGear68 gear;
+    BuaTccGate68 gate;
+    bua_u8 mode = RAM8(4u);
+    bua_u8 nv = (bua_u8)(bua_fractional_divide((bua_u16)(RPM_DIV25 * 25u),
+                                                ram16be_get(0x65u)) >> 8);
+    RAM8(0x8Fu) = nv;
+    if ((SPARK_MODE_WORD & 8u) || COOLANT >= STEP67_TCC_COOL_MIN)
+        return;
+    if (mode & STEP68_MODE_OD_ACTIVE) {
+        BuaOdNv69 od;
+        od.mode04 = mode;
+        od.first_delay = RAM8(0x12Cu);
+        od.downshift_inhibit = RAM8(0x90u);
+        bua_od_nv_branch69(&od, nv);
+        mode = od.mode04;
+        RAM8(0x12Cu) = od.first_delay;
+        RAM8(0x90u) = od.downshift_inhibit;
+        RAM8(0x8Eu) = STEP68_FOURTH_CONFIRM;
+    } else {
+        gear.mode04 = mode;
+        gear.fourth_timer = RAM8(0x8Eu);
+        bua_nv_gear_update68(&gear, nv);
+        mode = gear.mode04;
+        RAM8(0x8Eu) = gear.fourth_timer;
+        RAM8(0x12Cu) = STEP69_FIRST_DELAY;
+    }
+    mode &= (bua_u8)~0x20u;
+    if ((mode & 0x80u) &&
+        (RPM_DIV25 > 128u /* LC293 and LC294 */ || VSS_MPH_HI > STEP73_FORCE_MPH)) {
+        RAM8(0x8Du) = 0u;
+        mode |= 0x81u;
+    } else {
+        mode &= (bua_u8)~0x80u;
+        RAM8(0x8Du) = STEP73_LOCK_DELAY_CAL;
+    }
+    gate.status37 = RAM8(0x37u);
+    gate.candidate_mode = mode;
+    gate.lock_delay = RAM8(0x8Du);
+    gate.downshift_inhibit = RAM8(0x90u);
+    bua_tcc_final_gate68(&gate);
+    RAM8(0x37u) = gate.status37;
+    RAM8(0x8Du) = gate.lock_delay;
+    RAM8(0x90u) = gate.downshift_inhibit;
+    RAM8(4u) = (bua_u8)(mode & 0x9Fu);
+    MINOR_MODE_WORD2 = (bua_u8)((MINOR_MODE_WORD2 & 0xFEu) | (mode & 1u));
+}
 static void segE_tcc_adc(void)
 {
     BuaBatt86 r;
@@ -159,6 +208,7 @@ static void segE_tcc_adc(void)
         RAM8(0x0004u)=bua_prndl78(RAM8(0x0037u),&sh,RAM8(0x0004u),
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
+        bua_cold_tcc_after_shifter();
     }
 }
 

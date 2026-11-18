@@ -16,9 +16,9 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 131 |
+| Observed on the IRQ path | 146 |
 | Static IRQ path, unobserved in this scenario | 37 |
-| Outside the IRQ call graph | 117 |
+| Outside the IRQ call graph | 105 |
 
 The observed set includes both spark lookups, advance sum, knock attack and
 major-segment recovery, Mode-4 blend, LD1F6 output, EST finish, stall-saver
@@ -39,7 +39,8 @@ The comparison uses the Python HC11 instruction emulator at the following pin.
 git clone https://github.com/anarkiwi/m68hc11 ../m68hc11
 git -C ../m68hc11 checkout 9856198c1a8c5ce5e3c2428a4c332808307998a4
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py
-PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq --check-outputs
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq --check-outputs
 ```
 
 - Running spark. Both implementations retain their own state for 16 ticks
@@ -55,21 +56,27 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq
 - Full IRQ. Both sides begin with the C reset RAM, MPU and I/O backing. The
   ROM runs from the IRQ vector to the wait loop, including the intervening
   serial IRQs when armed. The harness supplies timer IRQ status, immediate
-  SPI completion and host ADC/FMD values. This stopped-engine scenario
-  diverges on all 32 ticks. Tick 1 differs in 19 non-stack RAM bytes. The ROM
-  writes $FB02 to $3FFC before writing zero to $3FD0. C performs only the
-  latter write. The command exits unsuccessfully while differences remain.
-  Some differences can reflect peripheral or harness assumptions. Separate
-  those from translation gaps before assigning an instruction-level cause.
+  SPI completion and host ADC/FMD values. The stopped scenario matches
+  all ordered MPU byte writes on 32/32 ticks. The second scenario supplies
+  a valid VATS capture and a stopped, 300 RPM, then 1,100 RPM reference
+  signal. It matches all ordered MPU writes on 256/256 ticks. Both set the
+  running flag on tick 116. On every tick of both scenarios the fuel words
+  $C2 and $D9, FMD byte selector and serial interrupt flags also match.
+- Remove `--check-outputs` to require all non-stack RAM bytes to match as
+  well. This stricter diagnostic fails on both traces. The first stopped tick
+  differs at $64 (SPI scratch), $F3 and $010F (IAC state). At the last tick
+  four RAM bytes differ in the stopped scenario and thirteen in the drive
+  scenario. Other inputs, warm transmission behavior and physical bus timing
+  remain outside these results.
 
 ## C regression and calibration coverage
 
-`make test` compares the 48 compiled `cal_*` byte tables with fixed addresses
+`make test` compares the 49 compiled `cal_*` byte tables with fixed addresses
 in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are 6B024BFD, 09D73D61 and 316BC768 respectively. These are C regression
+are 9F75141D, 9D8873B6 and BC5F5E86 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
 Simulation boundaries include the host period-valid flag, invalid capture
