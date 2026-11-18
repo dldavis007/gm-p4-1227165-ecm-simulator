@@ -1,3 +1,30 @@
+/* LD3F0..LD450 and LD6CA. The commanded idle update runs every eighth
+ * minor loop. LD468 compares A after the Mode-4 option tests. */
+static void bua_running_idle_speed(void)
+{
+    BuaIacCommandStep36 target;
+    bua_u8 compare;
+    RAM8(0x85u) = RAM8(0x84u);
+    if (RAM8(0x82u) != RAM8(0x84u))
+        RAM8(0x84u) = RAM8(0x82u);
+    if (RAM8(0x3Fu) & 0x24u)
+        RAM8(0x84u) = 2u * 3u;
+    if (MINOR_COUNT & 7u)
+        return;
+    RAM8(0xF3u) &= (bua_u8)~0x20u;
+    target = bua_iac_command_step36(COOLANT, RAM8(0xF3u), RAM8(0xF2u),
+                                    RAM8(0x3Au), MINOR_MODE_WORD2);
+    compare = RAM8(0x102u) = target.command_raw;
+    if (MINOR_MODE_WORD2 & 8u) {
+        compare = RAM8(0x158u);
+        if ((compare & 3u) == 3u)
+            compare = RAM8(0x102u) = RAM8(0x159u);
+    }
+    if (compare < RAM8(0x58u))
+        RAM8(0xF2u) |= 2u;
+    ram16be_set(0xFFu, ram16be_get(0x58u));
+}
+
 /* ---------------------------------------------------------------------- */
 /* Step 90: scheduler-facing wiring for Segments 1/5/6/A/E.               */
 /*                                                                        */
@@ -120,10 +147,33 @@ static void seg6_coolant_adc(void)
     RAM8(0x003Cu)=(bua_u8)(RAM8(0x003Cu)&0x7Fu);
 }
 
+static void bua_error43_service(void)
+{
+    /* LEB5B..LEBB3. Error 43 is enabled in LC1D2 of the BUA image. */
+    if (MINOR_COUNT == 26u && !(MODE_WORD2 & 0x40u)) {
+        if (MODE_WORD2 & 1u) {
+            MODE_WORD2 &= (bua_u8)~1u;
+            if (COOLANT > CAL_ERR43_TEST_MIN_COOLANT)
+                MODE_WORD2 |= 0xC0u;
+        } else if (!RAM8(0xB0u) && RAM8(0x63u) >= 170u) {
+            MODE_WORD2 |= 1u;
+        }
+    }
+    if (++RAM8(0xA4u) == 39u) {
+        bua_u8 sample = (bua_u8)(mpu16be_get(0x3FCAu) >> 8);
+        RAM8(0xA4u) = 0u;
+        RAM8(0x3Bu) &= (bua_u8)~0x20u;
+        if ((bua_u8)(sample - RAM8(0xA3u)) >= 235u)
+            RAM8(0x3Bu) |= 0x20u;
+        RAM8(0xA3u) = sample;
+    }
+}
+
 static void segA_mat_variables(void)
 {
     BuaMat84 r;
     bua_knock_recovery_segment_a();
+    bua_error43_service();
     r=bua_mat84_step(hw_adc(0x80u),ram16be_get(0x001Au),RAM8(0x0065u),
                      RAM8(0x00ACu),RAM8(0x00ADu),RAM8(0x0043u),
                      RAM8(0x0040u),RAM8(0x004Cu),RAM8(0x004Du));
@@ -137,6 +187,55 @@ static void segA_mat_variables(void)
     RAM8(0x004Du)=r.err25_latched4d;
 }
 
+/* LE10F..LE2B9 cold automatic-transmission path after shifter sampling. */
+static void bua_cold_tcc_after_shifter(void)
+{
+    BuaGear68 gear;
+    BuaTccGate68 gate;
+    bua_u8 mode = RAM8(4u);
+    bua_u8 nv = (bua_u8)(bua_fractional_divide((bua_u16)(RPM_DIV25 * 25u),
+                                                ram16be_get(0x65u)) >> 8);
+    RAM8(0x8Fu) = nv;
+    if ((SPARK_MODE_WORD & 8u) || COOLANT >= STEP67_TCC_COOL_MIN)
+        return;
+    if (mode & STEP68_MODE_OD_ACTIVE) {
+        BuaOdNv69 od;
+        od.mode04 = mode;
+        od.first_delay = RAM8(0x12Cu);
+        od.downshift_inhibit = RAM8(0x90u);
+        bua_od_nv_branch69(&od, nv);
+        mode = od.mode04;
+        RAM8(0x12Cu) = od.first_delay;
+        RAM8(0x90u) = od.downshift_inhibit;
+        RAM8(0x8Eu) = STEP68_FOURTH_CONFIRM;
+    } else {
+        gear.mode04 = mode;
+        gear.fourth_timer = RAM8(0x8Eu);
+        bua_nv_gear_update68(&gear, nv);
+        mode = gear.mode04;
+        RAM8(0x8Eu) = gear.fourth_timer;
+        RAM8(0x12Cu) = STEP69_FIRST_DELAY;
+    }
+    mode &= (bua_u8)~0x20u;
+    if ((mode & 0x80u) &&
+        (RPM_DIV25 > 128u /* LC293 and LC294 */ || VSS_MPH_HI > STEP73_FORCE_MPH)) {
+        RAM8(0x8Du) = 0u;
+        mode |= 0x81u;
+    } else {
+        mode &= (bua_u8)~0x80u;
+        RAM8(0x8Du) = STEP73_LOCK_DELAY_CAL;
+    }
+    gate.status37 = RAM8(0x37u);
+    gate.candidate_mode = mode;
+    gate.lock_delay = RAM8(0x8Du);
+    gate.downshift_inhibit = RAM8(0x90u);
+    bua_tcc_final_gate68(&gate);
+    RAM8(0x37u) = gate.status37;
+    RAM8(0x8Du) = gate.lock_delay;
+    RAM8(0x90u) = gate.downshift_inhibit;
+    RAM8(4u) = (bua_u8)(mode & 0x9Fu);
+    MINOR_MODE_WORD2 = (bua_u8)((MINOR_MODE_WORD2 & 0xFEu) | (mode & 1u));
+}
 static void segE_tcc_adc(void)
 {
     BuaBatt86 r;
@@ -159,6 +258,7 @@ static void segE_tcc_adc(void)
         RAM8(0x0004u)=bua_prndl78(RAM8(0x0037u),&sh,RAM8(0x0004u),
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
+        bua_cold_tcc_after_shifter();
     }
 }
 

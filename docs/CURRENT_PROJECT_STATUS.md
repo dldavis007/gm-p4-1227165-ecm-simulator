@@ -1,16 +1,10 @@
 # Current project status
 
-## Behavioral-port milestone
-
-Step 171 restores the qualified whole-image closure after Steps 168 and 169
-translated the diagnostic and factory branches of the 160-baud LF880 manager
-identified by Step 167. Step 170 exposes the completed manager through a
-cell-level raw HAL.
-
-No known reachable, internally defined executable area in the supplied PROM
-image remains classified as unported. The complete Strict C89 workflow passes
-without compiler warnings, and all frozen behavioral signatures remain
-unchanged.
+The [live scheduler audit](LIVE_SCHEDULER_AUDIT.md) supersedes the Step-171
+whole-image assessment. Running spark has a passing ROM differential. Full
+IRQ replay matches ordered MPU writes in both test scenarios. Internal RAM
+differences remain. The sections below
+describe the earlier behavioral-port milestones.
 
 ## What this establishes
 
@@ -91,7 +85,7 @@ the workbook as the target for replacement networks. The measured-matrix
 15- or 14-resistor 16055375 networks and a nine-resistor 16055376 network.
 They remain computed DC candidates pending new physical build/measurement.
 The original measured matrices govern resistance targets; photographs govern
-what was installed on the earlier reconstruction. Behavioral closure is unchanged.
+what was installed on the earlier reconstruction. The live scheduler audit tracks behavioral verification separately.
 
 ## Step 180 — NetRes circuit roles
 

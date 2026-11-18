@@ -14,20 +14,36 @@ $(TARGET): main.c src/*.inc.h simulation/*.inc.h tests/*.inc.h
 run: $(TARGET)
 	$(TARGET)
 
-test: $(TARGET)
+# Codespaces and CI use the same pinned emulator. HC11_DIR may point at an
+# existing checkout for offline runs.
+HC11_DIR ?= build/m68hc11
+HC11_REV = 9856198c1a8c5ce5e3c2428a4c332808307998a4
+
+.PHONY: test-rom
+test-rom:
+	@test -d "$(HC11_DIR)" || git clone -q https://github.com/anarkiwi/m68hc11 "$(HC11_DIR)"
+	@if [ "$(HC11_DIR)" = build/m68hc11 ]; then git -C "$(HC11_DIR)" checkout -q --detach $(HC11_REV); fi
+	@test "$$(git -C "$(HC11_DIR)" rev-parse HEAD)" = "$(HC11_REV)"
+	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py
+	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --full-irq
+	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --drive-irq
+
+test: $(TARGET) test-rom
+	$(CC) $(CFLAGS) tests/rom_calibration.c -o build/rom_calibration
+	build/rom_calibration
 	$(TARGET) > $(OUTPUT)
-	grep -q "Step-104 normal-operation behavioral signature: 4BA6B7C6" $(OUTPUT)
+	grep -q "Step-104 normal-operation behavioral signature: F56CA262" $(OUTPUT)
 	grep -q "step-104 baseline-freeze regression result: PASS (10/10)" $(OUTPUT)
-	grep -q "Step-105 transmission trace signature: 9732D09B" $(OUTPUT)
+	grep -q "Step-105 transmission trace signature: C8414C20" $(OUTPUT)
 	grep -q "step-105 transmission-aware regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-106 listing-coolant regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-107 diagnostic-stage1 regression result: PASS (17/17)" $(OUTPUT)
 	grep -q "step-108 diagnostic-qualification regression result: PASS (22/22)" $(OUTPUT)
-	grep -q "Step-109 integrated Segment-D signature: F357A5F2" $(OUTPUT)
+	grep -q "Step-109 integrated Segment-D signature: B12D3084" $(OUTPUT)
 	grep -q "step-109 Segment-D integration regression result: PASS (40/40)" $(OUTPUT)
 	grep -q "Step-110 integrated output-stage signature: FAADF8A6" $(OUTPUT)
 	grep -q "step-110 Segment-1 output regression result: PASS (22/22)" $(OUTPUT)
-	grep -q "Step-111 ignition lifecycle signature: 16D17C9C" $(OUTPUT)
+	grep -q "Step-111 ignition lifecycle signature: 1029F31C" $(OUTPUT)
 	grep -q "step-111 ignition shutdown regression result: PASS (40/40)" $(OUTPUT)
 	grep -q "step-112 reset/startup regression result: PASS (19/19)" $(OUTPUT)
 	grep -q "step-113 retained-memory regression result: PASS (10/10)" $(OUTPUT)

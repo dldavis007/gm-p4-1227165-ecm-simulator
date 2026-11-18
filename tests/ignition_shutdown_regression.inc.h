@@ -151,7 +151,7 @@ static void run_step111_ignition_shutdown_test(void)
     signature=step111_lifecycle_signature();
     printf("  Step-111 ignition lifecycle signature: %08lX\n",
            (unsigned long)signature);
-    S111(signature==0x16D17C9Cul);
+    S111(signature==0x1029F31Cul);
 
     printf("  step-111 ignition shutdown regression result: %s (%u/%u)\n",
            pass==total?"PASS":"FAIL",pass,total);

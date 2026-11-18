@@ -7,7 +7,7 @@
 /* ---------------------------------------------------------------------- */
 #define STEP104_FNV_OFFSET 2166136261ul
 #define STEP104_FNV_PRIME    16777619ul
-#define STEP104_EXPECTED_SIGNATURE 0x4BA6B7C6ul
+#define STEP104_EXPECTED_SIGNATURE 0xF56CA262ul
 static bua_u32 step104_sig_byte(bua_u32 sig,bua_u8 value)
 {
     sig^=(bua_u32)value;
@@ -257,7 +257,7 @@ static void run_dynamic_drive_cycle(void)
     printf("  %-84s %s\n",T,(C)?"PASS":"FAIL"); } while(0)
     printf("\nStep-104 normal-operation baseline-freeze regression:\n");
     STEP104_CHECK(behavior_signature==STEP104_EXPECTED_SIGNATURE,
-                  "canonical RAM/MPU/I/O/statistics trace equals 4BA6B7C6");
+                  "canonical RAM/MPU/I/O/statistics trace equals F56CA262");
     STEP104_CHECK(total_tick==4960u && stats.irq_ticks==4960ul,
                   "fixed warm-restart profile contains exactly 4,960 ordinary IRQ ticks");
     STEP104_CHECK(stats.air_fuel_loops==2480ul && stats.spark_vss_loops==2480ul,

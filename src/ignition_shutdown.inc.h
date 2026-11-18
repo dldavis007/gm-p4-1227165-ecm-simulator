@@ -140,8 +140,7 @@ static bua_u8 bua_iac_move_to_park_step111(bua_u8 position)
         magnitude=(bua_u8)(position-STEP111_IAC_PARK_POSITION);
         if(magnitude>127u)
             magnitude=127u;
-        if(magnitude!=0u)
-            magnitude=(bua_u8)(magnitude|0x80u);
+        magnitude=(bua_u8)(magnitude|0x80u);
         return magnitude;
     }
     return (bua_u8)(STEP111_IAC_PARK_POSITION-position);
@@ -160,6 +159,8 @@ static void bua_iac_restart_ld335_step111(void)
     RAM8(0x00F2u)=0x80u;
     RAM8(0x00F3u)=((RAM8(0x0037u)&0x01u)!=0u)?0x90u:0u;
 }
+
+static void bua_running_idle_speed(void);
 
 /* $D370..$D3DB selection and homing state machine. It runs on the even
    12.5-ms branch; physical step consumption remains the 6.25-ms service. */
@@ -185,6 +186,9 @@ static void bua_iac_shutdown_homing_even_step111(void)
         if((RAM8(0x0034u)&STEP111_ENGINE_RUNNING_BIT)==0u) {
             RAM8(0x0105u)=0u;
             RAM8(0x00F2u)=(bua_u8)(RAM8(0x00F2u)&0xEFu);
+            ram16be_set(0xFFu, ram16be_get(0x58u));
+        } else {
+            bua_running_idle_speed();
         }
         return;
     }

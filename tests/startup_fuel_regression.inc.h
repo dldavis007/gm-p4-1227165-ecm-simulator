@@ -51,10 +51,10 @@ static void run_step48_startup_afr_decay_test(void)
     STEP48_CHECK(p.initial_delay==240u && p.startup_enrich==9216u,
                  "cranking/non-running injector events do not decay startup enrichment");
     a=bua_afr_lda2d((bua_u8)(s.startup_enrich>>8),AF_CLOSED_LOOP_BIT,s.coolant_afr,128u);
-    STEP48_CHECK(a.factor==292u && a.afr_code==507u,
-                 "closed loop still retains startup high byte: factor 256+36 -> AFR code 507");
+    STEP48_CHECK(a.factor==292u && a.afr_code==508u,
+                 "closed loop still retains startup high byte: factor 256+36 -> AFR code 508");
     a=bua_afr_lda2d((bua_u8)(s.startup_enrich>>8),0u,s.coolant_afr,128u);
-    STEP48_CHECK(a.factor==295u && a.afr_code==512u,
+    STEP48_CHECK(a.factor==295u && a.afr_code==513u,
                  "open loop combines startup 36 + bias 221 + coolant 25 + load 13 = 295");
     printf("  step-48 startup-AFR regression result: %s (%u/%u)\n",
            (passed==total)?"PASS":"FAIL",passed,total);
@@ -678,7 +678,7 @@ static void run_step49_continuous_start_fuel_test(void)
     first=bua_start49_running_fuel(&s,96u,128u,96u,410u);
     STEP49_CHECK(first.maf.final_q8_8==16185u,
                  "first running pass uses real analog-MAF path: ADC128 -> 63.22 g/s Q8.8");
-    STEP49_CHECK(first.afr.factor==295u && first.afr.afr_code==512u,
+    STEP49_CHECK(first.afr.factor==295u && first.afr.afr_code==513u,
                  "first running AFR retains startup 36 with open-loop coolant/load terms");
     STEP49_CHECK(first.base_pw>0u && first.output.hardware_pw>0u,
                  "post-catch MAF/AFR path produces nonzero calculated running injector PW");

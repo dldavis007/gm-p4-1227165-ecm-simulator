@@ -617,6 +617,8 @@ static void run_step162_raw_volt_output_safety_test(void)
     outcome=bua_lifecycle_power_cycle_step121(0xFFFEu,in);
     RAM8(0x0034u)=0x88u;
     RAM8(0x003Eu)=0x06u;
+    /* Hold the pass-by TCC lock while Segment E samples the shifter. */
+    SPARK_MODE_WORD |= 8u;
     RAM8(0x0037u)=0x20u;
     RAM8(0x0113u)=0u;
     RAM8(0x0112u)=255u;

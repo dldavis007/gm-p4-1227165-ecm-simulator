@@ -1,12 +1,13 @@
-# BUA / GM 1227165 Step-171 evidence-supported whole-image closure
+# BUA / GM 1227165 ECM simulator
 
 ## Current status
 
-The supplied 9340 / 16059335 PROM image has an evidence-supported behavioral
-C89 translation with no known reachable, internally defined executable area
-remaining classified as unported. This is not a claim of cycle-exact processor
-emulation or electrical equivalence to the original ECM.
+The live 12.5 ms running path drives the spark and EST outputs. A differential
+against the assembled BUA ROM matches 16 consecutive running spark ticks.
+The full IRQ matches non-stack RAM below $0500 and all ordered MPU writes on a 32-tick stopped-engine
+replay and a 256-tick crank-to-run replay. Both reach engine-running on tick 116. Whole-image behavioral equivalence remains open.
 
+- [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)
 - [Formal theory of operation](THEORY_OF_OPERATION.md)
   ([PDF publication](THEORY_OF_OPERATION.pdf))
@@ -17,9 +18,7 @@ emulation or electrical equivalence to the original ECM.
 - [Technical-reference index](docs/reference/README.md)
 - [Step 171 closure audit](docs/STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt)
 
-New behavioral work requires a newly identified exact listing discrepancy or
-new primary evidence. Embedded/HIL implementation is a separate phase at the
-documented HAL boundaries.
+The live scheduler audit supersedes the historical closure assessments below.
 
 ## Development history
 
@@ -87,9 +86,7 @@ defined firmware area still classified as unported. Step 167 later narrowed
 that conclusion after identifying the missing LF880 factory and diagnostic
 table branches. Steps 168 and 169 translate those exact listing-backed gaps,
 Step 170 exposes the completed manager through a cell-level raw HAL, and Step
-171 restores the qualified whole-image closure conclusion. Remaining limits
-are calibration/data, external or absent ROM, processor/custom-device behavior,
-and physical electrical/timing boundaries rather than known unported behavior.
+171 recorded a historical closure assessment under the earlier criteria.
 Step 123 inventories the historical Library/Drive evidence before cleanup. It
 confirms the committed assembled listing, identifies the six ECM schematic
 sheets and MEMCAL records awaiting controlled import, classifies duplicate
@@ -299,8 +296,7 @@ whole-image closure conclusion. Earlier audits remain historical checkpoints.
 
 Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
 PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
-Step-104 and Step-105 replay scenarios, so their historical signatures remain
-comparable. It is not source RAM and is not part of the target ECM behavior.
+Step-104 and Step-105 replay scenarios, and those scenarios now exercise the live spark chain. It is not source RAM and is not part of the target ECM behavior.
 
 Normal simulator execution now also performs Segment 1's raw writes to MPU
 addresses `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8` and parallel-I/O `$4004`. Electrical

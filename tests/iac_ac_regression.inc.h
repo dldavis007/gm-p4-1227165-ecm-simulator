@@ -36,13 +36,7 @@ static bua_u8 bua_coolant_warmup_step57(double sec)
 }
 static bua_u8 bua_warm_park_step57(bua_u8 coolant)
 {
-    unsigned int idx=(unsigned int)(coolant>>5);
-    unsigned int frac=(unsigned int)(coolant&31u);
-    unsigned int a,b;
-    if (idx>=8u) return step57_warm_park[8];
-    a=step57_warm_park[idx]; b=step57_warm_park[idx+1u];
-    if (b>=a) return (bua_u8)(a+((b-a)*frac)/32u);
-    return (bua_u8)(a-((a-b)*frac)/32u);
+    return bua_lookup_spacing32(step57_warm_park, 9u, coolant);
 }
 static void bua_closed_idle_init_step57(BuaClosedIdle57 *s)
 {
@@ -1449,9 +1443,9 @@ static void run_step47_afr_selection_test(void)
                  "below PE load -> normal closed-loop stoich; single-fire unchanged");
     r = bua_select_afr_step47(96u, 50u, 180u, 160u, 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u, 0u, 0u, 0u);
-    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 545u &&
+    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u &&
                  (r.af_mode_word & AF_POWER_ENRICH_BIT) != 0u && r.single_fire == 0u,
-                 "exact PE thresholds -> PE code 545 and single-fire cleared");
+                 "exact PE thresholds -> PE code 546 and single-fire cleared");
     r = bua_select_afr_step47(96u, 40u, 164u, 160u, 0u,
                               AF_CLOSED_LOOP_BIT, 25u, AF_POWER_ENRICH_BIT,
                               1u, 0u, 0u, 0u);
@@ -1469,7 +1463,7 @@ static void run_step47_afr_selection_test(void)
                  "cold PE coolant term produces rich code 688 (~9.53:1)");
     r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
                               0u, 25u, 0u, 1u, 0u, 0u, 0u);
-    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 545u,
+    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,
                  "PE overrides normal open-loop AFR construction");
     /* Use filtered load 128 for the known Step-25 open-loop anchor. */
     r = bua_select_afr_step47(96u, 128u, 100u, 160u, 0u,
@@ -1489,7 +1483,7 @@ static void run_step47_afr_selection_test(void)
     r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u,
                               STEP47_MODE4_ACTIVE_BIT, 0u, 128u);
-    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 545u,
+    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,
                  "Mode 4 active without AFR-enable bit falls through to PE");
     STEP47_CHECK(bua_mode4_afr_code_step47(255u) == 257u,
                  "Mode 4 raw AFR 255 -> reciprocal code 257");
@@ -1499,7 +1493,7 @@ static void run_step47_afr_selection_test(void)
     r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
                               AF_CLOSED_LOOP_BIT, 25u, FUEL_DFCO_ZERO_BIT,
                               1u, 0u, 0u, 0u);
-    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 545u,
+    STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,
                  "DFCO bit does not inhibit AFR/PE calculation (fuel cut is downstream)");
 #undef STEP47_CHECK
     printf("  step-47 AFR-selection regression result: %s (%u/%u)\n",

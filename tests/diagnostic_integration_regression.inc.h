@@ -138,7 +138,7 @@ static void run_step109_diagnostic_integration_test(void)
     signature=step109_diag_state_signature();
     printf("  Step-109 integrated Segment-D signature: %08lX\n",
            (unsigned long)signature);
-    S109(signature==0xF357A5F2ul);
+    S109(signature==0xB12D3084ul);
 
     printf("  step-109 Segment-D integration regression result: %s (%u/%u)\n",
            pass==total?"PASS":"FAIL",pass,total);

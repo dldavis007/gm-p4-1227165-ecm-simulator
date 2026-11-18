@@ -1,8 +1,8 @@
+static void bua_write_lf92a(bua_u16 pulse_width);
 static void bua_common_maf_6p25ms(void);
 static void bua_common_tps_6p25ms(void);
 static void bua_common_injector_service_6p25ms(void);
 static void bua_odd_fuel_chain_12p5ms(void);
-static void bua_step94_fuel_state_reset(void);
 static void bua_odd_transient_front_12p5ms(void);
 static void bua_odd_50ms_tail_lddc2(void);
 static bua_u8 bua_ignition_shutdown_odd_step111(void);
@@ -54,6 +54,45 @@ static void bua_slow_o2_filter_12p5ms(void)
 /* LCD4B..LCDDD: reference qualification / engine-running portion of the
  * even 12.5-ms spark path.  Spark-feedback, stall-saver hardware writes,
  * and the later dwell/spark tables remain for subsequent translation. */
+static void bua_running_spark_12p5ms(void)
+{
+    bua_u8 load, main_raw, cool_raw, highway, hot, test, magnitude;
+    bua_u16 counter, delta;
+    bua_calculate_rpm_from_reference();
+    bua_stall_saver_update(RAM8(0x58u), RAM8(0x5Au));
+    bua_compute_dwell_12p5ms();
+    load = FILTERED_LOAD;
+    if ((MODE_WORD1 & 0x40u) == 0u) {
+        if (COOLANT >= 113u || (COOLANT >= STARTUP_COOLANT &&
+            COOLANT - STARTUP_COOLANT >= 27))
+            RAM8(0x3Bu) |= 0x40u;
+        load = 208u;
+    }
+    main_raw = bua_lookup_main_spark_raw(RPM_SPECIAL, load > 208u ? 208u : load);
+    cool_raw = bua_lookup_coolant_spark_raw(COOLANT, FILTERED_LOAD);
+    highway = bua_highway_spark_eval(FILTERED_LOAD, COOLANT, RPM_SPECIAL,
+                                     RAM8(0), RAM8(0xA6u), &RAM8(0xA6u));
+    hot = bua_hot_restart_retard_eval(MODE_WORD1, STARTUP_COOLANT,
+                                      RAM8(0x1Bu), &MODE_WORD1);
+    RAM8(0x045Du) = main_raw;
+    RAM8(0x045Eu) = cool_raw;
+    RAM8(0x045Fu) = highway;
+    RAM8(0x0460u) = hot;
+    RAM8(0x3Au) = (bua_u8)((RAM8(0x3Au) & 0xCFu) |
+                       (highway ? 0x10u : 0u) | (hot ? 0x20u : 0u));
+    test = bua_knock_test_spark_eval(hot);
+    bua_spark_sum_ld096(main_raw, cool_raw, highway, hot, test,
+                        bua_aldl_added_spark_eval(), bua_startup_spark_sum_byte());
+    counter = mpu16be_get(0x3FCAu);
+    delta = (bua_u16)(counter - ram16be_get(0xA1u));
+    ram16be_set(0xA1u, counter);
+    bua_knock_attack_eval(delta > 255u ? 255u : (bua_u8)delta);
+    bua_spark_relative_to_reference_pre_mode4();
+    magnitude = bua_spark_mode4_blend_ld192();
+    bua_spark_timing_output_ld1f6(magnitude);
+    bua_est_output_finish_ld25x();
+    (void)bua_read_fmd_byte2();
+}
 static void bua_reference_state_12p5ms(void)
 {
     bua_u16 ref_period;
@@ -67,6 +106,7 @@ static void bua_reference_state_12p5ms(void)
         ref_period >= CAL_STARTUP_REF_PERIOD) {
         MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
         STARTUP_COUNTER = 0u;
+        bua_low_rpm_spark_reset_ld306();
         return;
     }
     if ((MINOR_MODE_WORD2 & REF_SEEN_BIT) != 0u) {
@@ -82,25 +122,29 @@ static void bua_reference_state_12p5ms(void)
         if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) == 0u) {
             if ((IGN_MODE_WORD & SECOND_REF_VALID_BIT) == 0u) {
                 IGN_MODE_WORD |= SECOND_REF_VALID_BIT;
+                bua_low_rpm_spark_reset_ld306();
                 return;
             }
             if (STARTUP_COUNTER < CAL_STARTUP_LOOPS) {
                 STARTUP_COUNTER = (bua_u8)(STARTUP_COUNTER + 1u);
+                bua_low_rpm_spark_reset_ld306();
                 return;
             }
             ENGINE_MODE_WORD |= ENGINE_RUNNING_BIT;
             RAM8(0x003Bu) &= (bua_u8)~0x02u;
             RAM8(0x00B0u) = 0u;
+            if ((IGN_MODE_WORD & 0x10u) == 0u && ram16be_get(0xEFu) < 85u)
+                RAM8(0x3Fu) |= 0x40u;
             RAM8(0x0001u) |= 0x08u;
             ++stats.engine_run_transitions;
         }
         /* LCDDD is reached after startup qualification as well as during
          * ordinary running.  The RPM calculation is therefore an every-even-
-         * loop operation once ENGINE RUNNING is set, not only a new-edge task. */
+         * loop operation once ENGINE RUNNING is set. period_valid is a
+         * simulator-only guard until the host has captured two edges. */
         if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u &&
             sim_ecm_ref.period_valid != 0u) {
-            bua_calculate_rpm_from_reference();
-            bua_compute_dwell_12p5ms();
+            bua_running_spark_12p5ms();
         }
         return;
     }
@@ -109,23 +153,40 @@ static void bua_reference_state_12p5ms(void)
      * but deliberately do not invent the interrupt-side recovery yet. */
     if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u) {
         if (NO_REF_MINOR_COUNT >= CAL_NO_REF_WAIT_LOOPS) {
+            mpu16be_set(0x3FC0u, 0xFFFFu);
             ++stats.reference_wait_events;
             bua_vector_note_swi_step119(0xCDCDu);
             return;
         }
         NO_REF_MINOR_COUNT = (bua_u8)(NO_REF_MINOR_COUNT + 1u);
         if (sim_ecm_ref.period_valid != 0u) {
-            bua_calculate_rpm_from_reference();
-            bua_compute_dwell_12p5ms();
+            bua_running_spark_12p5ms();
         }
+    } else {
+        bua_low_rpm_spark_reset_ld306();
     }
 }
 static void spark_vss_12p5ms(void)
 {
     ++stats.spark_vss_loops;
+    /* LCC7B..LCC92, Mode 4 can bypass the LF21A watchdog transfer. */
+    RAM8(0x3Bu) &= (bua_u8)~8u;
+    if ((MINOR_MODE_WORD2 & 8u) && (RAM8(0x154u) & 128u)) {
+        RAM8(0x3Bu) |= 8u;
+        RAM8(0x36u) |= 1u;
+    } else {
+        RAM8(0x30u) ^= 2u;
+    }
     bua_lcd05_diagnostic_merge();
     bua_slow_o2_filter_12p5ms();
+    if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) &&
+        (MINOR_MODE_WORD2 & REF_SEEN_BIT) == 0u &&
+        NO_REF_MINOR_COUNT >= CAL_NO_REF_WAIT_LOOPS) {
+        bua_reference_state_12p5ms();
+        return;
+    }
     bua_reference_state_12p5ms();
+    bua_write_lf92a(ram16be_get(0x00C2u));
     if(sim_legacy_ignition_shutdown_freeze==0u)
         bua_iac_shutdown_homing_even_step111();
 }
@@ -752,14 +813,12 @@ static void ecm_reset(void)
     sim_factory_fmd_byte2_117 = 0u;
     sim_factory_swi_reason117 = FACTORY117_SWI_NONE;
     sim_soft_powerdown_latched = 0u;
-    sim_timer8 = 0u;
     sim_iac_motor_on = 1u;
     sim_maf_adc = 128u;
     sim_o2_adc = 128u;
     sim_tps_adc = 35u;
     sim_diag_adc = 200u;
     bua_factory_reset_step118();
-    bua_step94_fuel_state_reset();
     sim_vss_abs_ticks = 0ul;
     sim_vss_next_edge = 0ul;
     sim_vss_capture_reg = 0u;
@@ -789,6 +848,67 @@ static void ecm_reset(void)
     bua_startup_apply_normal_step112();
     /* Cold reset leaves ENGINE RUNNING clear; LCD4B..LCD8F qualifies it. */
 }
+/* Finish the preceding cell's timer compares, then arm this minor loop. */
+static void bua_serial_timer_irq(bua_u32 tick)
+{
+    bua_u32 start = tick * SERIAL_T_CELL;
+    bua_u8 low;
+    if (SERIAL_MODE_WORD & SERIAL_FLAG_FIRST) {
+        mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 143u);
+        SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
+        {
+            int bit = bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
+            if (bit == 0 || (bit < 0 && ALCL_TABLE_INDEX != 0u))
+                bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+        }
+    }
+    if (SERIAL_MODE_WORD & SERIAL_FLAG_SECOND) {
+        mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);
+        SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_SECOND;
+        bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+        serial_line_high_at(start - SERIAL_T_CELL + SERIAL_T_SECOND);
+        if ((MINOR_MODE_WORD2 & 0x20u) && ALCL_TABLE_INDEX == 25u &&
+            ALCL_BIT_COUNT == 0u) {
+            RAM8(0x012Eu) = 9u;
+            SERIAL_MODE_WORD |= 4u;
+            mem.io4000[7] = 0x27u;
+            mpu16be_set(MPU_CPU_CONTROL_ADDR, mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u);
+        }
+    }
+    TIMER_SNAPSHOT = mem.io4000[6];
+    if (SERIAL_MODE_WORD & 4u) {
+        if ((SERIAL_MODE_WORD & 8u) || --RAM8(0x012Eu) != 0u) {
+            mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);
+            return;
+        }
+        SERIAL_MODE_WORD &= (bua_u8)~4u;
+    }
+    SERIAL_MODE_WORD |= SERIAL_FLAG_FIRST | SERIAL_FLAG_SECOND;
+    low = (bua_u8)mpu16be_get(MPU_CPU_CONTROL_ADDR);
+    bua_write_control_low((bua_u8)(low & 0xFBu));
+    serial_line_low_at(start);
+    mem.io4000[7] = 1u;
+    mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 11u);
+}
+/* LCB1D..LCB5A, VATS is enabled in the BUA calibration. */
+static void bua_vats_reference_check(void)
+{
+    bua_u16 capture, delta;
+    if (MODE_WORD3 & FUEL_VATS_OK_BIT)
+        return;
+    RAM8(7u) |= 2u;
+    ram16be_set(0x18u, bua_error_word_checksum_step113());
+    capture = mpu16be_get(0x3FF8u);
+    delta = (bua_u16)(capture - ram16be_get(0x121u));
+    if (delta != 0u) {
+        ram16be_set(0x121u, capture);
+        if (delta >= 1638u && delta <= 3277u) {
+            MODE_WORD3 |= FUEL_VATS_OK_BIT;
+            RAM8(7u) &= (bua_u8)~2u;
+            ram16be_set(0x18u, bua_error_word_checksum_step113());
+        }
+    }
+}
 static void irq_6p25ms(void)
 {
     bua_u8 count;
@@ -798,9 +918,31 @@ static void irq_6p25ms(void)
         bua_factory_irq_step117();
         return;
     }
+    bua_serial_timer_irq(stats.irq_ticks);
     ++stats.irq_ticks;
     sim_advance_dash_signals_6p25ms();
     sim_advance_ecm_reference_6p25ms();
+    RAM8(0xA0u) = sim_ecm_ref.injector_services_pending ? 0x40u : 0u;
+    if (sim_ecm_ref.pulse_since_irq) {
+        RAM8(0xA0u) |= 8u;
+        COLD_START_REF_COUNT = bua_cold_start_ref_count_step44(COLD_START_REF_COUNT,
+            ram16be_get(ENGINE_RUN_TIME_ADDR), TPS_LOAD_AXIS);
+        if ((SPARK_INPUT_MODE_WORD & EST_ENABLE_BIT) && !(RAM8(0x9Du) & 0x80u)) {
+            if (SPARK_BLEND_MULT > 253u) {
+                SPARK_BLEND_MULT = 255u;
+                SPARK_MODE_WORD &= (bua_u8)~SPARK_BLEND_BIT;
+            } else {
+                SPARK_BLEND_MULT += 2u;
+            }
+        }
+        if (!(RAM8(0x3Bu) & 2u) && !(ENGINE_MODE_WORD & ENGINE_RUNNING_BIT)) {
+            RAM8(0x3Bu) |= 2u;
+            RAM8(0x472u) = 0u;
+        }
+    }
+    if (IGN_MODE_WORD & 0x10u)
+        MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
+    bua_vats_reference_check();
     sim_advance_vss_6p25ms();
     bua_vss_capture_check_6p25ms();
     /* $CB5F..$CBB4 consumes the completed SCI mode before count dispatch. */
@@ -811,17 +953,17 @@ static void irq_6p25ms(void)
         count = 0u;
     }
     MINOR_COUNT = count;
-    TIMER_SNAPSHOT = hw_timer8();
+
     if(sim_normal_fmd_enabled!=0u)
         bua_normal_fmd_refresh_step158();
     /* LCC21 calls LF4DF before the odd/even minor-loop dispatch. */
     bua_iac_motor_service_6p25ms();
-    /* LCC21 reads/normalizes TPS and updates its transient filter. */
-    bua_common_tps_6p25ms();
     /* LF67B services an MPU-reported injection before falling into LF76A. */
     bua_common_injector_service_6p25ms();
     /* LF76A completes before LCC65 selects the odd/even minor path. */
     bua_common_maf_6p25ms();
+    /* LCC21 reads/normalizes TPS and updates its transient filter. */
+    bua_common_tps_6p25ms();
     if ((count & 1u) != 0u)
         air_fuel_12p5ms();
     else
