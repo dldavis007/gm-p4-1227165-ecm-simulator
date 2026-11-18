@@ -185,7 +185,7 @@ static void run_step94_odd_fuel_path_test(void)
     sim_maf_adc=128u; sim_o2_adc=180u;
     ENGINE_MODE_WORD|=ENGINE_RUNNING_BIT;
     MODE_WORD3|=FUEL_VATS_OK_BIT;
-    ram16be_set(REF_PERIOD_ADDR,410u);
+    mpu16be_set(0x3FC0u,410u);
     RPM_DIV25=96u; RPM_SPECIAL=96u; FILTERED_LOAD=128u; TPS_LOAD_AXIS=80u;
     COOLANT=160u; RAM8(0x00CDu)=25u; BLM=128u;
     CLOSED_LOOP_INTEGRATOR=128u; CLOSED_LOOP_PW_CORR=128u;
@@ -221,7 +221,7 @@ static void run_step94_odd_fuel_path_test(void)
                  "16-IRQ cadence retains eight even Spark/O2 selections");
 
     ecm_reset(); ENGINE_MODE_WORD|=ENGINE_RUNNING_BIT; MODE_WORD3|=FUEL_VATS_OK_BIT;
-    ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
+    mpu16be_set(0x3FC0u,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     FILTERED_LOAD=128u; TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u;
     CLOSED_LOOP_PW_CORR=128u; sim_maf_adc=64u;
     seed_live_maf(
@@ -229,7 +229,7 @@ static void run_step94_odd_fuel_path_test(void)
     irq_6p25ms();
     flow_low=ram16be_get(AIRFLOW_WORD_ADDR); fuel_low=mpu16be_get(0x3FD0u);
     ecm_reset(); ENGINE_MODE_WORD|=ENGINE_RUNNING_BIT; MODE_WORD3|=FUEL_VATS_OK_BIT;
-    ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
+    mpu16be_set(0x3FC0u,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     FILTERED_LOAD=128u; TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u;
     CLOSED_LOOP_PW_CORR=128u; sim_maf_adc=160u;
     seed_live_maf(
@@ -276,7 +276,7 @@ static void run_step95_load_producer_test(void)
 
     ecm_reset(); sim_maf_adc=128u; sim_o2_adc=180u;
     ENGINE_MODE_WORD|=ENGINE_RUNNING_BIT; MODE_WORD3|=FUEL_VATS_OK_BIT;
-    ram16be_set(REF_PERIOD_ADDR,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
+    mpu16be_set(0x3FC0u,410u); RPM_DIV25=96u; RPM_SPECIAL=96u;
     TPS_LOAD_AXIS=80u; COOLANT=160u; BLM=128u; CLOSED_LOOP_PW_CORR=128u;
     seed_live_maf(
                         bua_maf_analog_unlimited_lf7ac(sim_maf_adc,0,0,0,0));

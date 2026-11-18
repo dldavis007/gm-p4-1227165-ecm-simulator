@@ -16,8 +16,8 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 146 |
-| Static IRQ path, unobserved in this scenario | 37 |
+| Observed on the IRQ path | 155 |
+| Static IRQ path, unobserved in this scenario | 38 |
 | Outside the IRQ call graph | 105 |
 
 The observed set includes both spark lookups, advance sum, knock attack and
@@ -41,6 +41,7 @@ git -C ../m68hc11 checkout 9856198c1a8c5ce5e3c2428a4c332808307998a4
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --all --coverage
 ```
 
 - Running spark. Both implementations retain their own state for 16 ticks
@@ -59,16 +60,46 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq
   SPI completion and host ADC/FMD values. The stopped scenario matches
   all ordered MPU byte writes on 32/32 ticks. The second scenario supplies
   a valid VATS capture and a stopped, 300 RPM, then 1,100 RPM reference
-  signal. It matches all ordered MPU writes on 256/256 ticks. Both set the
-  running flag on tick 116. On every tick of both scenarios the fuel words
-  $C2 and $D9, FMD byte selector and serial interrupt flags also match.
-- Both full IRQ scenarios compare every byte below $0500 except the CPU
-  stack window $01C0–$01FF, including the ADC receive scratch at $64.
-  LF651 base bias, warm park, the startup motor trajectory, commanded idle,
-  COP2 and Error 43 now agree across these traces. The emulator adapter
-  corrects FDIV overflow to return $FFFF per M68HC11RM. This matters on
-  drive tick 99 ($0999 divided by $06FE). Other idle PID operating regions,
-  physical bus timing and warm transmission behavior need separate traces.
+  signal. A third, 512-tick scenario shifts into drive and supplies a 40 mph
+  vehicle-speed input. On both driving traces the ROM and C first flag the
+  engine running at tick 116. All three traces agree on non-stack RAM through
+  $04FF and all ordered MPU writes on every tick. Both driving inputs supply
+  reference captures and VATS periods through modeled MPU registers. The
+  emulator adapter returns $FFFF for FDIV overflow per M68HC11RM.
+- Cold power-on. The ROM starts at its reset vector with zero-filled memory.
+  At $CCC6 its non-stack RAM, MPU and modeled I/O match the C power-on
+  lifecycle entry. The historical `ecm_reset()` fixture used to seed the
+  full IRQ replays differs from cold startup at 29 addresses. Reset checks
+  final register state; intermediate reset write order is unverified.
+- Targeted replays. Major-segment dispatches and routine slices use equal
+  sensor inputs and RAM preloads and compare non-stack RAM, MPU state and
+  ordered MPU writes at their endpoints. Cases include acceleration and PE,
+  warm O2 feedback, BLM cell learning, idle PID and homing, shutdown, warm
+  TCC lock/unlock, EGR, purge, outputs, MAT faults, code flashing, Mode 4 and
+  factory control. The BLM threshold case retains state for 64 additional
+  services. SCI runs receive and transmit IRQs for Modes 0–4 and checks
+  every response byte against the C packet handler, plus bad-checksum
+  rejection. Intermediate per-byte SCI scratch is unverified.
+
+### Executed ROM instructions
+
+`--coverage` counts unique executed instruction addresses against instruction
+starts in the assembled listing. It verifies the listed instruction bytes
+against the image and groups them into contiguous regions at routine entries,
+dispatch targets and selected functional boundaries. Shared tails count once
+at their ROM address. Repeated ticks do not increase the count.
+
+| Replays added in command order | New instructions | Cumulative |
+|---|---:|---:|
+| Running spark and arithmetic, stopped, crank-to-idle | 3,000 | 45.47% |
+| 512-tick road input | 237 | 49.06% |
+| Independent reset vector | 213 | 52.29% |
+| Targeted segments, routine slices and SCI | 866 | 65.41% |
+
+Of 6,598 listing instructions, 2,282 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $E4F7 (163), $E87A (152), $DA2D
+(131) and $CDE6 (104). A hit records execution under the scenario inputs.
+The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
 
@@ -77,10 +108,10 @@ in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are F56CA262, C8414C20 and B12D3084 respectively. These are C regression
+are 6E4775A7, 86B8CDB5 and B12D3084 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
-Simulation boundaries include the host period-valid flag, invalid capture
+Simulation boundaries include invalid capture
 sentinels in RPM/dwell and the SWI wait. Reference capture and ASLD now wrap
 to 16 bits. FMD transactions use the processor-facing byte boundary. SPI bus
 timing, stack traffic and physical ignition timing remain unverified.

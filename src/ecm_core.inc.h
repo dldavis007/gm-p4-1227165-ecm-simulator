@@ -645,7 +645,6 @@ typedef struct {
     bua_u32 absolute_timer_ticks;
     bua_u32 last_edge_ticks;
     bua_u16 period_reg;
-    bua_u8 period_valid;
     bua_u8 pulse_since_irq;
     bua_u8 injector_ref_phase;
     bua_u8 injector_services_pending;
@@ -1420,8 +1419,9 @@ static void sim_advance_ecm_reference_6p25ms(void)
         if (sim_ecm_ref.last_edge_ticks != 0ul) {
             delta = edge_tick - sim_ecm_ref.last_edge_ticks;
             sim_ecm_ref.period_reg = (bua_u16)delta;
-            sim_ecm_ref.period_valid = 1u;
-            ram16be_set(REF_PERIOD_ADDR, sim_ecm_ref.period_reg);
+            /* Peripheral capture, independent of CPU writes to the MPU. */
+            mem.mpu[0] = (bua_u8)(delta >> 8);
+            mem.mpu[1] = (bua_u8)delta;
         }
         sim_ecm_ref.last_edge_ticks = edge_tick;
         sim_ecm_ref.pulse_since_irq = 1u;
@@ -1827,16 +1827,14 @@ static BuaAfrResult bua_afr_lda2d(bua_u8 startup_enrich_hi,
 static BuaAfrResult bua_afr_power_enrich_ld9d7(bua_u8 rpm_div25,
                                                bua_u8 filtered_load,
                                                bua_u8 tps_axis,
-                                               bua_u8 coolant_arg,
+                                               bua_u8 coolant_change,
                                                bua_u8 pe_was_active)
 {
     BuaAfrResult r;
     unsigned int tps_threshold;
     unsigned int load_threshold;
-    bua_u8 coolant_change;
     bua_u8 rpm_change;
     unsigned int factor;
-    (void)rpm_div25;
     r.afr_code = 0u;
     r.factor = 0u;
     r.load_change = 0u;
@@ -1860,9 +1858,7 @@ static BuaAfrResult bua_afr_power_enrich_ld9d7(bua_u8 rpm_div25,
     }
     if ((unsigned int)filtered_load < load_threshold)
         return r;
-    coolant_change = bua_lookup_spacing32(cal_pe_coolant_change, 9u,
-                                          coolant_arg);
-    rpm_change = cal_pe_rpm_change[0];
+    rpm_change = bua_lookup_spacing16(cal_pe_rpm_change, 17u, rpm_div25);
     factor = 128u + (unsigned int)rpm_change + (unsigned int)coolant_change;
     r.pe_active = 1u;
     r.single_fire_cleared = 1u;
@@ -1901,7 +1897,7 @@ static bua_u16 bua_mode4_afr_code_step47(bua_u8 aldl_afr_value)
 static BuaAfrSelectResult bua_select_afr_step47(bua_u8 rpm_div25,
                                                  bua_u8 filtered_load,
                                                  bua_u8 tps_axis,
-                                                 bua_u8 coolant_arg,
+                                                 bua_u8 pe_coolant_change,
                                                  bua_u8 startup_enrich_hi,
                                                  bua_u8 af_mode_word2,
                                                  bua_u8 coolant_afr_change,
@@ -1929,12 +1925,12 @@ static BuaAfrSelectResult bua_select_afr_step47(bua_u8 rpm_div25,
     }
     pe_was_active = (bua_u8)(((af_mode_word & AF_POWER_ENRICH_BIT) != 0u) ? 1u : 0u);
     pe = bua_afr_power_enrich_ld9d7(rpm_div25, filtered_load, tps_axis,
-                                    coolant_arg, pe_was_active);
+                                    pe_coolant_change, pe_was_active);
     /* LD9ED clears PE before testing the current qualifiers. */
     r.af_mode_word = (bua_u8)(r.af_mode_word & (bua_u8)~AF_POWER_ENRICH_BIT);
     if (pe.pe_active != 0u) {
         r.af_mode_word = (bua_u8)(r.af_mode_word | AF_POWER_ENRICH_BIT);
-        r.single_fire = 0u; /* BCLR L0039,$80 */
+        r.single_fire &= (bua_u8)~0x80u; /* BCLR L0039,$80 */
         r.afr = pe;
         r.source = 1u;
         return r;

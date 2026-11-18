@@ -77,7 +77,9 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
         ++bua_power_on_trace120.volatile_ram_clears;
     }
     mem.io4000[4]=(bua_u8)(mem.io4000[4]|0x08u);
-    mem.io4000[2]=(bua_u8)(mem.io4000[2]&0xFBu);
+    mem.io4000[2]=(bua_u8)((mem.io4000[2]&0xFBu)|8u); /* LF1C3 deselects ADC. */
+    mem.io4000[0xBu]=0xFFu; /* LF348, ROM checksum COP strobe. */
+    mem.io4000[0xCu]=0u;
     RAM8(0x0030u)=0x04u;
     RAM8(0x0049u)=in.initial_fmd_byte1;
 

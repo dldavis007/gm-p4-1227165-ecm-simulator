@@ -2,16 +2,23 @@
 import argparse
 import ctypes
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
 from m68hc11 import HC11
+from rom_coverage import report
+from rom_replays import segments, slices, serial, reset_vector, attach_spi
 
 
 class BuaCPU(HC11):
     """Correct FDIV overflow in the pinned emulator (M68HC11RM, FDIV)."""
 
+    visited = None
+
     def step(self):
+        if self.visited is not None:
+            self.visited.add(self.pc)
         overflow = self.mem[self.pc] == 0x03 and self.d >= self.x
         instruction = super().step()
         if overflow:
@@ -113,12 +120,11 @@ def compare_error43(lib):
             assert ram[address] == cpu.mem[address], (call, hex(address))
 
 
-def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
+def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=False):
     """Diagnostic full scheduler comparison, reporting detail on the first unequal tick."""
     cpu = BuaCPU()
     cpu.load(ROM.read_bytes(), 0xC000)
     cpu.on_read(0x4008, 0x4008, lambda addr: 1)  # timer IRQ
-    cpu.on_read(0x4001, 0x4001, lambda addr: 128)  # SPI complete
     lib.probe_irq_setup()
     lib.probe_ram.restype = lib.probe_mpu.restype = ctypes.POINTER(ctypes.c_ubyte)
     ram = lib.probe_ram()
@@ -126,18 +132,7 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
     cpu.load(bytes(lib.probe_mpu()[:64]), 0x3FC0)
     lib.probe_io.restype = ctypes.POINTER(ctypes.c_ubyte)
     cpu.load(bytes(lib.probe_io()[:16]), 0x4000)
-    command, channel = 0, 0
-    def spi_write(addr, value):
-        nonlocal command, channel
-        command = value
-        if not cpu.mem[0x4002] & 4 and value != 0xB0:
-            channel = value
-    def spi_read(addr):
-        if cpu.mem[0x4002] & 4:
-            return lib.probe_fmd(command)
-        return lib.probe_adc(channel)
-    cpu.on_write(0x4000, 0x4000, spi_write)
-    cpu.on_read(0x4000, 0x4000, spi_read)
+    attach_spi(cpu, lib)
     writes = []
     def log_write(addr, value):
         writes.append((addr, value))
@@ -158,7 +153,7 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
     state_failures = 0
     running = [None, None]
     injection_count = 0
-    for tick in range(1, 257 if drive else 33):
+    for tick in range(1, 513 if road else 257 if drive else 33):
         if tick == trace_tick:
             cpu.step = trace_step
             cpu.on_write(0, 0x4FF, trace_ram)
@@ -178,12 +173,17 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
             cpu.mem[0x3FF8:0x3FFA] = (2000).to_bytes(2, "big")  # valid VATS period
             mpu = lib.probe_mpu()
             mpu[0x38], mpu[0x39] = divmod(2000, 256)
+        if road:
+            lib.probe_road(40 if tick >= 160 else 0)
         lib.probe_irq()
         if drive:
+            if road:
+                cpu.mem[0x3FC2:0x3FC4] = lib.probe_vss_capture().to_bytes(2, "big")
             injections = lib.probe_injections()
             cpu.mem[0x3FFA] = 8 * lib.probe_reference_seen() | (64 if injections != injection_count else 0)
             injection_count = injections
-            cpu.mem[0x3FC0:0x3FC2] = lib.probe_capture().to_bytes(2, "big")
+            if lib.probe_reference_seen():
+                cpu.mem[0x3FC0:0x3FC2] = lib.probe_capture().to_bytes(2, "big")
         cpu.pc, cpu.sp = cpu.read16(0xFFF2), 0x1F6
         reason = cpu.run(until_pc=0xCCC6, max_steps=20000)
         if reason != "until_pc":
@@ -236,14 +236,22 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--full-irq", action="store_true")
-    parser.add_argument("--drive-irq", action="store_true")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--full-irq", action="store_true")
+    group.add_argument("--road-irq", action="store_true")
+    group.add_argument("--drive-irq", action="store_true")
+    group.add_argument("--all", action="store_true", help="run all scenarios and combine their coverage")
     parser.add_argument("--check-outputs", action="store_true",
                         help="check ordered MPU writes and fuel/FMD/serial state")
     parser.add_argument("--trace-tick", type=int, help="show ROM stores to differing RAM bytes")
+    parser.add_argument("--coverage", action="store_true", help="report unique executed instruction starts by listing region")
+    group.add_argument("--segments", action="store_true")
+    group.add_argument("--reset-vector", action="store_true")
     args = parser.parse_args()
+    if args.coverage:
+        BuaCPU.visited = set()
     if args.trace_tick is not None and not (
-        (args.drive_irq or args.full_irq) and 1 <= args.trace_tick <= (256 if args.drive_irq else 32)
+        (args.road_irq or args.drive_irq or args.full_irq) and 1 <= args.trace_tick <= (512 if args.road_irq else 256 if args.drive_irq else 32)
     ):
         parser.error("--trace-tick requires a tick in the selected IRQ scenario")
     if args.check_outputs and not (args.full_irq or args.drive_irq):
@@ -252,9 +260,25 @@ if __name__ == "__main__":
         bridge = Path(temp) / "probe.so"
         subprocess.run(["cc", "-std=c89", "-shared", "-fPIC",
                         str(ROOT / "tests/spark_rom_probe.c"), "-o", str(bridge)], check=True)
-        lib = ctypes.CDLL(str(bridge))
-        if args.full_irq or args.drive_irq:
-            compare_irq(lib, args.drive_irq, args.check_outputs, args.trace_tick)
-        else:
-            compare(lib)
-            compare_error43(lib)
+        scenarios = {
+            "spark": lambda lib: (compare(lib), compare_error43(lib)),
+            "stopped": lambda lib: compare_irq(lib, False, args.check_outputs, args.trace_tick),
+            "drive": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick),
+            "road": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick, road=True),
+            "reset": lambda lib: reset_vector(BuaCPU(), ROM.read_bytes(), lib),
+            "targeted": lambda lib: (segments(BuaCPU, ROM.read_bytes(), lib),
+                                     slices(BuaCPU, ROM.read_bytes(), lib),
+                                     serial(BuaCPU, ROM.read_bytes(), lib)),
+        }
+        selected = ("reset" if args.reset_vector else "targeted" if args.segments
+                    else "road" if args.road_irq else "drive" if args.drive_irq else "stopped" if args.full_irq else "spark")
+        for name in scenarios if args.all else [selected]:
+            # A separate loaded image gives every scenario fresh C static state.
+            path = Path(temp) / (name + ".so")
+            shutil.copyfile(bridge, path)
+            before = len(BuaCPU.visited) if args.coverage else 0
+            scenarios[name](ctypes.CDLL(str(path)))
+            if args.coverage:
+                print(f"{name}: +{len(BuaCPU.visited)-before} unique PCs, {len(BuaCPU.visited)} cumulative")
+    if args.coverage:
+        report(ROM.with_suffix(".lst"), ROM.read_bytes(), BuaCPU.visited)

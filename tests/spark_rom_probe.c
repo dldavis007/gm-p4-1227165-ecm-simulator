@@ -17,7 +17,6 @@ static void record_write(unsigned int address, unsigned int value)
 void probe_reset(void)
 {
     memset(&mem, 0, sizeof(mem));
-    sim_ecm_ref.period_valid = 1u;
 }
 unsigned char *probe_io(void) { return mem.io4000; }
 unsigned char *probe_ram(void) { return mem.low; }
@@ -59,4 +58,58 @@ int probe_injections(void) { return (int)stats.physical_injector_services; }
 int probe_product(unsigned int a, unsigned int b)
 {
     return bua_mul_u16_u16_lf2f0((bua_u16)a, (bua_u16)b, 0);
+}
+
+void probe_major(unsigned int segment)
+{
+    count = 0;
+    major_segment((bua_u8)segment);
+}
+
+void probe_cold_boot(void)
+{
+    BuaPowerOnInput120 in;
+    memset(&in, 0, sizeof(in));
+    memset(&mem, 0, sizeof(mem));
+    count = 0;
+    in.socket_checksum_valid = 1u;
+    bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
+}
+
+int probe_map(void) { return mem.io5000; }
+
+void probe_afr(void) { count = 0; bua_select_live_afr(); }
+void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
+void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }
+void probe_homing(void) { count = 0; bua_iac_shutdown_homing_even_step111(); }
+void probe_motor(void) { count = 0; bua_iac_motor_service_6p25ms(); }
+void probe_mode4(void) { count = 0; bua_mode4_scheduler_step116(); }
+void probe_flash(void) { count = 0; bua_diag_flash_step109(); }
+void probe_factory(void)
+{
+    count = 0;
+    sim_factory_diagnostic_adc117 = sim_diag_adc;
+    sim_factory_battery_adc117 = sim_volt_adc;
+    bua_factory_irq_step117();
+}
+void probe_factory_inputs(void) { sim_diag_adc = 60u; }
+
+int probe_frame(const bua_u8 *data, unsigned int length)
+{
+    return bua_sci115_receive(data, (bua_u8)length);
+}
+int probe_response_length(void) { return bua_sci115.output_count; }
+int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_warm_fuel(void) { count = 0; bua_odd_normal_fuel_after_load_12p5ms(); }
+void probe_blm_tail(void) { count = 0; bua_odd_50ms_tail_lddc2(); }
+void probe_road(unsigned int mph)
+{
+    sim_set_vss_mph(mph);
+    sim_normal_fmd_byte1 = mph ? 1u : 0u;
+}
+int probe_vss_capture(void) { return sim_vss_capture_reg; }
+void probe_temperature_inputs(unsigned int cts, unsigned int mat)
+{
+    sim_cts_adc = (bua_u8)cts;
+    sim_mat_adc = (bua_u8)mat;
 }

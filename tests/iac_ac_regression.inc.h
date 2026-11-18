@@ -1436,51 +1436,51 @@ static void run_step47_afr_selection_test(void)
     printf("\nStep-47 integrated AFR selection / PE interaction (LD9A9..LDA5A):\n");
 #define STEP47_CHECK(cond, text) do { ++total; if (cond) ++passed; \
     printf("  %-68s %s\n", text, (cond) ? "PASS" : "FAIL"); } while (0)
-    r = bua_select_afr_step47(96u, 49u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 49u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 0u && r.afr.afr_code == 445u &&
                  (r.af_mode_word & AF_POWER_ENRICH_BIT) == 0u && r.single_fire == 1u,
                  "below PE load -> normal closed-loop stoich; single-fire unchanged");
-    r = bua_select_afr_step47(96u, 50u, 180u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 50u, 180u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u &&
-                 (r.af_mode_word & AF_POWER_ENRICH_BIT) != 0u && r.single_fire == 0u,
+                 (r.af_mode_word & AF_POWER_ENRICH_BIT) != 0u && r.single_fire == 1u,
                  "exact PE thresholds -> PE code 546 and single-fire cleared");
-    r = bua_select_afr_step47(96u, 40u, 164u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 40u, 164u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, AF_POWER_ENRICH_BIT,
                               1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 1u && (r.af_mode_word & AF_POWER_ENRICH_BIT) != 0u,
                  "prior PE uses TPS/load hysteresis (164 / 40 remains active)");
-    r = bua_select_afr_step47(96u, 39u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 39u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, AF_POWER_ENRICH_BIT,
                               1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 0u && (r.af_mode_word & AF_POWER_ENRICH_BIT) == 0u &&
                  r.single_fire == 1u,
                  "prior PE below hysteresis load clears PE; does not force single-fire");
-    r = bua_select_afr_step47(96u, 80u, 200u, 0u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 0u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 1u && r.afr.afr_code == 688u,
                  "cold PE coolant term produces rich code 688 (~9.53:1)");
-    r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               0u, 25u, 0u, 1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,
                  "PE overrides normal open-loop AFR construction");
     /* Use filtered load 128 for the known Step-25 open-loop anchor. */
-    r = bua_select_afr_step47(96u, 128u, 100u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 128u, 100u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               0u, 25u, 0u, 1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 0u && r.afr.afr_code == 450u,
                  "normal LDA2D fallback preserves warm open-loop code 450");
-    r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u,
                               STEP47_MODE4_ACTIVE_BIT, STEP47_MODE4_AFR_ENABLE_BIT, 128u);
     STEP47_CHECK(r.source == 2u && r.afr.afr_code == 511u && r.single_fire == 1u,
                  "Mode 4 AFR override has priority over PE: 65535/128 = 511");
-    r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, AF_POWER_ENRICH_BIT, 1u,
                               STEP47_MODE4_ACTIVE_BIT, STEP47_MODE4_AFR_ENABLE_BIT, 128u);
     STEP47_CHECK(r.source == 2u && (r.af_mode_word & AF_POWER_ENRICH_BIT) != 0u,
                  "Mode 4 bypass leaves pre-existing PE state bit untouched this pass");
-    r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, 0u, 1u,
                               STEP47_MODE4_ACTIVE_BIT, 0u, 128u);
     STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,
@@ -1490,7 +1490,7 @@ static void run_step47_afr_selection_test(void)
     STEP47_CHECK(bua_mode4_afr_code_step47(1u) == 65535u,
                  "Mode 4 raw AFR 1 -> reciprocal code 65535");
     /* DFCO is downstream: AFR can be PE-rich while LF92A still zeros fuel. */
-    r = bua_select_afr_step47(96u, 80u, 200u, 160u, 0u,
+    r = bua_select_afr_step47(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u,
                               AF_CLOSED_LOOP_BIT, 25u, FUEL_DFCO_ZERO_BIT,
                               1u, 0u, 0u, 0u);
     STEP47_CHECK(r.source == 1u && r.afr.afr_code == 546u,

@@ -1,7 +1,7 @@
 static void run_step116_mode4_lifecycle_test(void)
 {
     unsigned int passed=0u;
-    unsigned int total=16u;
+    unsigned int total=17u;
     bua_u8 frame[SCI115_MAX_FRAME];
     bua_u8 data[13];
     bua_u8 i;
@@ -32,6 +32,13 @@ static void run_step116_mode4_lifecycle_test(void)
          "command-word-3 bit 6 clears all five retained error bytes");
     S116(ram16be_get(0x0018u)==1u && bua_mode4_trace116.error_resets==1ul,
          "error reset immediately stores the LF3A7 checksum");
+    /* LF3A7 leaves A zero, suppressing the later bit tests on this entry.
+     * Issue the independent IAC/BLM commands on a second Mode 4 entry. */
+    S116(RAM8(0x002Cu)==100u && RAM8(0x001Cu)==0x44u,
+         "combined error reset follows the checksum high byte at LCB90");
+    MINOR_MODE_WORD2 &= (bua_u8)~8u;
+    RAM8(0x0154u)=0x30u;
+    bua_mode4_scheduler_step116();
     S116((RAM8(0x00F3u)&0x04u)!=0u && RAM8(0x002Cu)==255u &&
          bua_mode4_trace116.iac_resets==1ul,
          "command-word-3 bit 5 requests IAC reset and writes position 255");

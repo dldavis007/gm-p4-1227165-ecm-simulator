@@ -7,7 +7,7 @@
 /* ---------------------------------------------------------------------- */
 #define STEP104_FNV_OFFSET 2166136261ul
 #define STEP104_FNV_PRIME    16777619ul
-#define STEP104_EXPECTED_SIGNATURE 0xF56CA262ul
+#define STEP104_EXPECTED_SIGNATURE 0x6E4775A7ul
 static bua_u32 step104_sig_byte(bua_u32 sig,bua_u8 value)
 {
     sig^=(bua_u32)value;
@@ -98,7 +98,8 @@ static void run_dynamic_drive_cycle(void)
     printf("  This is a behavioral integration profile, not a vehicle-dynamics claim.\n\n");
     printf(" time  cmdMPH/RPM TPSin/axis MAF  ECMmph RPM  load fuel DFCO IAC phase\n");
 
-    MODE_WORD3|=FUEL_VATS_OK_BIT;
+    mem.mpu[0x38] = 0x07u; /* VATS input capture, 2000 timer counts. */
+    mem.mpu[0x39] = 0xD0u;
     sim_o2_adc=128u;
     BLM=128u;
     CLOSED_LOOP_PW_CORR=128u;
@@ -136,7 +137,7 @@ static void run_dynamic_drive_cycle(void)
             /* Alternating PC O2 voltage provides actual ready crossings and
              * rich/lean activity; it is a stimulus, not a plant model. */
             if(segment_index>=1u)
-                sim_o2_adc=((total_tick/40u)&1u)!=0u ? 180u : 30u;
+                sim_o2_adc=(total_tick % 160u < 120u) ? 30u : 180u;
             apply_dynamic_command(speed_mph,rpm,tps_adc,maf_adc,segment->in_drive);
             irq_6p25ms();
             behavior_signature=step104_sig_tick(behavior_signature,
@@ -257,7 +258,7 @@ static void run_dynamic_drive_cycle(void)
     printf("  %-84s %s\n",T,(C)?"PASS":"FAIL"); } while(0)
     printf("\nStep-104 normal-operation baseline-freeze regression:\n");
     STEP104_CHECK(behavior_signature==STEP104_EXPECTED_SIGNATURE,
-                  "canonical RAM/MPU/I/O/statistics trace equals F56CA262");
+                  "canonical RAM/MPU/I/O/statistics trace equals 6E4775A7");
     STEP104_CHECK(total_tick==4960u && stats.irq_ticks==4960ul,
                   "fixed warm-restart profile contains exactly 4,960 ordinary IRQ ticks");
     STEP104_CHECK(stats.air_fuel_loops==2480ul && stats.spark_vss_loops==2480ul,

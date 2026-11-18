@@ -138,14 +138,7 @@ static void bua_reference_state_12p5ms(void)
             RAM8(0x0001u) |= 0x08u;
             ++stats.engine_run_transitions;
         }
-        /* LCDDD is reached after startup qualification as well as during
-         * ordinary running.  The RPM calculation is therefore an every-even-
-         * loop operation once ENGINE RUNNING is set. period_valid is a
-         * simulator-only guard until the host has captured two edges. */
-        if ((ENGINE_MODE_WORD & ENGINE_RUNNING_BIT) != 0u &&
-            sim_ecm_ref.period_valid != 0u) {
-            bua_running_spark_12p5ms();
-        }
+        bua_running_spark_12p5ms();
         return;
     }
     /* LCDC1..LCDCD only counts missing references after ENGINE RUNNING.
@@ -159,9 +152,7 @@ static void bua_reference_state_12p5ms(void)
             return;
         }
         NO_REF_MINOR_COUNT = (bua_u8)(NO_REF_MINOR_COUNT + 1u);
-        if (sim_ecm_ref.period_valid != 0u) {
-            bua_running_spark_12p5ms();
-        }
+        bua_running_spark_12p5ms();
     } else {
         bua_low_rpm_spark_reset_ld306();
     }
@@ -943,6 +934,7 @@ static void irq_6p25ms(void)
     if (IGN_MODE_WORD & 0x10u)
         MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
     bua_vats_reference_check();
+    ram16be_set(REF_PERIOD_ADDR, mpu16be_get(0x3FC0u)); /* LCB5A */
     sim_advance_vss_6p25ms();
     bua_vss_capture_check_6p25ms();
     /* $CB5F..$CBB4 consumes the completed SCI mode before count dispatch. */
