@@ -170,3 +170,9 @@ void probe_temperature_inputs(unsigned int cts, unsigned int mat)
     sim_cts_adc = (bua_u8)cts;
     sim_mat_adc = (bua_u8)mat;
 }
+
+void probe_serial_manager(unsigned int cell)
+{
+    count = 0;
+    (void)bua_lf880_manager(cell * SERIAL_T_CELL + SERIAL_T_FIRST);
+}

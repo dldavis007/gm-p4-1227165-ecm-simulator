@@ -593,6 +593,13 @@ static bua_u8 bua_160_load_next_factory_byte(void)
     ALCL_TABLE_INDEX=(bua_u8)(i+1u); ++stats.display_bytes_loaded;
     return 1u;
 }
+/* LF8F3 drives the line high through LF4A8 on this cell. */
+static void bua_160_first_high(bua_u32 t)
+{
+    bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+    serial_line_high_at(t);
+}
+
 static int bua_lf880_manager(bua_u32 t)
 {
     bua_u8 msb;
@@ -601,7 +608,7 @@ static int bua_lf880_manager(bua_u32 t)
         ALCL_BIT_COUNT=(bua_u8)(ALCL_BIT_COUNT-1u);
         msb=(bua_u8)((ALCL_XMIT_BYTE&0x80u)!=0u);
         ALCL_XMIT_BYTE=(bua_u8)(ALCL_XMIT_BYTE<<1);
-        if(msb==0u) serial_line_high_at(t);
+        if(msb==0u) bua_160_first_high(t);
         return msb!=0u?1:0;
     }
     ALCL_BIT_COUNT=8u;
@@ -609,7 +616,7 @@ static int bua_lf880_manager(bua_u32 t)
         if(bua_160_load_next_factory_byte()==0u) return -1;
     } else if((MINOR_MODE_WORD2&0x30u)!=0u) bua_160_load_next_diagnostic_byte();
     else bua_160_load_next_normal_byte();
-    if(ALCL_TABLE_INDEX!=0u) serial_line_high_at(t);
+    if(ALCL_TABLE_INDEX!=0u) bua_160_first_high(t);
     return -1;
 }
 /* One complete 6.25-ms cell, corresponding to LCAA4 then LCA2C then LCA3B. */
@@ -926,11 +933,7 @@ static void bua_serial_timer_irq(bua_u32 tick)
     if (SERIAL_MODE_WORD & SERIAL_FLAG_FIRST) {
         mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 143u);
         SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
-        {
-            int bit = bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
-            if (bit == 0 || (bit < 0 && ALCL_TABLE_INDEX != 0u))
-                bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
-        }
+        (void)bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
     }
     if (SERIAL_MODE_WORD & SERIAL_FLAG_SECOND) {
         mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);

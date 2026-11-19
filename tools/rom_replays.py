@@ -1323,3 +1323,44 @@ def diagnostic_transitions(make_cpu, rom, lib):
         assert bool(cpu.mem[0x3FFD] & 8) == (count < 52), label
     assert ram[0x18] * 256 + ram[0x19] == 1 + sum(ram[5:10])
     print("Segment D: retained Error 21, checksum and lamp matched over 52 services")
+
+
+def serial_streams(make_cpu, rom, lib):
+    # One framing cell and eight shifts per byte, including the terminal $FF.
+    for name, mode, selector, index, frames in [
+        ("display", 0x05, None, 0, 6),
+        ("diagnostic", 0x25, None, 0, 26),
+        ("factory RAM", 0, 1, 0, 17),
+        ("factory mixed", 0, 2, 0, 17),
+        ("factory MPU", 0, 3, 0, 17),
+        ("factory deselected", 0, 0, 0xFF, 1),
+    ]:
+        cpu = make_cpu()
+        ram, mpu, _ = hardware(cpu, rom, lib)
+        for addr in range(0x173, 0x189):
+            cpu.mem[addr] = ram[addr] = (addr * 13) & 255
+        for addr, value in [(0x35, mode), (0x47, 128 if selector is not None else 0),
+                            (0x48, selector or 0), (0x189, 0), (0x18A, index),
+                            (0x18B, 0xA5)]:
+            cpu.mem[addr] = ram[addr] = value
+        writes = []
+
+        def write(addr, value):
+            cpu.mem[addr] = value
+            writes.append((addr, value))
+
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        for cell in range(frames * 9):
+            # Begin each cell with its line driven low by the timer service.
+            cpu.mem[0x3FFD] &= 0xFB
+            mpu[0x3D] &= 0xFB
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(0xF880, max_steps=100)
+            lib.probe_serial_manager(cell)
+            label = f"160-baud {name} cell {cell}"
+            assert cpu.pc == 0xFFFE, label
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+        assert ram[0x189] == 0 and ram[0x18A] == index, name
+    print("160-baud display, diagnostic and factory streams matched cell by cell")

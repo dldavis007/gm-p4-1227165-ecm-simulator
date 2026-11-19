@@ -97,8 +97,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,174 | 92.04% |
-| ROM-only background RAM refresh | 15 | 92.27% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,197 | 92.39% |
+| ROM-only background RAM refresh | 15 | 92.62% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -146,6 +146,14 @@ MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
 purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
 $D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
 alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+The 160-baud transmitter at $F880 reaches all 57 instructions. The replay
+compares non-stack RAM, MPU state and ordered MPU writes after each of 756
+cells across the display, diagnostic and three factory streams, including
+their terminal frames and a deselected factory stream. With selector zero and
+index $FF after a factory mode change, $F892 exits without writing the CSR.
+The C timer handler previously inferred a line transition from the nonzero
+index and issued an extra write to $3FFC–$3FFD on that framing cell.
 
 All 84 instructions in the factory output region at $FDED execute. Starting
 at factory service entry $FCA2, 96 consecutive passes retain state through
