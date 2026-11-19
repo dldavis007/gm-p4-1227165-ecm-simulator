@@ -84,6 +84,8 @@ void probe_cold_boot(void)
     bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
 }
 
+void probe_tps_adc(unsigned int sample) { bua_hal_set_tps_adc((bua_u8)sample); }
+
 void probe_boot_inputs(unsigned int battery, unsigned int pump,
                        unsigned int diagnostic, unsigned int fmd)
 {

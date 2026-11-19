@@ -86,16 +86,19 @@ def reset_vector(cpu, rom, lib):
 
 def reset_branches(make_cpu, rom, lib):
     cases = [
-        ("battery threshold", 100, 160, 40, 1, True, 1),
-        ("pump below threshold", 99, 159, 40, 1, True, 1),
-        ("diagnostic below window", 99, 160, 39, 1, True, 1),
-        ("diagnostic above window", 99, 160, 100, 1, True, 1),
-        ("factory RAM fill", 99, 160, 40, 0, True, 2),
-        ("factory preserves RAM", 99, 160, 99, 1, True, 2),
-        ("Error 51 normal handoff", 100, 0, 39, 0, False, 1),
-        ("Error 51 SWI boundary", 100, 0, 40, 0, False, 3),
+        ("battery threshold", 100, 160, 40, 1, True, 1, 35),
+        ("pump below threshold", 99, 159, 40, 1, True, 1, 35),
+        ("diagnostic below window", 99, 160, 39, 1, True, 1, 35),
+        ("diagnostic above window", 99, 160, 100, 1, True, 1, 35),
+        ("factory RAM fill", 99, 160, 40, 0, True, 2, 35),
+        ("factory preserves RAM", 99, 160, 99, 1, True, 2, 35),
+        ("Error 51 normal handoff", 100, 0, 39, 0, False, 1, 35),
+        ("Error 51 SWI boundary", 100, 0, 40, 0, False, 3, 35),
     ]
-    for name, battery, pump, diag, fmd, valid, outcome in cases:
+    # Cross the axis saturation and immediate high-TPS fault thresholds at boot.
+    for sample in (0, 180, 181, 182, 246, 247):
+        cases.append((f"startup TPS {sample}", 100, 160, 40, 1, True, 1, sample))
+    for name, battery, pump, diag, fmd, valid, outcome, tps in cases:
         image = bytearray(rom)
         if not valid:
             image[6] ^= 1  # Change only the stored socket checksum.
@@ -103,6 +106,7 @@ def reset_branches(make_cpu, rom, lib):
         ram, _, _ = hardware(cpu, image, lib, reset=True)
         lib.probe_reset()
         lib.probe_boot_inputs(battery, pump, diag, fmd)
+        lib.probe_tps_adc(tps)
         # Valid retained fault checksum; distinct BLM, IAC and volatile bytes.
         for addr, value in ((1, 8), (3, 8), (5, 32), (0x19, 33),
                             (0x1C, 149), (0x2C, 75), (0x2E, 77), (0x1B2, 99)):
@@ -119,7 +123,7 @@ def reset_branches(make_cpu, rom, lib):
         check_state(name, cpu, lib, include_io=True)
         assert cpu.mem[0x5000] == lib.probe_map(), name
         assert writes == ordered_writes(lib), (name, writes, ordered_writes(lib))
-    print("Eight seeded reset-vector cases matched RAM, MPU, I/O and ordered MPU writes")
+    print(f"{len(cases)} seeded reset-vector cases matched RAM, MPU, I/O and ordered MPU writes")
 
 
 # Preloads are scenario inputs. Each dispatch compares the rest of RAM as well

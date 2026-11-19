@@ -250,7 +250,7 @@ static void bua_common_maf_6p25ms(void)
  * The physical A/D source remains in the HAL.  L0086 is the 8.8 learned
  * closed-throttle voltage, L0082 the normalized load-axis byte, and L00DD
  * the 8.8 transient TPS consumed by LFA1E. */
-static void bua_common_tps_6p25ms(void)
+static void bua_sample_tps_axis(void)
 {
     bua_u8 raw;
     bua_u8 used;
@@ -289,6 +289,13 @@ static void bua_common_tps_6p25ms(void)
             TPS_LOAD_AXIS=(bua_u8)(d>>8);
         }
     }
+}
+
+/* Only the periodic path continues at $CC2E to filter transient TPS. */
+static void bua_common_tps_6p25ms(void)
+{
+    bua_u16 filtered;
+    bua_sample_tps_axis();
     filtered=bua_lag_filter_8_8(ram16be_get(0x00DDu),TPS_LOAD_AXIS,32u);
     ram16be_set(0x00DDu,filtered);
     ++stats.common_tps_calls;

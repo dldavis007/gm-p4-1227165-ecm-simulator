@@ -87,7 +87,7 @@ static void bua_startup_normal_step114(void)
     RAM8(0x0071u)=STEP114_O2_INITIAL;
     RAM8(0x0073u)=STEP114_O2_INITIAL;
     RAM8(0x0086u)=STEP114_MIN_TPS;
-    bua_common_tps_6p25ms();
+    bua_sample_tps_axis();
 
     bua_battery_service(RAM8(0x7Eu)); /* LC9A9 enters at LDE72 with prior sample. */
     bua_startup_trace114.segment_e_called=1u;

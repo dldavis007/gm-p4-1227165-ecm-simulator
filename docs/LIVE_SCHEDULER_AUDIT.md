@@ -69,7 +69,7 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --all --coverage
 - Cold power-on. The ROM starts at its reset vector with zero-filled memory.
   At $CCC6 its non-stack RAM, MPU and modeled I/O match the C power-on
   lifecycle entry. The historical `ecm_reset()` fixture used to seed the
-  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Eight additional cases
+  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Fourteen additional cases
   start with valid retained RAM and compare ordered MPU writes as well.
 - Targeted replays. Major-segment dispatches and routine slices use equal
   sensor inputs and RAM preloads and compare non-stack RAM, MPU state and
@@ -95,11 +95,11 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Mode 4 timeout | 25 | 49.44% |
 | Stopped engine with high airflow | 32 | 49.92% |
-| Independent reset vector | 262 | 53.90% |
-| Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,208 | 92.56% |
-| Diagnostic serial receive window and timeout | 30 | 93.01% |
-| ROM-only background RAM refresh | 15 | 93.24% |
+| Independent reset vector | 267 | 53.97% |
+| Diagnostic qualification and retained-code logging | 343 | 59.17% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,208 | 92.63% |
+| Diagnostic serial receive window and timeout | 30 | 93.09% |
+| ROM-only background RAM refresh | 15 | 93.32% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -240,6 +240,12 @@ flip one bit of the stored socket checksum. The simulator receives the
 checksum verdict as input, while the ROM computes it. Normal and factory
 paths compare state at $CCC6. The Error 51 wait case stops before SWI at $C938.
 
+Six normal-startup TPS cases reach all 39 instructions at $F35A, including
+axis saturation and the immediate high-TPS fault above ADC count 246.
+Startup samples the axis but leaves the transient TPS word at $00DD alone.
+At ADC count 180, the C startup previously wrote $1FC0 there. The ROM first
+applies that filter at $CC2E during the periodic IRQ.
+
 Six retained asynchronous fuel-pulse replays compare 84 services at $E436,
 including the pulse counter at $3FF2 and ordered CSR trigger writes. Two
 additional dispatches check limiter headroom of 110 and 111 counts. The
@@ -322,7 +328,7 @@ each of 1,295 services. With the update timer saturated at 255, it checks
 the five-count integrator deadband, the O2 direction gate, timer reset on
 update, and both learned-cell limits (108 and 160).
 
-Of 6,598 listing instructions, 446 remain unexecuted. A hit records execution under the scenario inputs.
+Of 6,598 listing instructions, 441 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
