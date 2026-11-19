@@ -1034,6 +1034,18 @@ static void irq_6p25ms(void)
     bua_common_maf_6p25ms();
     /* LCC21 reads/normalizes TPS and updates its transient filter. */
     bua_common_tps_6p25ms();
+    /* LCC3A..LCC63 qualifies high airflow on each stopped-engine tick.
+     * LC205 is 96 ticks. The following pass sets the high-MAF latch. */
+    if (!(ENGINE_MODE_WORD & ENGINE_RUNNING_BIT)) {
+        if ((RAM8(0x33u) & 0x10u) || RAM8(0x7Fu) <= 100u)
+            RAM8(0xB0u) = 0u;
+        else if (RAM8(0xB0u) > 96u)
+            RAM8(0x3Fu) |= 0x80u;
+        else if (RAM8(0xB6u) > 45u)
+            ++RAM8(0xB0u);
+        else
+            RAM8(0xB0u) = 0u;
+    }
     if ((count & 1u) != 0u)
         air_fuel_12p5ms();
     else

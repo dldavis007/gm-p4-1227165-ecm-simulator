@@ -428,6 +428,32 @@ def slices(make_cpu, rom, lib):
         raise AssertionError("\n".join(failures))
 
 
+def mode4_commands(cpu_factory, rom, lib):
+    # Start with distinct error latches, IAC position and learned BLM cells
+    # so each command's side effects are observable in the RAM comparison.
+    for command in range(256):
+        cpu = cpu_factory()
+        ram, _, _ = hardware(cpu, rom, lib)
+        inputs = {0x46: 8, 0x151: 4, 0x35: 0, 0x154: command,
+                  0x2C: 19, 0xF3: 0, 0x36: 1, 0x3F: 1, 0xB4: 7}
+        for addr in range(0x1C, 0x2C):
+            inputs[addr] = addr + 80
+        for addr in range(5, 10):
+            inputs[addr] = 0x40 + addr
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        for stage in ("enter", "repeat", "exit"):
+            if stage == "repeat":
+                cpu.mem[0x154] = ram[0x154] = command ^ 0xFF
+            if stage == "exit":
+                cpu.mem[0x151] = ram[0x151] = 0
+            cpu.pc, cpu.sp = 0xCB5F, 0x1FF
+            assert cpu.run(until_pc=0xCBB4, max_steps=2000) == "until_pc"
+            lib.probe_mode4()
+            check_state(f"Mode 4 command {command:02X} {stage}", cpu, lib)
+    print("256 Mode 4 command bytes matched on entry, repeat and exit")
+
+
 def injector_replays(make_cpu, rom, lib):
     # Stop before the MAF service. The ROM sees the captured MPU event bit
     # while the scheduler-facing C service consumes a pending HAL event.

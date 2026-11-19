@@ -121,6 +121,11 @@ int probe_frame(const bua_u8 *data, unsigned int length)
 }
 int probe_response_length(void) { return bua_sci115.output_count; }
 int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_stopped_airflow(unsigned int maf, unsigned int pump)
+{
+    sim_maf_adc = (bua_u8)maf;
+    sim_pumpvolt_adc = (bua_u8)pump;
+}
 void probe_o2_input(unsigned int sample) { sim_o2_adc = (bua_u8)sample; }
 void probe_warm_fuel(void) { count = 0; bua_odd_normal_fuel_after_load_12p5ms(); }
 void probe_blm_tail(void) { count = 0; bua_odd_50ms_tail_lddc2(); }

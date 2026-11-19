@@ -93,9 +93,11 @@ at their ROM address. Repeated ticks do not increase the count.
 |---|---:|---:|
 | Running spark and arithmetic, stopped, crank-to-idle | 3,000 | 45.47% |
 | 512-tick road input | 237 | 49.06% |
-| Independent reset vector | 213 | 52.29% |
-| Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,839 | 82.96% |
+| Mode 4 timeout | 25 | 49.44% |
+| Stopped engine with high airflow | 32 | 49.92% |
+| Independent reset vector | 213 | 53.15% |
+| Diagnostic qualification and retained-code logging | 185 | 55.96% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,832 | 83.72% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -178,8 +180,16 @@ test at $F695 requires enrichment of at least 256 and the decay amount is
 one byte. This replay supplies the event indication independently of its
 upstream physical generation.
 
-Of 6,598 listing instructions, 1,124 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $CB5F (63), $E10F (62) and $E75D (58). A hit records execution under the scenario inputs.
+The Mode 4 sweep checks all 256 command bytes through entry, a changed
+command while active, and exit. A 32-tick full IRQ replay checks the serial
+timeout clearing $0151 on rollover and the Mode 4 latch clearing one tick
+later. Another 32-tick IRQ replay checks the stopped-engine MAF timer at
+$00B0 advancing from 95 through 97, then setting the high-MAF latch at $003F.
+The $CB5F region includes the following scheduler code and background RAM
+refresh loop. Its total is 138 of 173 instructions.
+
+Of 6,598 listing instructions, 1,074 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $E10F (62), $E75D (58), $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

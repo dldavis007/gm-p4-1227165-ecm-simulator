@@ -2,15 +2,16 @@
 
 ## Current status
 
-The ROM and C match on every tick of three full-IRQ replays: 32 stopped,
+The ROM and C match on every tick of five full-IRQ replays: 32 ticks each for stopped operation,
+Mode 4 timeout and stopped-engine high airflow,
 256 from cranking to idle, and 512 through a shift into drive and 40 mph.
 Each tick compares RAM below $0500 outside the stack and ordered timer-chip
 writes. The cold power-on entries also agree at the scheduler handoff.
 
 Run `make test` in Codespaces or CI. To see instruction coverage by routine
 address, run `PYTHONPATH=build/m68hc11 python3 tools/compare_spark_rom.py --all --coverage`
-afterward. The complete suite executes **5,474 of 6,598 instructions
-(82.96%)**. This includes targeted routine replays and serial packet tests.
+afterward. The complete suite executes **5,524 of 6,598 instructions
+(83.72%)**. This includes targeted routine replays and serial packet tests.
 The audit describes which state each comparison checks.
 
 - [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)

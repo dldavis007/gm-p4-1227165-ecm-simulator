@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, attach_spi
+from rom_replays import mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, attach_spi
 
 
 class BuaCPU(HC11):
@@ -120,7 +120,7 @@ def compare_error43(lib):
             assert ram[address] == cpu.mem[address], (call, hex(address))
 
 
-def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=False):
+def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=False, mode4_timeout=False, stopped_airflow=False):
     """Diagnostic full scheduler comparison, reporting detail on the first unequal tick."""
     cpu = BuaCPU()
     cpu.load(ROM.read_bytes(), 0xC000)
@@ -133,6 +133,14 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=Fal
     lib.probe_io.restype = ctypes.POINTER(ctypes.c_ubyte)
     cpu.load(bytes(lib.probe_io()[:16]), 0x4000)
     attach_spi(cpu, lib)
+    if stopped_airflow:
+        lib.probe_stopped_airflow(240, 180)
+        for address, value in ((0xB0, 95), (0x7F, 180), (0x82, 255)):
+            cpu.mem[address] = ram[address] = value
+    if mode4_timeout:
+        for address, value in ((0, 157), (0x171, 30), (0x46, 8), (0x151, 4),
+                               (0x154, 0x80), (0x3F, 1), (0xB4, 7)):
+            cpu.mem[address] = ram[address] = value
     writes = []
     def log_write(addr, value):
         writes.append((addr, value))
@@ -188,6 +196,12 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=Fal
         reason = cpu.run(until_pc=0xCCC6, max_steps=20000)
         if reason != "until_pc":
             raise SystemExit(f"IRQ {tick}: ROM stopped at ${cpu.pc:04X} ({reason})")
+        if stopped_airflow and tick <= 3:
+            assert cpu.mem[0xB0] == min(95 + tick, 97), (tick, "MAF timer")
+            assert bool(cpu.mem[0x3F] & 128) == (tick == 3), (tick, "high MAF")
+        if mode4_timeout and tick <= 4:
+            assert bool(cpu.mem[0x35] & 8) == (tick <= 3), (tick, "Mode 4 latch")
+            assert cpu.mem[0x151] == (4 if tick < 3 else 0), (tick, "SCI mode")
         for i, flags in enumerate((cpu.mem[0x34], ram[0x34])):
             if flags & 128 and running[i] is None:
                 running[i] = tick
@@ -266,9 +280,12 @@ if __name__ == "__main__":
             "stopped": lambda lib: compare_irq(lib, False, args.check_outputs, args.trace_tick),
             "drive": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick),
             "road": lambda lib: compare_irq(lib, True, args.check_outputs, args.trace_tick, road=True),
+            "mode4_timeout": lambda lib: compare_irq(lib, mode4_timeout=True),
+            "stopped_airflow": lambda lib: compare_irq(lib, stopped_airflow=True),
             "reset": lambda lib: reset_vector(BuaCPU(), ROM.read_bytes(), lib),
             "faults": lambda lib: diagnostic_transitions(BuaCPU, ROM.read_bytes(), lib),
             "targeted": lambda lib: (segments(BuaCPU, ROM.read_bytes(), lib),
+                                     mode4_commands(BuaCPU, ROM.read_bytes(), lib),
                                      injector_replays(BuaCPU, ROM.read_bytes(), lib),
                                      factory_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      passby_cycle(BuaCPU(), ROM.read_bytes(), lib),
