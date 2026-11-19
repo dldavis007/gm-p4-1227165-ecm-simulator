@@ -536,11 +536,9 @@ static void seg1_output_bits(void)
         tcc_count=0xD000u;
     mpu16be_set(0x3FD6u,tcc_count);
 
-    /* $EE9E..$EEB8: canister-purge counter; normal value is complemented. */
-    if(mode4!=0u && (mode4_control&0x08u)!=0u)
-        purge_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
-    else
-        purge_count=bua_pwm_count91(RAM8(0x0113u));
+    /* $EEB1 complements the selected duty for both purge sources. */
+    purge_count=bua_pwm_count91((mode4!=0u && (mode4_control&0x08u)!=0u)
+                                ? mode4_value : RAM8(0x0113u));
     mpu16be_set(0x3FD8u,purge_count);
 
     /* $EEBB..$EEE3: fan bit is staged at raw parallel-I/O bit 1. */

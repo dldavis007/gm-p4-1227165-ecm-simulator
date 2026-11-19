@@ -58,7 +58,7 @@ static void run_step116_mode4_lifecycle_test(void)
     S116(mpu16be_get(0x3FD4u)==(bua_u16)(((0x3400u|0x55u)<<2)|3u) &&
          mpu16be_get(0x3FD6u)==(bua_u16)(((0x3400u|0x55u)<<2)|3u),
          "received command words reach existing enrichment and TCC output consumers");
-    S116(mpu16be_get(0x3FD8u)==(bua_u16)(((0x3400u|0x55u)<<2)|3u) &&
+    S116(mpu16be_get(0x3FD8u)==0xD2ABu &&
          mpu16be_get(0x3FD2u)==(bua_u16)(((0x3400u|0x55u)<<2)|3u),
          "received command words reach existing purge and EGR output consumers");
 

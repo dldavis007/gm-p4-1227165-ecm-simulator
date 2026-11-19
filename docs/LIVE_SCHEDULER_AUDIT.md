@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,360 | 75.70% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,427 | 76.72% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -136,8 +136,16 @@ Separate cases cover the Mode 4 AFR override, including a zero divisor.
 The remaining instruction at $D915 selects single fire on cutoff entry
 when calibration bit 1 at $C014 is set. The stock image clears this bit.
 
-Of 6,598 listing instructions, 1,603 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $EDA3 (77), $FDED (75) and $D59A (74). A hit records execution under the scenario inputs.
+Segment 1 at $EDA3 reaches 143 of 153 instructions. Separate dispatches
+exercise each Mode 4 output override, the first and repeated high-voltage
+conditions, and stopped diagnostic outputs. Each compares non-stack RAM,
+MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
+purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
+$D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
+alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+Of 6,598 listing instructions, 1,536 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $FDED (75) and $D59A (74). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

@@ -89,6 +89,28 @@ SEGMENTS = [
 ]
 
 
+# Exercise each enable bit separately. Unselected channels use their normal
+# requests, including distinct purge and EGR duties.
+output_inputs = {0x34: 0x88, 0x35: 8, 0x37: 32, 0x3E: 6, 0x7E: 170,
+                 0xF4: 1, 0x112: 37, 0x113: 95, 0x157: 0xA6}
+for name, overrides in [
+    ("Mode 4 normal requests", {}),
+    ("Mode 4 AIR", {0x156: 0x20}),
+    ("Mode 4 enrichment", {0x156: 0x40}),
+    ("Mode 4 TCC", {0x156: 4}),
+    ("Mode 4 purge", {0x156: 8}),
+    ("Mode 4 EGR", {0x156: 1}),
+    ("Mode 4 fan off", {0x152: 2, 0x153: 0}),
+    ("Mode 4 fan on", {0x152: 2, 0x153: 2, 0xF4: 0}),
+    ("Mode 4 purge minimum", {0x156: 8, 0x157: 0}),
+    ("Mode 4 purge maximum", {0x156: 8, 0x157: 255}),
+    ("first high voltage", {0x7E: 171}),
+    ("persistent high voltage", {0x7E: 171, 0x35: 0x48}),
+    ("stopped diagnostic outputs", {0x34: 0, 0x41: 128}),
+]:
+    SEGMENTS.append((name, 1, {**output_inputs, **overrides}))
+
+
 def ordered_writes(lib):
     return [(lib.probe_address(i), lib.probe_value(i)) for i in range(lib.probe_trace_size())]
 
@@ -96,7 +118,9 @@ def ordered_writes(lib):
 def segments(make_cpu, rom, lib):
     for name, segment, inputs in SEGMENTS:
         cpu = make_cpu()
-        ram, _, _ = hardware(cpu, rom, lib)
+        ram, _, io = hardware(cpu, rom, lib)
+        if segment == 1:
+            io[4] = cpu.mem[0x4004] = 0xA5 if inputs.get(0x153) == 2 else 0xA7
         if segment in (6, 10):
             lib.probe_temperature_inputs(255 if segment == 6 else 120,
                                          255 if name.endswith("23") else 0)
@@ -112,6 +136,8 @@ def segments(make_cpu, rom, lib):
         assert cpu.pc == 0xFFFE, (name, hex(cpu.pc))
         lib.probe_major(segment)
         check_state(name, cpu, lib)
+        if segment == 1:
+            assert cpu.mem[0x4004] == io[4], (name, cpu.mem[0x4004], io[4])
         if name.startswith("warm TCC"):
             locked = name == "warm TCC lock"
             assert bool(ram[4] & 128) == bool(ram[0x37] & 32) == locked
