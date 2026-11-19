@@ -718,6 +718,32 @@ for delivered in (77, 78):
                     0xD9: 0, 0xDA: delivered}))
 
 
+# LF92A synchronous injector output, including limits based on fuel already
+# supplied. Each case starts with a distinct previous diagnostic pulse width.
+for name, base, previous, delivered, extra in [
+    ("fixed allowance unused", 300, 100, 0, {0x3E: 32}),
+    ("fixed allowance exhausted", 300, 300, 0, {0x3E: 128}),
+    ("limited to minimum", 300, 400, 89, {0x3E: 32}),
+    ("limited below minimum", 300, 400, 90, {0x3E: 32}),
+    ("excess exceeds requested fuel", 300, 600, 1, {0x3E: 32}),
+    ("trigger coolant factor", 300, 400, 100, {0x38: 128}),
+    ("post-injection coolant factor", 300, 400, 100, {0x38: 80}),
+    ("saturated supplied fuel", 65535, 65530, 10, {0x38: 128, 0x5B: 0}),
+    ("cut clears enrichment", 300, 300, 100, {3: 0, 0x38: 128}),
+    ("single fire inhibited", 300, 400, 89, {0x3E: 32, 0x39: 192}),
+    ("cutoff reenable speed", 300, 0, 0, {0x43: 64, 0x65: 255}),
+    ("cutoff reenable period", 300, 0, 0, {0x43: 64, 0x96: 103}),
+    ("hardware saturation", 32767, 0, 0, {}),
+    ("low width default", 1, 0, 0, {}),
+]:
+    inputs = {3: 32, 0x33: 0, 0x34: 128, 0x38: 0, 0x39: 0, 0x3E: 0,
+              0x43: 0, 0x65: 0, 0x95: 0, 0x96: 104, 0x5B: 100, 0xCB: 0,
+              0x466: 0x12, 0x467: 0x34, 0xC2: base >> 8, 0xC3: base & 255,
+              0xD5: previous >> 8, 0xD6: previous & 255,
+              0xD9: delivered >> 8, 0xDA: delivered & 255, **extra}
+    SLICES.append((f"synchronous fuel {name}", "sync_fuel", 0xF92A, 0xFFFE, inputs))
+
+
 def shutdown_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     inputs = {0x33: 0x30, 0x34: 128, 0x65: 0, 0x8B: 0, 0x8C: 0,

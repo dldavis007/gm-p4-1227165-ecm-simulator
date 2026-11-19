@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,104 | 90.07% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,146 | 90.71% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -249,8 +249,16 @@ services the shift-light request at $E2D1 after N/V calculation on both
 transmission paths. The replay compares RAM and MPU state through the
 300-count delay, RPM hysteresis, forced-on and cutout conditions.
 
-Of 6,598 listing instructions, 655 remain unexecuted. The largest gaps are
-$D6D1 and $F92A (39 each). A hit records execution under the scenario inputs.
+Fourteen synchronous injector-output replays compare RAM, MPU state and
+ordered writes from $F92A through return. The scheduler applies the fixed or
+coolant-dependent fuel allowance before single-fire suppression and injector
+offsets. With a base width of 300, a fixed allowance of 300 and 489 counts
+already supplied, the pending width is 111 and the hardware width is 116.
+One more count supplied suppresses the pulse. The suite executes all 84
+instructions at $F92A and all 35 in its $F9E5 limiter helper.
+
+Of 6,598 listing instructions, 613 remain unexecuted. The largest gap is
+$D6D1 (39), followed by $F76A (37). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

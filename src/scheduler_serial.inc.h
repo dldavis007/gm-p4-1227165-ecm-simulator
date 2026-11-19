@@ -1200,20 +1200,15 @@ static bua_u16 bua_ae_apply_lf901(bua_u16 base_pw,
     *ae_flags_io = flags;
     return (bua_u16)sum;
 }
-static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
+static BuaFuelOutputResult bua_fuel_cutoff(bua_u16 corrected_base_pw,
                                                  bua_u8 mode_word3,
                                                  bua_u8 ign_mode_word,
                                                  bua_u8 af_mode_word,
                                                  bua_u8 spark_mode_word,
-                                                 bua_u8 single_fire_word,
                                                  bua_u8 speed_raw,
-                                                 bua_u16 ref_period,
-                                                 bua_u8 injector_batt_offset)
+                                                 bua_u16 ref_period)
 {
     BuaFuelOutputResult r;
-    bua_u16 pending;
-    bua_u16 shaped;
-    bua_u8 small_offset;
     bua_u8 cut;
     bua_u8 high_cut_active;
     bua_u8 speed_limit;
@@ -1222,7 +1217,6 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
     r.corrected_base_pw = corrected_base_pw;
     r.af_mode_word = af_mode_word;
     r.ign_mode_word = ign_mode_word;
-    pending = corrected_base_pw;
     cut = 0u;
     if ((mode_word3 & FUEL_VATS_OK_BIT) == 0u ||
         (ign_mode_word & FUEL_IGN_OFF_BIT) != 0u ||
@@ -1243,13 +1237,21 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
             cut = 1u;
         }
     }
-    if (cut != 0u)
-        pending = 0u;
+    r.fuel_cut = cut;
+    return r;
+}
+
+static BuaFuelOutputResult bua_shape_fuel_output(BuaFuelOutputResult r,
+                                               bua_u16 pending,
+                                               bua_u8 single_fire_word,
+                                               bua_u8 injector_batt_offset)
+{
+    bua_u16 shaped;
+    bua_u8 small_offset;
     if ((single_fire_word & SINGLE_FIRE_BIT) != 0u &&
         (single_fire_word & SINGLE_FIRE_ZERO_PW_BIT) != 0u)
         pending = 0u;
     r.pending_pw = pending;
-    r.fuel_cut = cut;
     if (pending == 0u) {
         r.hardware_pw = 0u;
         return r;
@@ -1270,6 +1272,22 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
         shaped = 0x7FFFu;
     r.hardware_pw = shaped;
     return r;
+}
+static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
+                                                 bua_u8 mode_word3,
+                                                 bua_u8 ign_mode_word,
+                                                 bua_u8 af_mode_word,
+                                                 bua_u8 spark_mode_word,
+                                                 bua_u8 single_fire_word,
+                                                 bua_u8 speed_raw,
+                                                 bua_u16 ref_period,
+                                                 bua_u8 injector_batt_offset)
+{
+    BuaFuelOutputResult r = bua_fuel_cutoff(corrected_base_pw, mode_word3,
+                                           ign_mode_word, af_mode_word,
+                                           spark_mode_word, speed_raw, ref_period);
+    return bua_shape_fuel_output(r, r.fuel_cut ? 0u : corrected_base_pw,
+                                 single_fire_word, injector_batt_offset);
 }
 /* ---------------------------------------------------------------------- */
 /* Step 27: LF95E/LF9E5 special fuel limiting.                            */

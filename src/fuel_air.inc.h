@@ -350,14 +350,18 @@ static void bua_odd_load_producer_12p5ms(void)
 static void bua_write_lf92a(bua_u16 pulse_width)
 {
     BuaFuelOutputResult out;
-    out = bua_fuel_output_lf92a(pulse_width, MODE_WORD3, IGN_MODE_WORD,
-                                AF_MODE_WORD, ENGINE_MODE_WORD,
-                                INJECT_MODE_WORD, VSS_MPH_HI,
-                                ram16be_get(REF_PERIOD_ADDR), RAM8(0x00CBu));
+    BuaFuelLimitResult limit;
+    out = bua_fuel_cutoff(pulse_width, MODE_WORD3, IGN_MODE_WORD, AF_MODE_WORD,
+                          ENGINE_MODE_WORD, VSS_MPH_HI, ram16be_get(REF_PERIOD_ADDR));
     if (out.fuel_cut) {
         ram16be_set(ACCEL_FUEL_ADDR, 0u);
         ram16be_set(0x00C2u, 0u);
+        pulse_width = 0u;
     }
+    limit = bua_fuel_limit_lf95e(pulse_width, ram16be_get(0xD5u),
+                                 ram16be_get(ACCEL_FUEL_ADDR), COOLANT,
+                                 RAM8(0x38u), RAM8(0x3Eu));
+    out = bua_shape_fuel_output(out, limit.output_pw, INJECT_MODE_WORD, RAM8(0xCBu));
     AF_MODE_WORD = out.af_mode_word;
     IGN_MODE_WORD = out.ign_mode_word;
     ram16be_set(0x011Cu, out.pending_pw);
