@@ -636,6 +636,37 @@ def shift_light_cycle(cpu, rom, lib):
     print("Segment E shift-light delay, qualification and hysteresis matched")
 
 
+def ram_refresh(cpu, rom):
+    # The tick-driven simulator returns at $CCC6. Characterize the ROM's
+    # background loop separately without assuming an idle duration per IRQ.
+    cpu.load(rom, 0xC000)
+    initial = bytes((37 * addr + 11) & 255 for addr in range(512))
+    cpu.load(initial, 0)
+    cpu.write16(0x110, 0x1FE)
+    writes = []
+
+    def record(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0, 0x1FF, record)
+    cpu.pc = 0xCCC6
+    for address in range(0x1FE, -1, -2):
+        writes.clear()
+        word = cpu.read16(address)
+        # Step off the loop head before asking the emulator to stop there.
+        cpu.step()
+        assert cpu.run(until_pc=0xCCCC, max_steps=32) == "until_pc"
+        expected = [(address, word >> 8), (address + 1, word & 255)]
+        decremented = (address - 2) & 0xFFFF
+        expected.extend(((0x110, decremented >> 8), (0x111, decremented & 255)))
+        if address == 0:
+            expected.extend(((0x110, 1), (0x111, 0xFE)))
+        assert writes == expected, (hex(address), writes, expected)
+    assert bytes(cpu.mem[:512]) == initial[:0x110] + bytes((1, 254)) + initial[0x112:]
+    print("ROM background refresh rewrote 256 words and wrapped the pointer to $01FE")
+
+
 def mode4_commands(cpu_factory, rom, lib):
     # Start with distinct error latches, IAC position and learned BLM cells
     # so each command's side effects are observable in the RAM comparison.

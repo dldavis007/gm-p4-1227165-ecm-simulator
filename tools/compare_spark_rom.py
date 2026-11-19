@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import airflow_cycle, shift_light_cycle, air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
+from rom_replays import ram_refresh, airflow_cycle, shift_light_cycle, air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
 
 
 class BuaCPU(HC11):
@@ -303,6 +303,7 @@ if __name__ == "__main__":
                                      follower_motion(BuaCPU(), ROM.read_bytes(), lib),
                                      slices(BuaCPU, ROM.read_bytes(), lib),
                                      serial(BuaCPU, ROM.read_bytes(), lib)),
+            "rom_idle": lambda lib: ram_refresh(BuaCPU(), ROM.read_bytes()),
         }
         selected = ("faults" if args.faults else "reset" if args.reset_vector else "targeted" if args.segments
                     else "road" if args.road_irq else "drive" if args.drive_irq else "stopped" if args.full_irq else "spark")

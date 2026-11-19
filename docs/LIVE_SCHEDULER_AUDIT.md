@@ -98,6 +98,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
 | Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,149 | 90.75% |
+| ROM-only background RAM refresh | 15 | 90.98% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -266,8 +267,14 @@ bypassed by $C014 bit 2. The analog entry also clears A before $F7EE and
 cannot exceed an input axis of 255 × 7, excluding $F7F1 and $F7FA. The
 fallback sum cannot overflow at $F7E4 with the stock TPS cap and IAC scale.
 
-Of 6,598 listing instructions, 610 remain unexecuted. The largest gaps are
-$D6D1 (39) and $CB5F (35). A hit records execution under the scenario inputs.
+The region starting at $CB5F includes the background loop at $CCC6.
+A ROM-only replay checks the read/write refresh of 256 words, the pointer
+decrements, the wrap to $01FE and the final RAM contents. IRQ comparisons
+stop at $CCC6. Of the 20 instructions still unexecuted in this region, 11
+require a bad EPROM signature, eight require unequal stock throttle limits
+at $C67D/$C67E (both 255), and one requires the fan polarity option at $C017.
+
+Of 6,598 listing instructions, 595 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
