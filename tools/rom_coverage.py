@@ -16,6 +16,7 @@ BLOCKS = {
     0xE87A: "IAC motor request",
     0xF67B: "injector service", 0xF76A: "airflow service",
     0xFA91: "SCI receive", 0xFBBB: "SCI transmit", 0xFCA2: "factory test",
+    0xFDED: "factory PWM and fuel/spark exercise",
 }
 
 

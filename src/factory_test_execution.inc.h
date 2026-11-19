@@ -100,6 +100,8 @@ static void bua_factory_adc_step118(void)
     bua_u8 coolant;
     for(i=0u;i<12u;++i)
         RAM8((bua_u16)(0x017Bu+i))=sim_factory_adc118[i];
+    /* LF1CE leaves the final selector ($B0) sample in the SPI scratch byte. */
+    RAM8(0x64u)=sim_factory_adc118[11];
     ++bua_factory_trace118.adc_sweeps;
 
     counter=RAM8(0x0172u);

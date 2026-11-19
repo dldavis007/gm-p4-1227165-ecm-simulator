@@ -3,17 +3,30 @@ import ctypes
 
 
 def attach_spi(cpu, lib):
-    command = channel = 0
+    command = 0
+    channel = None
+
+    # Each ADC selection has two transfers. $B0 selects channel 11 on
+    # the first transfer and clocks the result out on the second.
+    def latch(addr, value):
+        nonlocal channel
+        if value & 8:
+            channel = None
+        cpu.mem[addr] = value
+
     def write(addr, value):
         nonlocal command, channel
         command = value
-        if not cpu.mem[0x4002] & 4 and value != 0xB0:
+        if not cpu.mem[0x4002] & 4 and channel is None:
             channel = value
 
     def read(addr):
-        return lib.probe_fmd(command) if cpu.mem[0x4002] & 4 else lib.probe_adc(channel)
+        if cpu.mem[0x4002] & 4:
+            return lib.probe_fmd(command)
+        return lib.probe_adc(channel if channel is not None else 0)
 
     cpu.on_read(0x4001, 0x4001, lambda addr: cpu.mem[addr] | 128)
+    cpu.on_write(0x4002, 0x4002, latch)
     cpu.on_write(0x4000, 0x4000, write)
     cpu.on_read(0x4000, 0x4000, read)
 
@@ -380,6 +393,43 @@ def passby_cycle(cpu, rom, lib):
         assert ram[0x126] == max(3 - tick, 0), label
     assert ram[4] & 0x81 == 0x81 and ram[0x124] == 1
     print("TCC hold: voltage inhibit, lock write, expiry and requalification matched")
+
+
+def factory_cycle(cpu, rom, lib):
+    ram, mpu, io = hardware(cpu, rom, lib)
+    lib.probe_factory_inputs()
+    for address, value in {0x47: 128, 0x48: 1, 0x32: 0, 0x172: 0, 0x179: 0xCC}.items():
+        ram[address] = cpu.mem[address] = value
+    writes = []
+
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for tick in range(1, 98):
+        if tick == 97:
+            # Ignition restored: the factory IRQ samples mode 2 from the FMD.
+            ram[0x32] = cpu.mem[0x32] = 1
+            lib.probe_factory_mode(2)
+        ref = (327, 328, 655, 656)[(tick - 1) % 4]
+        mpu[0] = cpu.mem[0x3FC0] = ref >> 8
+        mpu[1] = cpu.mem[0x3FC1] = ref & 255
+        cpu.pc = 0xFCA2
+        writes.clear()
+        assert cpu.run(until_pc=0xCCC6, max_steps=10000) == "until_pc"
+        lib.probe_factory_hal()
+        label = f"factory pass {tick}"
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+        for offset in (2, 4, 6, 11, 12):
+            assert cpu.mem[0x4000 + offset] == io[offset], (label, hex(0x4000 + offset), cpu.mem[0x4000 + offset], io[offset])
+        if tick <= 96:
+            assert ram[0x172] == tick % 96 and ram[0x64] == 0xA5, label
+        else:
+            assert ram[0x48] == 2 and ram[0x172] == 0, label
+            assert cpu.read16(0x175) == sum(ram[:0x2E]), label
+    print("Factory IRQ: 96 exercise passes and ignition transition to mode 2 matched")
 
 
 def fuel_replay(cpu, rom, lib, inputs):

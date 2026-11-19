@@ -128,6 +128,7 @@ static void bua_factory_irq_step117(void)
     bua_factory_trace117.last_match=mem.io4000[6];
 
     RAM8(0x64u)=sim_factory_diagnostic_adc117;
+    mem.io4000[2] |= 0x08u; /* LF1C3 deselects the ADC after the read. */
     if(bua_factory_diag_valid_step117(sim_factory_diagnostic_adc117)==0u)
         return;
 

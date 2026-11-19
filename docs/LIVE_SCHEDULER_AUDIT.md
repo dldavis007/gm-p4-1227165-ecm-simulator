@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,427 | 76.72% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,566 | 78.83% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -144,8 +144,17 @@ purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
 $D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
 alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
 
-Of 6,598 listing instructions, 1,536 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $FDED (75) and $D59A (74). A hit records execution under the scenario inputs.
+All 84 instructions in the factory output region at $FDED execute. Starting
+at factory service entry $FCA2, 96 consecutive passes retain state through
+the minor-counter rollover. Reference periods of 327, 328, 655 and 656
+exercise both sides of the fuel and dwell thresholds. A 97th pass simulates
+ignition restoration and an FMD mode change, then compares the asynchronous
+pulse, checksum and shutdown outputs. Each pass compares non-stack RAM,
+MPU state, ordered MPU writes, and final I/O registers $4002, $4004, $4006,
+$400B and $400C. Serial IRQ dispatch before $FCA2 is outside this trace.
+
+Of 6,598 listing instructions, 1,397 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $D59A (74), $DF9D (66) and $F67B (66). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

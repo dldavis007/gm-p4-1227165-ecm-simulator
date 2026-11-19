@@ -38,7 +38,10 @@ void probe_irq_setup(void)
     ecm_reset();
     sim_normal_fmd_enabled = 1u;
 }
-int probe_adc(unsigned int channel) { return adc_sample((bua_u8)channel); }
+int probe_adc(unsigned int channel)
+{
+    return channel == 0xB0u ? sim_factory_adc118[11] : adc_sample((bua_u8)channel);
+}
 int probe_fmd(unsigned int command)
 {
     return (command & 128u) ? sim_normal_fmd_byte2 : sim_normal_fmd_byte1;
@@ -97,7 +100,14 @@ void probe_factory(void)
     sim_factory_battery_adc117 = sim_volt_adc;
     bua_factory_irq_step117();
 }
-void probe_factory_inputs(void) { sim_diag_adc = 60u; }
+void probe_factory_hal(void) { count = 0; bua_lifecycle_irq_from_hal_step165(); }
+void probe_factory_inputs(void)
+{
+    sim_diag_adc = 60u;
+    sim_normal_fmd_byte1 = 0u;
+    sim_factory_adc118[11] = 0xA5u;
+}
+void probe_factory_mode(unsigned int mode) { sim_normal_fmd_byte1 = (bua_u8)mode; }
 
 int probe_frame(const bua_u8 *data, unsigned int length)
 {
