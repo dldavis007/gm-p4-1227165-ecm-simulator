@@ -84,7 +84,7 @@ static void run_dynamic_drive_cycle(void)
     /* Replay the frozen Step-104 signature at its historical Segment-D
        boundary; Step-109 has a separate full-diagnostics signature. */
     sim_legacy_segment_d_freeze=1u;
-    sim_legacy_shift_light_freeze=1u;
+    sim_legacy_drive_trace=1u;
     sim_legacy_segment1_output_freeze=1u;
     sim_legacy_ignition_shutdown_freeze=1u;
     sim_legacy_mode4_lifecycle_freeze=1u;

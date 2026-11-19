@@ -571,7 +571,7 @@ static void bua_battery_service(bua_u8 sample)
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
         bua_tcc_after_shifter();
-        if (!sim_legacy_shift_light_freeze)
+        if (!sim_legacy_drive_trace)
             bua_shift_light_service();
     }
 }

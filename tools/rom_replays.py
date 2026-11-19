@@ -662,6 +662,25 @@ def mode4_commands(cpu_factory, rom, lib):
     print("256 Mode 4 command bytes matched on entry, repeat and exit")
 
 
+def airflow_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    # Keep the four filter samples and the byte-sized write index across
+    # sweeps, including entry to and recovery from both MAF fault flags.
+    for fault, samples in ((0, range(256)), (0x40, range(256)),
+                           (0x80, range(255, -1, -1)), (0, range(255, -1, -1))):
+        for sample in samples:
+            for addr, value in ((0x3F, fault), (0x56, sample), (0x57, 255 - sample),
+                                (0x82, sample), (0x2C, 255 - sample)):
+                cpu.mem[addr] = ram[addr] = value
+            lib.probe_stopped_airflow(sample, 0)
+            cpu.sp = 0x1FF
+            cpu.call(0xF76A, max_steps=1000)
+            assert cpu.pc == 0xFFFE
+            lib.probe_maf_service()
+            check_state(f"airflow fault {fault:02X} sample {sample}", cpu, lib)
+    print("1024 retained analog MAF services matched across fault and recovery")
+
+
 def injector_replays(make_cpu, rom, lib):
     # Stop before the MAF service. The ROM sees the captured MPU event bit
     # while the scheduler-facing C service consumes a pending HAL event.

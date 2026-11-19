@@ -213,7 +213,7 @@ static void run_step105_transmission_drive(void)
 
     /* Preserve the frozen Step-105 trace independently of Step-109 wiring. */
     sim_legacy_segment_d_freeze=1u;
-    sim_legacy_shift_light_freeze=1u;
+    sim_legacy_drive_trace=1u;
     sim_legacy_segment1_output_freeze=1u;
     sim_legacy_ignition_shutdown_freeze=1u;
     sim_legacy_mode4_lifecycle_freeze=1u;

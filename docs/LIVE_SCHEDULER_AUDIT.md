@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,146 | 90.71% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,149 | 90.75% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -257,8 +257,17 @@ already supplied, the pending width is 111 and the hardware width is 116.
 One more count supplied suppresses the pulse. The suite executes all 84
 instructions at $F92A and all 35 in its $F9E5 limiter helper.
 
-Of 6,598 listing instructions, 613 remain unexecuted. The largest gap is
-$D6D1 (39), followed by $F76A (37). A hit records execution under the scenario inputs.
+The $F76A airflow replay retains the filter across four 256-sample sweeps
+through normal operation, Error 34, Error 33 and recovery. The C lookup uses
+the ROM interpolation rounding for measured and fallback airflow. The two
+historical driving signatures retain their original rounding. The suite hits
+110/144 instructions here. Of the 34 remaining, 31 are the digital MAF path
+bypassed by $C014 bit 2. The analog entry also clears A before $F7EE and
+cannot exceed an input axis of 255 × 7, excluding $F7F1 and $F7FA. The
+fallback sum cannot overflow at $F7E4 with the stock TPS cap and IAC scale.
+
+Of 6,598 listing instructions, 610 remain unexecuted. The largest gaps are
+$D6D1 (39) and $CB5F (35). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

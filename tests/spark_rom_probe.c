@@ -143,6 +143,7 @@ int probe_frame(const bua_u8 *data, unsigned int length)
 }
 int probe_response_length(void) { return bua_sci115.output_count; }
 int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_maf_service(void) { count = 0; bua_common_maf_6p25ms(); }
 void probe_stopped_airflow(unsigned int maf, unsigned int pump)
 {
     sim_maf_adc = (bua_u8)maf;

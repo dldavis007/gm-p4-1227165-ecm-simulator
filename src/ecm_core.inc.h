@@ -529,8 +529,8 @@ typedef struct {
 } BuaStats;
 static BuaMemory mem;
 static BuaStats stats;
-/* The two historical driving signatures predate shift-light servicing. */
-static bua_u8 sim_legacy_shift_light_freeze = 0u;
+/* The two historical driving signatures predate shift-light servicing and corrected MAF rounding. */
+static bua_u8 sim_legacy_drive_trace = 0u;
 /* PC regression switch: replay old frozen baselines without newly wired D. */
 static bua_u8 sim_legacy_segment_d_freeze = 0u;
 /* PC regression switch for pre-Step-110 software-only Segment-1 staging. */
