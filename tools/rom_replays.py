@@ -211,6 +211,12 @@ for name, overrides in FEEDBACK_CASES:
     SLICES.append((name, "feedback", 0xDB35, 0xDD29, inputs))
 
 SLICES.extend([
+    ("Mode 4 AFR override disabled", "afr", 0xD9BC, 0xDA5A,
+     {0x35: 8, 0x154: 4, 0x158: 0, 0x15A: 137}),
+    ("Mode 4 AFR override", "afr", 0xD9BC, 0xDA5A,
+     {0x35: 8, 0x154: 0, 0x158: 4, 0x15A: 137, 0x43: 32}),
+    ("Mode 4 AFR zero divisor", "afr", 0xD9BC, 0xDA5A,
+     {0x35: 8, 0x158: 4, 0x15A: 0}),
     ("invalid retained BLM", "blm_select", 0xDA73, 0xDB35,
      {0xBF: 0, 0x57: 0, 0xEA: 0, 0x1C: 0, 0x0A: 33, 0x0C: 44}),
     ("PE below-neutral BLM", "blm_select", 0xDA73, 0xDB35,
@@ -248,6 +254,28 @@ for name, overrides in SPARK_CASES:
               0x63: 80, 0x7E: 126, 1: 64}
     inputs.update(overrides)
     SLICES.append((name, "tick", 0xCD4B, 0xD36A, inputs))
+
+
+# LD86B..LD9A9, including entry and exit gates for deceleration fuel cutoff.
+TRANSIENT_CASES = [
+    ("single fire and enlean threshold", {0x39: 128, 0xE5: 255, 0x63: 10, 0xE9: 240, 0xE8: 5}),
+    ("enlean countdown", {0x3E: 128, 0xE8: 2, 0xE5: 40}),
+    ("DFCO qualification with lockout", {0xD3: 2, 0x89: 3}),
+    ("DFCO active with pending count", {0x43: 2, 0xD3: 2}),
+    ("DFCO entry skips acceleration", {0x38: 128, 0xDF: 3, 0xE2: 32}),
+    ("DFCO stays at load limit", {0x43: 2, 0x63: 40, 0x57: 37}),
+    ("DFCO exit at RPM limit", {0x43: 2, 0x57: 36, 0x89: 4}),
+    ("DFCO rapid RPM drop", {0x43: 2, 0x89: 4, 0x58: 90, 0x5A: 97}),
+    ("DFCO rising RPM in lockout", {0x89: 4, 0x58: 90, 0x5A: 89}),
+    ("DFCO throttle clears lockout", {0x82: 9, 0x89: 20, 0x39: 96}),
+    ("DFCO sensor fault bypass", {0x44: 16, 0x65: 0, 0x3F: 196, 0x63: 80, 0x82: 20}),
+    ("load enrichment saturation", {0x63: 250, 0xE7: 250, 0xE2: 250}),
+]
+for name, overrides in TRANSIENT_CASES:
+    inputs = {0x37: 0, 0x65: 25, 0x57: 60, 0x58: 120, 0x5A: 120, 0x63: 25,
+              0x82: 0, 0xD3: 0, 0x43: 0}
+    inputs.update(overrides)
+    SLICES.append((name, "accel", 0xD86B, 0xD9A9, inputs))
 
 
 def slices(make_cpu, rom, lib):
@@ -328,10 +356,8 @@ def passby_cycle(cpu, rom, lib):
     print("TCC hold: voltage inhibit, lock write, expiry and requalification matched")
 
 
-def warm_fuel_cycle(cpu, rom, lib):
+def fuel_replay(cpu, rom, lib, inputs):
     ram, _, _ = hardware(cpu, rom, lib)
-    inputs = {0x34: 128, 0x44: 0x82, 0x5B: 170, 0x63: 110, 0x1A: 1,
-              0x1B: 30, 0xBF: 2, 0x57: 60, 0x58: 120, 0x95: 4, 0xEA: 12, 0xCB: 64, 3: 32}
     for addr, value in inputs.items():
         ram[addr] = cpu.mem[addr] = value
     writes = []
@@ -341,6 +367,45 @@ def warm_fuel_cycle(cpu, rom, lib):
         writes.append((addr, value))
 
     cpu.on_write(0x3FC0, 0x3FFF, write)
+
+    def service(label):
+        cpu.pc, cpu.sp = 0xD86B, 0x1FD
+        writes.clear()
+        assert cpu.run(until_pc=0xCCAC, max_steps=10000) == "until_pc"
+        lib.probe_warm_fuel()
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+        assert [addr for addr, _ in writes if addr in (0x3FD0, 0x3FD1)] == [0x3FD0, 0x3FD1], label
+
+    return ram, service
+
+
+def decel_fuel_cycle(cpu, rom, lib):
+    inputs = {0x34: 128, 0x37: 0, 0x65: 25, 0x63: 25, 0x82: 0, 0x57: 60,
+              0x58: 120, 0x5A: 120, 0xD3: 20, 0x5B: 170, 0x95: 4,
+              0xEA: 12, 0xCB: 64, 3: 32}
+    ram, service = fuel_replay(cpu, rom, lib, inputs)
+    for tick in range(1, 25):
+        ram[0] = cpu.mem[0] = 2 * tick - 1
+        if tick == 23:
+            ram[0x57] = cpu.mem[0x57] = 36
+            ram[0x58] = cpu.mem[0x58] = 72
+        label = f"DFCO fuel pass {tick}"
+        service(label)
+        cutoff = tick in (21, 22)
+        assert bool(ram[0x43] & 2) == cutoff, label
+        assert (cpu.read16(0x3FD0) == 0) == cutoff, label
+        if tick <= 22:
+            assert ram[0xD3] == max(20 - tick, 0), label
+        else:
+            assert ram[0x3D] & 16 and ram[0xC5] == 30, label
+    print("24 deceleration fuel passes: qualification, two cut pulses and stall-saver restart matched")
+
+
+def warm_fuel_cycle(cpu, rom, lib):
+    inputs = {0x34: 128, 0x44: 0x82, 0x5B: 170, 0x63: 110, 0x1A: 1,
+              0x1B: 30, 0xBF: 2, 0x57: 60, 0x58: 120, 0x95: 4, 0xEA: 12, 0xCB: 64, 3: 32}
+    ram, service = fuel_replay(cpu, rom, lib, inputs)
     endpoints = []
     for phase, sample in enumerate((20, 230)):
         lib.probe_o2_input(sample)
@@ -349,14 +414,7 @@ def warm_fuel_cycle(cpu, rom, lib):
         ram[0x71] = cpu.mem[0x71] = sample
         for tick in range(64):
             ram[0] = cpu.mem[0] = (1 + 2 * (64 * phase + tick)) % 160
-            cpu.pc, cpu.sp = 0xD86B, 0x1FD
-            writes.clear()
-            assert cpu.run(until_pc=0xCCAC, max_steps=10000) == "until_pc"
-            lib.probe_warm_fuel()
-            label = f"Warm fuel ADC {sample}, pass {tick + 1}"
-            check_state(label, cpu, lib)
-            assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
-            assert [addr for addr, _ in writes if addr in (0x3FD0, 0x3FD1)] == [0x3FD0, 0x3FD1], label
+            service(f"Warm fuel ADC {sample}, pass {tick + 1}")
         endpoints.append(ram[0xC9])
     assert endpoints[0] > 128 and endpoints[1] < endpoints[0], endpoints
     print(f"128 warm fuel passes: lean/rich integrator endpoints {endpoints}, RAM and MPU writes matched")

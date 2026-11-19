@@ -72,17 +72,15 @@ static BuaDecelEnlean45 bua_decel_enlean_step45(BuaDecelEnlean45 s,
         s.hold_count=(bua_u8)STEP45_DECEL_HOLD_COUNT;
         return s;
     }
-    s.active=1u;
-    s.hold_count=(bua_u8)STEP45_DECEL_HOLD_COUNT;
+    s.active=1u; /* LD896 leaves the stored hold counter intact. */
     return s;
 }
-static void bua_dfco_disqualify_step45(BuaDfcoState45 *s,
+static void bua_dfco_exit_step45(BuaDfcoState45 *s,
                                         bua_u8 rpm25,
                                         bua_u8 old_rpm12p5,
                                         bua_u8 current_rpm12p5)
 {
     bua_u8 drop;
-    s->qualify_count=(bua_u8)STEP45_DFCO_ENTRY_COUNT;
     s->af_mode_word &= (bua_u8)~STEP45_DFCO_BIT;
     if (s->lockout_count==0u) {
         s->mode3d &= (bua_u8)~STEP45_STALL_SAVE_BIT;
@@ -103,6 +101,12 @@ static void bua_dfco_disqualify_step45(BuaDfcoState45 *s,
         s->stall_ae_pulses=(bua_u8)STEP45_STALL_AE_PULSES;
         s->stall_tf_count=(bua_u8)STEP45_STALL_TF_COUNT;
     }
+}
+static void bua_dfco_disqualify_step45(BuaDfcoState45 *s, bua_u8 rpm25,
+                                       bua_u8 old_rpm12p5, bua_u8 current_rpm12p5)
+{
+    s->qualify_count = STEP45_DFCO_ENTRY_COUNT;
+    bua_dfco_exit_step45(s, rpm25, old_rpm12p5, current_rpm12p5);
 }
 static void bua_dfco_tick_step45(BuaDfcoState45 *s,
                                   bua_u8 coolant,
@@ -158,9 +162,9 @@ static void bua_dfco_tick_step45(BuaDfcoState45 *s,
         bua_dfco_disqualify_step45(s,rpm25,old_rpm12p5,current_rpm12p5);
         return;
     }
-    if (!active && s->qualify_count!=0u) {
+    if (s->qualify_count!=0u) {
         --s->qualify_count;
-        s->af_mode_word &= (bua_u8)~STEP45_DFCO_BIT;
+        bua_dfco_exit_step45(s,rpm25,old_rpm12p5,current_rpm12p5);
         return;
     }
     if (!active && s->lockout_count!=0u) {
@@ -256,12 +260,14 @@ static void bua_odd_transient_front_12p5ms(void)
     RAM8(0x008Au)=d.stall_ae_pulses;
     RAM8(0x00C5u)=d.stall_tf_count;
 
-    bua_tps_accel_trigger();
+    if (!(AF_MODE_WORD & STEP45_DFCO_BIT))
+        bua_tps_accel_trigger();
 
     /* LD97C..LD99E: the C0 fault mask or negative load delta clears E2.
      * Otherwise subtract LC33C, interpolate C33D, apply E7, double, and
      * saturating-add the result to the existing differential-load factor. */
-    if((RAM8(0x003Fu)&0xC0u)!=0u || FILTERED_LOAD<RAM8(0x00E5u)) {
+    if((AF_MODE_WORD & STEP45_DFCO_BIT) || (RAM8(0x003Fu)&0xC0u)!=0u ||
+       FILTERED_LOAD<RAM8(0x00E5u)) {
         ACCEL_LOAD_FACTOR=0u;
     } else {
         delta=(bua_u8)(FILTERED_LOAD-RAM8(0x00E5u));

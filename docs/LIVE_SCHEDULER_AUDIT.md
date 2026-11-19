@@ -16,7 +16,7 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 161 |
+| Observed on the IRQ path | 162 |
 | Static IRQ path, unobserved in this scenario | 38 |
 | Outside the IRQ call graph | 104 |
 
@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,250 | 74.04% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices and SCI | 1,360 | 75.70% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -128,8 +128,16 @@ the counter wraps and cannot start a hold. A separate four-service replay
 preloads an active hold and checks voltage inhibition, the $DFFF write to
 $3FD6, hold expiry and the next qualifying pass.
 
-Of 6,598 listing instructions, 1,713 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $D86B (81), $EDA3 (77) and $FDED (75). A hit records execution under the scenario inputs.
+The fuel transient region at $D86B reaches 163 of 164 instructions. A retained
+24-service replay compares non-stack RAM, MPU state and ordered writes on
+every pass. Fuel stays on during all 20 qualification passes, cuts for two
+passes, and resumes with stall saver active when engine speed falls to 900 RPM.
+Separate cases cover the Mode 4 AFR override, including a zero divisor.
+The remaining instruction at $D915 selects single fire on cutoff entry
+when calibration bit 1 at $C014 is set. The stock image clears this bit.
+
+Of 6,598 listing instructions, 1,603 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $EDA3 (77), $FDED (75) and $D59A (74). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
