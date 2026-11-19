@@ -584,25 +584,25 @@ static void run_step25_afr_test(void)
     printf("  startup enrichment in closed loop: factor=288 -> code=%u  %s\n",
            (unsigned int)r.afr_code,
            (r.factor == 288u && r.afr_code == 501u) ? "PASS" : "FAIL");
-    r = bua_afr_power_enrich_ld9d7(96u, 50u, 180u, 160u, 0u);
+    r = bua_afr_power_enrich_ld9d7(96u, 50u, 180u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u);
     if (r.pe_active == 1u && r.factor == 314u && r.afr_code == 546u) ++passed;
     printf("  PE threshold exact: TPS=180 load=50 -> factor=%u code=%u AFR=%0.2f  %s\n",
            (unsigned int)r.factor, (unsigned int)r.afr_code,
            bua_afr_code_to_ratio(r.afr_code),
            (r.pe_active == 1u && r.factor == 314u && r.afr_code == 546u) ? "PASS" : "FAIL");
-    r = bua_afr_power_enrich_ld9d7(96u, 80u, 179u, 160u, 0u);
+    r = bua_afr_power_enrich_ld9d7(96u, 80u, 179u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u);
     if (r.pe_active == 0u) ++passed;
     printf("  PE TPS qualifier: TPS=179 < 180 -> inactive  %s\n",
            (r.pe_active == 0u) ? "PASS" : "FAIL");
-    r = bua_afr_power_enrich_ld9d7(96u, 49u, 200u, 160u, 0u);
+    r = bua_afr_power_enrich_ld9d7(96u, 49u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 0u);
     if (r.pe_active == 0u) ++passed;
     printf("  PE load qualifier: load=49 < 50 -> inactive  %s\n",
            (r.pe_active == 0u) ? "PASS" : "FAIL");
-    r = bua_afr_power_enrich_ld9d7(96u, 40u, 164u, 160u, 1u);
+    r = bua_afr_power_enrich_ld9d7(96u, 40u, 164u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 160u), 1u);
     if (r.pe_active == 1u) ++passed;
     printf("  PE hysteresis: prior-active accepts TPS=164 load=40  %s\n",
            (r.pe_active == 1u) ? "PASS" : "FAIL");
-    r = bua_afr_power_enrich_ld9d7(96u, 80u, 200u, 0u, 0u);
+    r = bua_afr_power_enrich_ld9d7(96u, 80u, 200u, bua_lookup_spacing32(cal_pe_coolant_change, 9u, 0u), 0u);
     if (r.pe_active == 1u && r.factor == 396u && r.afr_code == 688u) ++passed;
     printf("  cold PE coolant term: C613=140 -> factor=396 code=%u AFR=%0.2f  %s\n",
            (unsigned int)r.afr_code, bua_afr_code_to_ratio(r.afr_code),

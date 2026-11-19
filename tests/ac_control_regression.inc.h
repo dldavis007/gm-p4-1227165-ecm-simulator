@@ -17,7 +17,7 @@ static void run_step91_loose_ends_test(void)
     t=bua_ac_tail91(0x00u,0x01u,0u,30u,20u,10u,10u,0u);
     S91(t.learned_2d==15u && t.learn_accum105==5u && t.iac_control_f2==0x40u);
     t=bua_ac_tail91(0x00u,0x01u,0x80u,30u,20u,10u,10u,0u);
-    S91(t.learned_2d==15u && t.learn_accum105==2u);
+    S91(t.learned_2d==15u && t.learn_accum105==4u);
     t=bua_ac_tail91(0x00u,0x81u,0u,25u,20u,7u,10u,0u);
     S91(t.learn_pos108==25u && t.learn_timer107==0u && t.iac_control_f2==0x40u);
 

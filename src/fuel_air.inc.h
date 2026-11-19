@@ -188,7 +188,11 @@ static void bua_scheduler_blm_select_step103(void)
     AIR_MODE_WORD=r.air_mode_word;
     ++stats.scheduler_blm_select_calls;
     if(r.changed!=0u) ++stats.scheduler_blm_cell_changes;
-    if(r.reinitialized!=0u) ++stats.scheduler_blm_reinitializations;
+    if(r.reinitialized!=0u) {
+        ram16be_set(0x0Au, 0x8000u); /* LF434 also restores both SAM words. */
+        ram16be_set(0x0Cu, 0x8000u);
+        ++stats.scheduler_blm_reinitializations;
+    }
 }
 
 /* LDB35..LDB9B executes before the closed-loop gate, so O2-ready production
@@ -394,16 +398,88 @@ static void bua_odd_crank_fuel_12p5ms(void)
     bua_odd_50ms_tail_lddc2();
 }
 
-static void bua_odd_normal_fuel_after_load_12p5ms(void)
+static void bua_select_live_afr(void)
 {
     BuaAfrSelectResult afr;
+    /* LD9D7..LDA5A: Mode-4 has priority, then PE, then normal AFR. */
+    afr = bua_select_afr_step47(RPM_DIV25, FILTERED_LOAD, TPS_LOAD_AXIS,
+                                RAM8(0xD0u), RAM8(0x000Eu), AF_MODE_WORD2,
+                                RAM8(0x00CDu), AF_MODE_WORD, INJECT_MODE_WORD,
+                                MINOR_MODE_WORD2, ALDL_FUNC_MOD_ENABLE,
+                                RAM8(0x015Au));
+    if (afr.source == 0u && !(AF_MODE_WORD2 & AF_CLOSED_LOOP_BIT))
+        RAM8(0x046Au) = afr.afr.load_change;
+    AF_MODE_WORD = afr.af_mode_word;
+    INJECT_MODE_WORD = afr.single_fire;
+    ram16be_set(TOTAL_AFR_ADDR, afr.afr.afr_code);
+}
+
+/* LDB9D..LDC05 use the current cell, transient qualifiers and decel
+ * state to decide whether the O2 correction may update this pass. */
+static int bua_o2_feedback_enabled(void)
+{
+    if (!(AF_MODE_WORD2 & AF_CLOSED_LOOP_BIT))
+        return 0;
+    if (AF_MODE_WORD & 0x22u) {
+        RAM8(0x41u) |= 4u;
+        return 0;
+    }
+    if ((AF_MODE_WORD & 4u) || (IGN_MODE_WORD & 2u))
+        return 0;
+    if (!(RAM8(0x3Eu) & 128u)) {
+        if (RAM8(0x38u) & 0x88u)
+            return 0;
+        if ((MINOR_MODE_WORD2 & 0x20u) || FILTERED_LOAD > 40u || RPM_DIV25 <= 28u)
+            return 1;
+    }
+    if ((AF_MODE_WORD2 & 0x40u) || CLOSED_LOOP_INTEGRATOR < 128u)
+        return 1;
+    RAM8(0x41u) |= 4u;
+    return 0;
+}
+
+/* LDB35..LDD29. The returned step remains on the ROM stack for base fuel. */
+static bua_u8 bua_live_o2_feedback(void)
+{
     BuaO2ControlResult o2;
+    bua_u8 fast_rich, prop_step;
+    O2_LOOKUP_AIRFLOW = bua_o2_airflow_argument(ram16be_get(AIRFLOW_WORD_ADDR));
+    fast_rich=bua_scheduler_fast_o2_front_step103();
+    prop_step = 0u;
+    if (bua_o2_feedback_enabled()) {
+        o2 = bua_closed_loop_o2_core_step103(ram16be_get(AIRFLOW_WORD_ADDR),
+                                       (bua_u8)((AF_MODE_WORD2 & 0x20u) != 0u),
+                                       fast_rich,O2_FILTERED_SLOW,O2_LEAN_OFFSET,
+                                       (bua_u8)((RAM8(0x003Eu)&0x02u)!=0u),
+                                       TPS_LOAD_AXIS, VSS_SCALED, RPM_SPECIAL,
+                                       COOLANT, CLOSED_LOOP_DURATION,
+                                       CLOSED_LOOP_INTEGRATOR,
+                                       CLOSED_LOOP_INT_TIMER);
+        CLOSED_LOOP_INTEGRATOR = o2.integrator;
+        CLOSED_LOOP_INT_TIMER = o2.int_timer;
+        CLOSED_LOOP_PW_CORR = o2.closed_corr;
+        O2_ERROR_LIMITED = o2.limited_error;
+        if (!o2.prop_suppressed) /* LDD01 skips the LDD0F scratch write. */
+            O2_PROPORTIONAL_STEP = o2.prop_step;
+        AF_MODE_WORD2 = (bua_u8)(AF_MODE_WORD2 & (bua_u8)~0x20u);
+        if (o2.slow_rich != 0u) AF_MODE_WORD2 |= 0x20u;
+        prop_step = o2.prop_step;
+    } else {
+        CLOSED_LOOP_INTEGRATOR = 128u;
+        CLOSED_LOOP_PW_CORR = 128u;
+        CLOSED_LOOP_INT_TIMER = 0u;
+    }
+
+    return prop_step;
+}
+
+static void bua_odd_normal_fuel_after_load_12p5ms(void)
+{
     bua_u16 filtered_o2;
     bua_u16 corrected;
     bua_u8 prop_step;
     bua_u8 ae_factor;
     bua_u8 ae_flags;
-    bua_u8 fast_rich;
 
     bua_odd_transient_front_12p5ms();
 
@@ -415,42 +491,12 @@ static void bua_odd_normal_fuel_after_load_12p5ms(void)
                                       (bua_u8)STEP94_FAST_O2_COEF);
     ram16be_set(0x006Fu, filtered_o2);
 
-    /* LD9D7..LDA5A: Mode-4 has priority, then PE, then normal AFR. */
-    afr = bua_select_afr_step47(RPM_DIV25, FILTERED_LOAD, TPS_LOAD_AXIS,
-                                COOLANT, RAM8(0x000Eu), AF_MODE_WORD2,
-                                RAM8(0x00CDu), AF_MODE_WORD, INJECT_MODE_WORD,
-                                MINOR_MODE_WORD2, ALDL_FUNC_MOD_ENABLE,
-                                RAM8(0x015Au));
-    if (afr.source == 0u && !(AF_MODE_WORD2 & AF_CLOSED_LOOP_BIT))
-        RAM8(0x046Au) = afr.afr.load_change;
-    AF_MODE_WORD = afr.af_mode_word;
-    INJECT_MODE_WORD = afr.single_fire;
-    ram16be_set(TOTAL_AFR_ADDR, afr.afr.afr_code);
+    bua_select_live_afr();
 
     /* LDA73..LDB35 selects/validates the current BLM before O2 and BPW use. */
     bua_scheduler_blm_select_step103();
 
-    O2_LOOKUP_AIRFLOW = bua_o2_airflow_argument(ram16be_get(AIRFLOW_WORD_ADDR));
-    fast_rich=bua_scheduler_fast_o2_front_step103();
-    prop_step = 0u;
-    if ((AF_MODE_WORD2 & AF_CLOSED_LOOP_BIT) != 0u) {
-        o2 = bua_closed_loop_o2_core_step103(ram16be_get(AIRFLOW_WORD_ADDR),
-                                       fast_rich,O2_FILTERED_SLOW,O2_LEAN_OFFSET,
-                                       (bua_u8)((RAM8(0x003Eu)&0x02u)!=0u),
-                                       TPS_LOAD_AXIS, VSS_SCALED, RPM_SPECIAL,
-                                       COOLANT, CLOSED_LOOP_DURATION,
-                                       CLOSED_LOOP_INTEGRATOR,
-                                       CLOSED_LOOP_INT_TIMER);
-        CLOSED_LOOP_INTEGRATOR = o2.integrator;
-        CLOSED_LOOP_INT_TIMER = o2.int_timer;
-        CLOSED_LOOP_PW_CORR = o2.closed_corr;
-        O2_ERROR_LIMITED = o2.limited_error;
-        O2_PROPORTIONAL_STEP = o2.prop_step;
-        AF_MODE_WORD2 = (bua_u8)(AF_MODE_WORD2 & (bua_u8)~0x20u);
-        if (o2.slow_rich != 0u) AF_MODE_WORD2 |= 0x20u;
-        prop_step = o2.prop_step;
-    }
-
+    prop_step = bua_live_o2_feedback();
     corrected = bua_fuel_base_and_corrections_step23(prop_step);
     ae_factor = ACCEL_LOAD_FACTOR;
     ae_flags = RAM8(0x0038u);

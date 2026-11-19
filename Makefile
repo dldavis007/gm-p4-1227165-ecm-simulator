@@ -24,17 +24,15 @@ test-rom:
 	@test -d "$(HC11_DIR)" || git clone -q https://github.com/anarkiwi/m68hc11 "$(HC11_DIR)"
 	@if [ "$(HC11_DIR)" = build/m68hc11 ]; then git -C "$(HC11_DIR)" checkout -q --detach $(HC11_REV); fi
 	@test "$$(git -C "$(HC11_DIR)" rev-parse HEAD)" = "$(HC11_REV)"
-	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py
-	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --full-irq
-	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --drive-irq
+	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --all
 
 test: $(TARGET) test-rom
 	$(CC) $(CFLAGS) tests/rom_calibration.c -o build/rom_calibration
 	build/rom_calibration
 	$(TARGET) > $(OUTPUT)
-	grep -q "Step-104 normal-operation behavioral signature: F56CA262" $(OUTPUT)
+	grep -q "Step-104 normal-operation behavioral signature: 02BA4EA7" $(OUTPUT)
 	grep -q "step-104 baseline-freeze regression result: PASS (10/10)" $(OUTPUT)
-	grep -q "Step-105 transmission trace signature: C8414C20" $(OUTPUT)
+	grep -q "Step-105 transmission trace signature: 5636155D" $(OUTPUT)
 	grep -q "step-105 transmission-aware regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-106 listing-coolant regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-107 diagnostic-stage1 regression result: PASS (17/17)" $(OUTPUT)
@@ -49,7 +47,7 @@ test: $(TARGET) test-rom
 	grep -q "step-113 retained-memory regression result: PASS (10/10)" $(OUTPUT)
 	grep -q "step-114 normal-startup regression result: PASS (14/14)" $(OUTPUT)
 	grep -q "step-115 SCI regression result: PASS (20/20)" $(OUTPUT)
-	grep -q "step-116 Mode-4 lifecycle regression result: PASS (16/16)" $(OUTPUT)
+	grep -q "step-116 Mode-4 lifecycle regression result: PASS (17/17)" $(OUTPUT)
 	grep -q "step-117 factory-test control regression result: PASS (24/24)" $(OUTPUT)
 	grep -q "step-118 factory-test execution regression result: PASS (31/31)" $(OUTPUT)
 	grep -q "step-119 vector-boundary regression result: PASS (19/19)" $(OUTPUT)

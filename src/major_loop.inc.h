@@ -1,14 +1,180 @@
+/* LE87A..LEA25, fan, cold-start and throttle-follower motor requests. */
+static void bua_idle_motor_request(void)
+{
+    bua_u8 control = RAM8(0xF2u);
+    bua_u8 steer, ac, small_close, request;
+    BuaFollower46 follower;
+    BuaIacTfDesiredStep39 demand;
+    if (!(RAM8(0xF3u) & 8u))
+        return;
+    if (!(ENGINE_MODE_WORD & 8u) && RAM8(0xF4u)) {
+        if (RAM8(0x10Eu) < 10u) { /* twice LC632 */
+            RAM8(0x101u) = 2u;
+            RAM8(0xF2u) = (bua_u8)((control | 8u) & ~16u);
+            return;
+        }
+        ENGINE_MODE_WORD |= 8u;
+        RAM8(0x10Bu) = 20u; /* LC676 */
+    } else if (!(MODE_WORD1 & 0x40u) && (RAM8(0x3Bu) & 0x40u)) {
+        if (RAM8(0x10Eu) < 10u) { /* twice LC633 */
+            RAM8(0x101u) = 0x82u;
+            RAM8(0xF2u) = (bua_u8)((control | 8u) & ~16u);
+            return;
+        }
+        MODE_WORD1 |= 0x40u;
+        RAM8(0x3Bu) &= (bua_u8)~0x40u;
+        RAM8(0x10Bu) = 20u; /* LC677 */
+    }
+    control &= (bua_u8)~8u;
+    RAM8(0xF2u) = control;
+    RAM8(0x10Eu) = 0u;
+    if (RAM8(0xF3u) & 0x20u)
+        return;
+    follower = bua_dfco_follower_step46(RAM8(0x84u), AIR_MODE_WORD,
+                                        RAM8(0xC5u), AF_MODE_WORD);
+    RAM8(0xC5u) = follower.duration_left;
+    steer = RAM8(0x37u) & 8u;
+    if (follower.virtual_tps <= STEP39_TF_TPS_THRESHOLD &&
+        RAM8(0x85u) > STEP39_TF_TPS_THRESHOLD)
+        RAM8(0x10Bu) = 30u;
+    if (follower.virtual_tps > STEP39_TF_TPS_THRESHOLD || (control & 0x50u) ||
+        steer || RAM8(0x105u)) {
+        /* LE961 is bypassed when power steering owns the load. */
+        ac = (bua_u8)(!steer && !(control & 0x80u));
+        demand = bua_iac_tf_desired_step39(follower.virtual_tps, RAM8(0xF3u) & 0x80u,
+                                           RAM8(0x67u), ac, RAM8(0x2Du), steer);
+        if (demand.ac_learn_reset) {
+            RAM8(0x2Du) = demand.ac_steps;
+            AIR_MODE_WORD |= 0x40u;
+        }
+        if (steer)
+            control = (bua_u8)((control | 0x40u) & ~1u);
+        else if ((control & 0xC0u) == 0xC0u)
+            control |= 0x20u;
+        control |= 0x10u;
+        request = bua_tf_pack_request_step66(demand.desired_steps, RAM8(0x105u), &small_close);
+        RAM8(0x101u) = request;
+        if (small_close)
+            RAM8(0x10Bu) = 30u;
+        if (request & 0x7Fu) {
+            if ((request & 0x80u) || RAM8(0x2Cu) < 145u) {
+                RAM8(0xF2u) = control;
+                return;
+            }
+            control &= (bua_u8)~0x10u;
+        } else {
+            control &= (bua_u8)~0x30u;
+            if ((control & 0x80u) && !steer)
+                control &= (bua_u8)~0x41u;
+        }
+    }
+    RAM8(0xF2u) = control;
+    if ((MINOR_MODE_WORD2 & 8u) && (RAM8(0x154u) & 2u)) {
+        control &= (bua_u8)~4u;
+        if (!(RAM8(0x155u) & 2u))
+            control |= 4u;
+        RAM8(0xF2u) = control;
+        return;
+    }
+    if (!(control & 4u)) {
+        request = 0u;
+        if (!RAM8(0x67u) && RAM8(0x84u) < 3u) {
+            if (RPM_DIV12P5 > RAM8(0x102u)) {
+                request = 0x82u;
+                control |= 2u;
+            } else if (control & 2u) {
+                control |= 4u;
+                RAM8(0x10Bu) = 40u;
+            } else {
+                request = 2u;
+            }
+        }
+        RAM8(0x101u) = request;
+        RAM8(0xF2u) = control;
+    }
+}
+
+/* LD4CD doubles D and rotates B through carry. On negative overflow the
+ * CLRB at LD4D3 also clears carry, so the returned byte is zero. */
+static int bua_idle_signed_byte(long value)
+{
+    if (value < -128)
+        return 0;
+    return value > 127 ? 127 : (int)value;
+}
+
+/* LD59A..LD6C3. RPM and the previous RPM are both 8.8 fixed point. */
+static void bua_idle_feedback(int error)
+{
+    long change = (long)ram16be_get(0xFFu) - ram16be_get(0x58u);
+    int rate = bua_idle_signed_byte(change < 0 ? -((-change + 15) / 16) : change / 16);
+    int neutral = RAM8(0xF3u) & 128u;
+    int deadband = neutral ? STEP37_PN_DEADBAND_RAW : STEP37_DRIVE_DEADBAND_RAW;
+    unsigned int magnitude = (unsigned int)abs(error);
+    int linear = 0, fraction, residual, steps;
+    unsigned int product, word, gain;
+    bua_u8 coolant_gain;
+    if (magnitude > (unsigned int)deadband)
+        linear = step37_mul_gain_signed(error, STEP37_PROP_UNDER_GAIN);
+    if (abs(rate) >= 16) { /* LC67C */
+        if (error > 4 && rate > 22) /* LC658, LC656, LC654+LC657 */
+            linear += step37_clamp127(rate + step37_mul_gain_signed(rate, 15u));
+        else
+            linear += step37_mul_gain_signed(rate, rate < 0 ? STEP37_DERIV_NEG_GAIN : STEP37_DERIV_POS_GAIN);
+    }
+    linear = bua_idle_signed_byte(linear);
+    magnitude = abs(linear);
+    if (neutral)
+        magnitude = step37_mul_gain_signed(magnitude, STEP37_PN_SCALE);
+    RAM8(0x101u) = 0u;
+    if (magnitude >= STEP59_INV_QUANT) {
+        RAM8(0x103u) = 0u;
+    } else {
+        if (abs(rate) > STEP59_RATE_LIMIT || !error) {
+            RAM8(0x103u) = 0u;
+            return;
+        }
+        gain = STEP59_INT_GAIN_PN;
+        if (abs(error) <= deadband)
+            gain = neutral ? STEP59_LOW_INT_GAIN_PN : STEP59_LOW_INT_GAIN_DRIVE;
+        fraction = RAM8(0x103u);
+        if (fraction >= 128)
+            fraction -= 256;
+        magnitude = (unsigned int)abs(error) * gain / 128u;
+        linear = fraction + (error < 0 ? -(int)magnitude : (int)magnitude);
+        if (linear > 127 || linear < -128)
+            linear = linear < 0 ? -127 : 127;
+        RAM8(0x103u) = (bua_u8)linear;
+        magnitude = abs(linear);
+        if (magnitude < STEP59_INV_QUANT)
+            return;
+    }
+    product = magnitude * STEP59_QUANT_GAIN;
+    word = (step59_round_high_byte(product) << 8) | (product & 255u);
+    residual = step59_round_high_byte((product & 255u) * STEP59_INV_QUANT);
+    coolant_gain = bua_interp_u8_lf2d6(step37_iac_cool_mult[COOLANT >> 5],
+                    step37_iac_cool_mult[(COOLANT >> 5) + 1], (bua_u8)(COOLANT << 3));
+    steps = step59_round_high_byte(bua_mul_u8_u16_lf266(coolant_gain, (bua_u16)word));
+    RAM8(0x101u) = (bua_u8)(linear < 0 ? steps | 128 : steps);
+    if (steps)
+        RAM8(0xF3u) |= 0x20u;
+    if (RAM8(0x103u))
+        RAM8(0x103u) = (bua_u8)(linear < 0 ? -residual : residual);
+}
+
 /* LD3F0..LD450 and LD6CA. The commanded idle update runs every eighth
  * minor loop. LD468 compares A after the Mode-4 option tests. */
 static void bua_running_idle_speed(void)
 {
     BuaIacCommandStep36 target;
     bua_u8 compare;
+    int error, idle, inhibited;
     RAM8(0x85u) = RAM8(0x84u);
     if (RAM8(0x82u) != RAM8(0x84u))
         RAM8(0x84u) = RAM8(0x82u);
     if (RAM8(0x3Fu) & 0x24u)
         RAM8(0x84u) = 2u * 3u;
+    bua_idle_motor_request();
     if (MINOR_COUNT & 7u)
         return;
     RAM8(0xF3u) &= (bua_u8)~0x20u;
@@ -22,6 +188,54 @@ static void bua_running_idle_speed(void)
     }
     if (compare < RAM8(0x58u))
         RAM8(0xF2u) |= 2u;
+    error = bua_idle_signed_byte((int)RAM8(0x102u) - RAM8(0x58u));
+    if (abs(error) > 2)
+        RAM8(0x107u) = 0u;
+    else if (RAM8(0x107u) != 255u)
+        ++RAM8(0x107u);
+    /* LD4AE..LD503: count down the transition inhibit and sample the
+     * park/neutral switch while the throttle is closed and speed is zero. */
+    if (RAM8(0x10Bu))
+        --RAM8(0x10Bu);
+    idle = RAM8(0x84u) < 3u && RAM8(0x67u) <= 6u;
+    inhibited = idle && !RAM8(0x67u) && RAM8(0x10Bu);
+    if (idle && !inhibited && !RAM8(0x67u)) {
+        if ((RAM8(0xF3u) & 0x90u) == 0x10u) {
+            RAM8(0x10Bu) = 16u;
+            RAM8(0xF3u) &= (bua_u8)~0x10u;
+            RAM8(0x107u) = 0u;
+        } else if ((RAM8(0xF3u) & 0x90u) == 0x80u) {
+            RAM8(0xF3u) |= 0x10u;
+            RAM8(0x107u) = 0u;
+        }
+        if (!(RAM8(0xF3u) & 0x81u) && RAM8(0x107u) > 20u &&
+            !(RAM8(0x3Au) & 0x20u) && MINOR_COUNT == 0x30u && RAM8(0x10Fu)) {
+            if (RAM8(0x10Fu) & 0x80u) {
+                if (--RAM8(0x109u) == 0u)
+                    ++RAM8(0x109u);
+            } else if (++RAM8(0x109u) > RAM8(0x10Cu)) {
+                RAM8(0x109u) = RAM8(0x10Cu);
+            }
+        }
+    }
+    if (!idle)
+        RAM8(0xF2u) &= (bua_u8)~1u;
+    if (idle && (RAM8(0xF2u) & 0x1Cu) == 4u && !(RAM8(0x37u) & 8u) &&
+        !RAM8(0x106u) && !inhibited) {
+        bua_idle_feedback(error);
+    } else if (error > 4 && (!idle || inhibited || (RAM8(0xF2u) & 4u))) {
+        RAM8(0xF2u) &= (bua_u8)~0x18u;
+        bua_idle_feedback(error);
+    } else {
+        RAM8(0x107u) = 0u;
+        if (RAM8(0x84u) >= 8u && RAM8(0x67u) > 6u &&
+            RAM8(0x10Fu) && RAM8(0x10Fu) < 128u &&
+            (MINOR_COUNT & 0x18u) == 0x18u && !(RAM8(0xF2u) & 8u)) {
+            RAM8(0xF2u) &= (bua_u8)~16u;
+            RAM8(0x101u) = 0x81u;
+            RAM8(0xF3u) |= 0x20u;
+        }
+    }
     ram16be_set(0xFFu, ram16be_get(0x58u));
 }
 
@@ -139,7 +353,8 @@ static void seg6_coolant_adc(void)
                       (bua_u8)((RAM8(0x003Cu)&0x80u)!=0u));
     RAM8(0x005Du)=r.converted_5d;
     ram16be_set(0x005Bu,r.coolant_5b);
-    RAM8(0x005Fu)=r.startup_cool_5f;
+    if (!r.failure && !(RAM8(0x3Bu) & 0x18u))
+        RAM8(0x005Fu)=r.startup_cool_5f; /* Only LF42B captures startup coolant. */
     RAM8(0x0030u)=r.mode30;
     RAM8(0x003Bu)=r.mode3b;
     RAM8(0x0035u)=r.minor35;
@@ -187,8 +402,61 @@ static void segA_mat_variables(void)
     RAM8(0x004Du)=r.err25_latched4d;
 }
 
-/* LE10F..LE2B9 cold automatic-transmission path after shifter sampling. */
-static void bua_cold_tcc_after_shifter(void)
+/* LE193..LE28F. The leading byte of each TCC curve is also its
+ * minimum road speed. LE1CD advances X past it on the enabled path. */
+static bua_u8 bua_warm_tcc_candidate(bua_u8 mode)
+{
+    const bua_u8 *curve;
+    BuaTccCoast72 coast;
+    bua_u8 mph = VSS_MPH_HI;
+    bua_u8 argument, threshold;
+    unsigned int index;
+    if (mode & 0x20u) {
+        mode &= (bua_u8)~0x20u;
+        mph = mph >= 26u ? (bua_u8)(mph - 26u) : 0u;
+    }
+    if (mode & 0xC0u)
+        curve = mode & 0x12u ? step67_non4_unlock : step67_4th_unlock;
+    else
+        curve = mode & 8u ? step67_4th_lock : step67_non4_lock;
+    if (RAM8(0x90u))
+        return mode;
+    if (!(mode & 1u) || mph < curve[0]) {
+        if (mode & 1u)
+            mode |= 6u;
+        RAM8(0x8Du) = STEP73_LOCK_DELAY_CAL;
+        return (bua_u8)(mode & 0x7Fu);
+    }
+    if (mode & 2u) {
+        mode |= 4u;
+        if (!(mode & 0xC0u))
+            goto coast;
+    }
+    if (mode & 4u) {
+        mode = (bua_u8)((mode | 0x80u) & ~4u);
+        curve = step67_4th_unlock;
+    }
+coast:
+    coast.shift45 = RAM8(0x45u);
+    coast.mode04 = mode;
+    bua_tcc_coast72(&coast, VSS_MPH_HI, TPS_LOAD_AXIS);
+    RAM8(0x45u) = coast.shift45;
+    if (!coast.coast_qualified) {
+        argument = VSS_MPH_HI > 100u ? 200u : (bua_u8)(2u * VSS_MPH_HI);
+        argument = argument > 24u ? (bua_u8)(argument - 24u) : 0u;
+        index = 1u + (argument >> 4);
+        threshold = curve[index];
+        if (argument & 15u)
+            threshold = bua_interp_u8_lf2d6(threshold, curve[index+1u],
+                                            (bua_u8)(argument << 4));
+        if ((mode & 0xC0u) ? threshold >= TPS_LOAD_AXIS : threshold > TPS_LOAD_AXIS)
+            return (bua_u8)(mode | 0x81u);
+    }
+    return bua_tcc_tail73(mode, RPM_DIV25, VSS_MPH_HI, &RAM8(0x8Du));
+}
+
+/* LE10F..LE2B9 automatic-transmission path after shifter sampling. */
+static void bua_tcc_after_shifter(void)
 {
     BuaGear68 gear;
     BuaTccGate68 gate;
@@ -196,7 +464,7 @@ static void bua_cold_tcc_after_shifter(void)
     bua_u8 nv = (bua_u8)(bua_fractional_divide((bua_u16)(RPM_DIV25 * 25u),
                                                 ram16be_get(0x65u)) >> 8);
     RAM8(0x8Fu) = nv;
-    if ((SPARK_MODE_WORD & 8u) || COOLANT >= STEP67_TCC_COOL_MIN)
+    if (SPARK_MODE_WORD & 8u)
         return;
     if (mode & STEP68_MODE_OD_ACTIVE) {
         BuaOdNv69 od;
@@ -216,14 +484,18 @@ static void bua_cold_tcc_after_shifter(void)
         RAM8(0x8Eu) = gear.fourth_timer;
         RAM8(0x12Cu) = STEP69_FIRST_DELAY;
     }
-    mode &= (bua_u8)~0x20u;
-    if ((mode & 0x80u) &&
-        (RPM_DIV25 > 128u /* LC293 and LC294 */ || VSS_MPH_HI > STEP73_FORCE_MPH)) {
-        RAM8(0x8Du) = 0u;
-        mode |= 0x81u;
+    if (COOLANT >= STEP67_TCC_COOL_MIN) {
+        mode = bua_warm_tcc_candidate(mode);
     } else {
-        mode &= (bua_u8)~0x80u;
-        RAM8(0x8Du) = STEP73_LOCK_DELAY_CAL;
+        mode &= (bua_u8)~0x20u;
+        if ((mode & 0x80u) &&
+            (RPM_DIV25 > 128u /* LC293 and LC294 */ || VSS_MPH_HI > STEP73_FORCE_MPH)) {
+            RAM8(0x8Du) = 0u;
+            mode |= 0x81u;
+        } else {
+            mode &= (bua_u8)~0x80u;
+            RAM8(0x8Du) = STEP73_LOCK_DELAY_CAL;
+        }
     }
     gate.status37 = RAM8(0x37u);
     gate.candidate_mode = mode;
@@ -236,11 +508,11 @@ static void bua_cold_tcc_after_shifter(void)
     RAM8(4u) = (bua_u8)(mode & 0x9Fu);
     MINOR_MODE_WORD2 = (bua_u8)((MINOR_MODE_WORD2 & 0xFEu) | (mode & 1u));
 }
-static void segE_tcc_adc(void)
+static void bua_battery_service(bua_u8 sample)
 {
     BuaBatt86 r;
     bua_u8 sh;
-    r=bua_battery86_segment_e(hw_adc(0x10u),RAM8(0x0033u),RAM8(0x003Eu),
+    r=bua_battery86_segment_e(sample,RAM8(0x0033u),RAM8(0x003Eu),
                               mpu16be_get(0x3FC8u),ram16be_get(0x00B2u),
                               RAM8(0x00B4u),RAM8(0x00B7u),RAM8(0x00B8u),
                               RAM8(0x011Fu),RAM8(0x0120u));
@@ -258,8 +530,13 @@ static void segE_tcc_adc(void)
         RAM8(0x0004u)=bua_prndl78(RAM8(0x0037u),&sh,RAM8(0x0004u),
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
-        bua_cold_tcc_after_shifter();
+        bua_tcc_after_shifter();
     }
+}
+
+static void segE_tcc_adc(void)
+{
+    bua_battery_service(hw_adc(0x10u));
 }
 
 static void seg1_output_bits(void)
@@ -346,11 +623,9 @@ static void seg1_output_bits(void)
         tcc_count=0xD000u;
     mpu16be_set(0x3FD6u,tcc_count);
 
-    /* $EE9E..$EEB8: canister-purge counter; normal value is complemented. */
-    if(mode4!=0u && (mode4_control&0x08u)!=0u)
-        purge_count=(bua_u16)(((bua_u16)(0x3400u|mode4_value)<<2)|3u);
-    else
-        purge_count=bua_pwm_count91(RAM8(0x0113u));
+    /* $EEB1 complements the selected duty for both purge sources. */
+    purge_count=bua_pwm_count91((mode4!=0u && (mode4_control&0x08u)!=0u)
+                                ? mode4_value : RAM8(0x0113u));
     mpu16be_set(0x3FD8u,purge_count);
 
     /* $EEBB..$EEE3: fan bit is staged at raw parallel-I/O bit 1. */

@@ -645,7 +645,6 @@ typedef struct {
     bua_u32 absolute_timer_ticks;
     bua_u32 last_edge_ticks;
     bua_u16 period_reg;
-    bua_u8 period_valid;
     bua_u8 pulse_since_irq;
     bua_u8 injector_ref_phase;
     bua_u8 injector_services_pending;
@@ -1420,8 +1419,9 @@ static void sim_advance_ecm_reference_6p25ms(void)
         if (sim_ecm_ref.last_edge_ticks != 0ul) {
             delta = edge_tick - sim_ecm_ref.last_edge_ticks;
             sim_ecm_ref.period_reg = (bua_u16)delta;
-            sim_ecm_ref.period_valid = 1u;
-            ram16be_set(REF_PERIOD_ADDR, sim_ecm_ref.period_reg);
+            /* Peripheral capture, independent of CPU writes to the MPU. */
+            mem.mpu[0] = (bua_u8)(delta >> 8);
+            mem.mpu[1] = (bua_u8)delta;
         }
         sim_ecm_ref.last_edge_ticks = edge_tick;
         sim_ecm_ref.pulse_since_irq = 1u;
@@ -1451,13 +1451,6 @@ static void bua_calculate_rpm_from_reference(void)
     bua_u8 rpm12p5_new;
     bua_u16 filtered;
     ref_period = ram16be_get(REF_PERIOD_ADDR);
-    /* Simulator-only invalid capture sentinel. */
-    if (ref_period == 0u || ref_period == 0xFFFFu) {
-        RPM_SPECIAL = 0u;
-        RPM_DIV25 = 0u;
-        ram16be_set(0x0058u, 0u);
-        return;
-    }
     ram16be_set(0x0468u, ref_period);
     doubled_period = (bua_u16)(ref_period << 1);
     q = bua_fractional_divide(307u, doubled_period);
@@ -1827,16 +1820,14 @@ static BuaAfrResult bua_afr_lda2d(bua_u8 startup_enrich_hi,
 static BuaAfrResult bua_afr_power_enrich_ld9d7(bua_u8 rpm_div25,
                                                bua_u8 filtered_load,
                                                bua_u8 tps_axis,
-                                               bua_u8 coolant_arg,
+                                               bua_u8 coolant_change,
                                                bua_u8 pe_was_active)
 {
     BuaAfrResult r;
     unsigned int tps_threshold;
     unsigned int load_threshold;
-    bua_u8 coolant_change;
     bua_u8 rpm_change;
     unsigned int factor;
-    (void)rpm_div25;
     r.afr_code = 0u;
     r.factor = 0u;
     r.load_change = 0u;
@@ -1860,9 +1851,7 @@ static BuaAfrResult bua_afr_power_enrich_ld9d7(bua_u8 rpm_div25,
     }
     if ((unsigned int)filtered_load < load_threshold)
         return r;
-    coolant_change = bua_lookup_spacing32(cal_pe_coolant_change, 9u,
-                                          coolant_arg);
-    rpm_change = cal_pe_rpm_change[0];
+    rpm_change = bua_lookup_spacing16(cal_pe_rpm_change, 17u, rpm_div25);
     factor = 128u + (unsigned int)rpm_change + (unsigned int)coolant_change;
     r.pe_active = 1u;
     r.single_fire_cleared = 1u;
@@ -1901,7 +1890,7 @@ static bua_u16 bua_mode4_afr_code_step47(bua_u8 aldl_afr_value)
 static BuaAfrSelectResult bua_select_afr_step47(bua_u8 rpm_div25,
                                                  bua_u8 filtered_load,
                                                  bua_u8 tps_axis,
-                                                 bua_u8 coolant_arg,
+                                                 bua_u8 pe_coolant_change,
                                                  bua_u8 startup_enrich_hi,
                                                  bua_u8 af_mode_word2,
                                                  bua_u8 coolant_afr_change,
@@ -1929,12 +1918,12 @@ static BuaAfrSelectResult bua_select_afr_step47(bua_u8 rpm_div25,
     }
     pe_was_active = (bua_u8)(((af_mode_word & AF_POWER_ENRICH_BIT) != 0u) ? 1u : 0u);
     pe = bua_afr_power_enrich_ld9d7(rpm_div25, filtered_load, tps_axis,
-                                    coolant_arg, pe_was_active);
+                                    pe_coolant_change, pe_was_active);
     /* LD9ED clears PE before testing the current qualifiers. */
     r.af_mode_word = (bua_u8)(r.af_mode_word & (bua_u8)~AF_POWER_ENRICH_BIT);
     if (pe.pe_active != 0u) {
         r.af_mode_word = (bua_u8)(r.af_mode_word | AF_POWER_ENRICH_BIT);
-        r.single_fire = 0u; /* BCLR L0039,$80 */
+        r.single_fire &= (bua_u8)~0x80u; /* BCLR L0039,$80 */
         r.afr = pe;
         r.source = 1u;
         return r;
@@ -2282,6 +2271,7 @@ typedef struct {
     bua_u8 slow_rich;
     bua_u8 limited_error;
     bua_u8 prop_width;
+    bua_u8 prop_suppressed;
     bua_u8 prop_step;
     bua_u8 integrator;
     bua_u8 int_timer;
@@ -2374,9 +2364,7 @@ static bua_u8 bua_o2_slow_error_ldc05(bua_u8 airflow_arg,
             *slow_rich_out = 0u;
         } else {
             error = 0u;
-            /* LDC2B jumps directly to LDC69 without changing b5.  For the
-             * zero-error case direction is immaterial to the arithmetic. */
-            *slow_rich_out = 0u;
+            /* LDC2B jumps to LDC69, retaining the previous rich/lean bit. */
         }
     }
     factor = bua_lookup_spacing16(cal_o2_error_reduction, 9u, airflow_arg);
@@ -2391,6 +2379,7 @@ static bua_u8 bua_o2_slow_error_ldc05(bua_u8 airflow_arg,
     return error;
 }
 static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
+                                                     bua_u8 previous_slow_rich,
                                                      bua_u8 fast_rich,
                                                      bua_u8 slow_o2,
                                                      bua_u8 lean_offset,
@@ -2417,6 +2406,7 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
     arg = bua_o2_airflow_argument(airflow_word);
     idle = (tps_axis <= (bua_u8)CAL_O2_IDLE_TPS && vss_scaled == 0u) ? 1u : 0u;
     r.fast_rich = fast_rich;
+    r.slow_rich = previous_slow_rich;
     r.limited_error = bua_o2_slow_error_ldc05(arg, slow_o2, lean_offset,
                                                air_diverter_active, idle,
                                                &r.slow_rich);
@@ -2462,10 +2452,10 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
         if (delay <= r.int_timer) {
             r.int_timer = 0u;
             if (r.slow_rich != 0u) {
-                if (r.integrator > (bua_u8)CAL_O2_INT_MIN)
+                if (r.integrator != (bua_u8)CAL_O2_INT_MIN)
                     r.integrator = (bua_u8)(r.integrator - 1u);
             } else {
-                if (r.integrator < (bua_u8)CAL_O2_INT_MAX)
+                if (r.integrator != (bua_u8)CAL_O2_INT_MAX)
                     r.integrator = (bua_u8)(r.integrator + 1u);
             }
             ++stats.fuel_o2_integrator_updates;
@@ -2477,9 +2467,10 @@ static BuaO2ControlResult bua_closed_loop_o2_core_step103(bua_u16 airflow_word,
     }
     /* LDC9C/LDD01 suppresses proportional action once the same rich/lean
      * condition has persisted longer than the computed width. */
-    if ((r.fast_rich != r.slow_rich ||
-         r.limited_error <= (bua_u8)CAL_O2_MIN_INT_ERROR) &&
-        duration_counter > r.prop_width) {
+    r.prop_suppressed = (bua_u8)((r.fast_rich != r.slow_rich ||
+                         r.limited_error <= CAL_O2_MIN_INT_ERROR) &&
+                         duration_counter > r.prop_width);
+    if (r.prop_suppressed) {
         r.prop_step = 0u;
     } else {
         prop_error = (bua_u8)(r.limited_error << 1);
@@ -2520,7 +2511,7 @@ static BuaO2ControlResult bua_closed_loop_o2_step24(bua_u16 airflow_word,
                                       previous_fast_o2,lean_offset,
                                       air_diverter_active,&ready);
     (void)ready;
-    return bua_closed_loop_o2_core_step103(airflow_word,fast_rich,slow_o2,
+    return bua_closed_loop_o2_core_step103(airflow_word,0u,fast_rich,slow_o2,
                     lean_offset,air_diverter_active,tps_axis,vss_scaled,
                     rpm_special,coolant,duration_counter,integrator,int_timer);
 }
@@ -3213,9 +3204,6 @@ static void bua_compute_dwell_12p5ms(void)
     bua_u8 load_delta;
     bua_u8 batt_deficit;
     ref_period = ram16be_get(REF_PERIOD_ADDR);
-    /* Simulator-only invalid capture sentinel, also used by RPM. */
-    if (ref_period == 0u || ref_period == 0xFFFFu)
-        return;
     dynamic = ram16be_get(DYNAMIC_DWELL_ADDR);
     /* LCEB3..LCECB. A is intentionally $FF before the 8-bit load
      * subtraction. A sufficiently large positive load step therefore

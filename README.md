@@ -2,10 +2,17 @@
 
 ## Current status
 
-The live 12.5 ms running path drives the spark and EST outputs. A differential
-against the assembled BUA ROM matches 16 consecutive running spark ticks.
-The full IRQ matches non-stack RAM below $0500 and all ordered MPU writes on a 32-tick stopped-engine
-replay and a 256-tick crank-to-run replay. Both reach engine-running on tick 116. Whole-image behavioral equivalence remains open.
+The ROM and C match on every tick of five full-IRQ replays: 32 ticks each for stopped operation,
+Mode 4 timeout and stopped-engine high airflow,
+256 from cranking to idle, and 512 through a shift into drive and 40 mph.
+Each tick compares RAM below $0500 outside the stack and ordered timer-chip
+writes. The cold power-on entries also agree at the scheduler handoff.
+
+Run `make test` in Codespaces or CI. To see instruction coverage by routine
+address, run `PYTHONPATH=build/m68hc11 python3 tools/compare_spark_rom.py --all --coverage`
+afterward. The complete suite executes **5,835 of 6,598 instructions
+(88.44%)**. This includes targeted routine replays and serial packet tests.
+The audit describes which state each comparison checks.
 
 - [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)

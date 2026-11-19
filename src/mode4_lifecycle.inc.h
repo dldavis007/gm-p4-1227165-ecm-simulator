@@ -29,6 +29,8 @@ static void bua_mode4_scheduler_step116(void)
             RAM8(0x0008u)=0u;
             RAM8(0x0009u)=0u;
             ram16be_set(0x0018u,bua_error_word_checksum_step113());
+            /* LF3A7 returns the checksum in D. LCB90 tests its high byte. */
+            command3=RAM8(0x18u);
             ++bua_mode4_trace116.error_resets;
         }
         if((command3&0x20u)!=0u) {

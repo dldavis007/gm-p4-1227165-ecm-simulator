@@ -16,9 +16,9 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 146 |
-| Static IRQ path, unobserved in this scenario | 37 |
-| Outside the IRQ call graph | 105 |
+| Observed on the IRQ path | 164 |
+| Static IRQ path, unobserved in this scenario | 38 |
+| Outside the IRQ call graph | 104 |
 
 The observed set includes both spark lookups, advance sum, knock attack and
 major-segment recovery, Mode-4 blend, LD1F6 output, EST finish, stall-saver
@@ -41,6 +41,7 @@ git -C ../m68hc11 checkout 9856198c1a8c5ce5e3c2428a4c332808307998a4
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --full-irq
 PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq
+PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --all --coverage
 ```
 
 - Running spark. Both implementations retain their own state for 16 ticks
@@ -59,16 +60,175 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --drive-irq
   SPI completion and host ADC/FMD values. The stopped scenario matches
   all ordered MPU byte writes on 32/32 ticks. The second scenario supplies
   a valid VATS capture and a stopped, 300 RPM, then 1,100 RPM reference
-  signal. It matches all ordered MPU writes on 256/256 ticks. Both set the
-  running flag on tick 116. On every tick of both scenarios the fuel words
-  $C2 and $D9, FMD byte selector and serial interrupt flags also match.
-- Both full IRQ scenarios compare every byte below $0500 except the CPU
-  stack window $01C0–$01FF, including the ADC receive scratch at $64.
-  LF651 base bias, warm park, the startup motor trajectory, commanded idle,
-  COP2 and Error 43 now agree across these traces. The emulator adapter
-  corrects FDIV overflow to return $FFFF per M68HC11RM. This matters on
-  drive tick 99 ($0999 divided by $06FE). Other idle PID operating regions,
-  physical bus timing and warm transmission behavior need separate traces.
+  signal. A third, 512-tick scenario shifts into drive and supplies a 40 mph
+  vehicle-speed input. On both driving traces the ROM and C first flag the
+  engine running at tick 116. All three traces agree on non-stack RAM through
+  $04FF and all ordered MPU writes on every tick. Both driving inputs supply
+  reference captures and VATS periods through modeled MPU registers. The
+  emulator adapter returns $FFFF for FDIV overflow per M68HC11RM.
+- Cold power-on. The ROM starts at its reset vector with zero-filled memory.
+  At $CCC6 its non-stack RAM, MPU and modeled I/O match the C power-on
+  lifecycle entry. The historical `ecm_reset()` fixture used to seed the
+  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Eight additional cases
+  start with valid retained RAM and compare ordered MPU writes as well.
+- Targeted replays. Major-segment dispatches and routine slices use equal
+  sensor inputs and RAM preloads and compare non-stack RAM, MPU state and
+  ordered MPU writes at their endpoints. Cases include acceleration and PE,
+  warm O2 feedback, BLM cell learning, idle PID and homing, shutdown, warm
+  TCC lock/unlock, EGR, purge, outputs, MAT faults, code flashing, Mode 4 and
+  factory control. The BLM threshold case retains state for 64 additional
+  services. SCI runs receive and transmit IRQs for Modes 0–4 and checks
+  every response byte against the C packet handler, plus bad-checksum
+  rejection. Intermediate per-byte SCI scratch is unverified.
+
+### Executed ROM instructions
+
+`--coverage` counts unique executed instruction addresses against instruction
+starts in the assembled listing. It verifies the listed instruction bytes
+against the image and groups them into contiguous regions at routine entries,
+dispatch targets and selected functional boundaries. Shared tails count once
+at their ROM address. Repeated ticks do not increase the count.
+
+| Replays added in command order | New instructions | Cumulative |
+|---|---:|---:|
+| Running spark and arithmetic, stopped, crank-to-idle | 3,000 | 45.47% |
+| 512-tick road input | 237 | 49.06% |
+| Mode 4 timeout | 25 | 49.44% |
+| Stopped engine with high airflow | 32 | 49.92% |
+| Independent reset vector | 262 | 53.90% |
+| Diagnostic qualification and retained-code logging | 283 | 58.18% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,996 | 88.44% |
+
+The suite executes all 275 instruction starts in the $E4F7 qualification routine.
+Run `--faults` to check the pre-latch and latch passes of nine faults, counter
+decay and inhibit paths, and single-pass Error 41 and 43 inputs. A separate
+52-service Segment D replay checks Error 21 persistence, retained checksum,
+and the active-low lamp command. Other input combinations remain untested.
+
+The IAC request routine at $E87A reaches 204 of its 211 instructions.
+The seven remaining instructions handle saturation. In this image the steering
+addends are zero, throttle demand is capped at 75, learned A/C adds at most 32,
+and moving in drive adds five. The maximum request before subtracting the
+current follower position is 112, below the positive 127-step clamp. Tests
+also cover negative deltas, fan and cold anticipation, and Mode 4. A retained
+throttle-opening and release trace compares non-stack RAM, MPU state and
+ordered MPU writes after each of 97 motor and 49 request services.
+
+In the fuel region starting at $DA2D the suite executes 370 of 377 instructions.
+For 128 successive 12.5 ms fuel services, the replay supplies a lean and then
+rich ADC input, and sets the slow O2 sample produced outside the routine.
+The integrator moves from 128 to 130 and then to 127. Non-stack RAM, MPU
+state, and ordered writes including the injector pulse word at $3FD0 match
+after every service. Separate cases check feedback inhibits, slow O2
+deadband, proportional-step suppression, and invalid retained BLM recovery.
+
+The $CDE6 region reaches 497 of 517 instructions. Running-reference cases
+exercise high RPM, dwell clipping, hot restart, highway spark, Error 43
+knock feedback and power enrichment. The even spark path calls LFA1E and
+services the TCC pass-by counter. With the stock $FFFF qualification delay,
+the counter wraps and cannot start a hold. A separate four-service replay
+preloads an active hold and checks voltage inhibition, the $DFFF write to
+$3FD6, hold expiry and the next qualifying pass.
+
+The fuel transient region at $D86B reaches 163 of 164 instructions. A retained
+24-service replay compares non-stack RAM, MPU state and ordered writes on
+every pass. Fuel stays on during all 20 qualification passes, cuts for two
+passes, and resumes with stall saver active when engine speed falls to 900 RPM.
+Separate cases cover the Mode 4 AFR override, including a zero divisor.
+The remaining instruction at $D915 selects single fire on cutoff entry
+when calibration bit 1 at $C014 is set. The stock image clears this bit.
+
+Segment 1 at $EDA3 reaches 143 of 153 instructions. Separate dispatches
+exercise each Mode 4 output override, the first and repeated high-voltage
+conditions, and stopped diagnostic outputs. Each compares non-stack RAM,
+MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
+purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
+$D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
+alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+All 84 instructions in the factory output region at $FDED execute. Starting
+at factory service entry $FCA2, 96 consecutive passes retain state through
+the minor-counter rollover. Reference periods of 327, 328, 655 and 656
+exercise both sides of the fuel and dwell thresholds. A 97th pass simulates
+ignition restoration and an FMD mode change, then compares the asynchronous
+pulse, checksum and shutdown outputs. Each pass compares non-stack RAM,
+MPU state, ordered MPU writes, and final I/O registers $4002, $4004, $4006,
+$400B and $400C. Serial IRQ dispatch before $FCA2 is outside this trace.
+
+The idle-speed PID region at $D59A reaches 152 of 153 instructions. The
+remaining instruction at $D684 caps a rounded product at 127. With the stock
+quantizer constant of 8 and an eight-bit remainder, this product rounds to
+at most 8. The replay starts at $D370, compares non-stack RAM, MPU state
+and ordered MPU writes, and stops at $D6CE before major-loop dispatch.
+An 18-pass trace retains the RPM history and integrator while speed dips
+below and rises above an 800 RPM setpoint. Additional cases exercise signed
+overflow, fractional RPM, derivative gain, the drive and neutral deadbands,
+throttle and gear transitions, and the learned warm motor-position limits.
+
+Fifteen Segment 5 dispatches exercise A/C timer expiry, cutouts, and IAC
+learning through the fan and closed-loop paths. Together with the existing
+suite they execute all 120 instructions at $DF9D. In park/neutral the ROM
+uses $C66A (128) to scale measured position travel and $C664 (255) to
+scale the signed change applied to the accumulator at $0105.
+
+The injector replay enters at $F67B and stops at the airflow service ($F76A).
+It checks all 256 startup coolant inputs, then retains state across 64 ticks
+with 48 reported injections. It compares non-stack RAM, MPU state and the
+empty MPU write trace after each service. These inputs execute 103 of 104
+instructions. The underflow clamp at $F6CF is unreachable here because the
+test at $F695 requires enrichment of at least 256 and the decay amount is
+one byte. This replay supplies the event indication independently of its
+upstream physical generation.
+
+The Mode 4 sweep checks all 256 command bytes through entry, a changed
+command while active, and exit. A 32-tick full IRQ replay checks the serial
+timeout clearing $0151 on rollover and the Mode 4 latch clearing one tick
+later. Another 32-tick IRQ replay checks the stopped-engine MAF timer at
+$00B0 advancing from 95 through 97, then setting the high-MAF latch at $003F.
+The $CB5F region includes the following scheduler code and background RAM
+refresh loop. Its total is 138 of 173 instructions.
+
+Six Segment E replays retain state across 72 dispatches apiece, comparing
+non-stack RAM, MPU state and ordered writes after every dispatch. At 25 mph
+they check the N/V ratio byte directly around the 30, 35 and 41 thresholds.
+The replays also exercise fourth-gear confirmation, the coolant threshold,
+and clutch command changes. A separate case exercises the pass-by hold.
+The $E10F region now reaches 189 of 205 instruction starts.
+
+The canister-purge replay alternates 48 Segment C services with 48 Segment 1
+output dispatches. Each dispatch compares non-stack RAM, MPU state and
+ordered writes, including the purge counter at $3FD8 on the output pass.
+Segment C copies the previous purge status to $003E bit 0 before testing
+eligibility. Once active duty is nonzero and the minimum latch at $0114
+clears, the next qualified request goes directly to $0113. The replay
+exercises 88 of 91 instructions in the $E75D region.
+
+The $EF04 diagnostic entry region reaches all 98 instructions. A 64-dispatch
+Segment D replay compares field-service lamp operation in open and closed
+loop, then switches to stopped-engine code flash. Separate dispatches check
+the Error 51 mask, immediate retention and checksum, and the no-error counter
+at 50 and 51. Each dispatch compares non-stack RAM, MPU state and ordered
+MPU writes.
+
+The reset-vector replays reach 203 of 210 instructions at $C800. They test
+both edges of the diagnostic ADC window and the battery and pump thresholds
+for factory boot, including the FMD-controlled retained-RAM fill. Two cases
+flip one bit of the stored socket checksum. The simulator receives the
+checksum verdict as input, while the ROM computes it. Normal and factory
+paths compare state at $CCC6. The Error 51 wait case stops before SWI at $C938.
+
+Six retained asynchronous fuel-pulse replays compare 84 services at $E436,
+including the pulse counter at $3FF2 and ordered CSR trigger writes. Two
+additional dispatches check limiter headroom of 110 and 111 counts. The
+first suppresses the pulse and the second emits 171 timer counts with a
+30-count injector offset applied twice. Of 85 instruction starts, 83 run.
+The stock pulse factors at $C315 are all 32, so even maximum base width
+cannot reach the overflow clamp at $E478. The optional HUD call at $E4EB
+is outside the modeled configuration.
+
+Of 6,598 listing instructions, 763 remain unexecuted. The largest remaining
+region by unexecuted instructions begins at $D6D1 (53). A hit records execution under the scenario inputs.
+The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
 
@@ -77,12 +237,12 @@ in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
 signatures changed with live spark and startup execution. Their current values
-are F56CA262, C8414C20 and B12D3084 respectively. These are C regression
+are 02BA4EA7, 5636155D and B12D3084 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
-Simulation boundaries include the host period-valid flag, invalid capture
-sentinels in RPM/dwell and the SWI wait. Reference capture and ASLD now wrap
-to 16 bits. FMD transactions use the processor-facing byte boundary. SPI bus
+The running RPM and dwell paths follow ROM arithmetic for $0000 and $FFFF
+reference captures. Reference capture and ASLD wrap to 16 bits. The SWI
+wait remains a simulator boundary. FMD transactions use the processor-facing byte boundary. SPI bus
 timing, stack traffic and physical ignition timing remain unverified.
 
 ### First divergent stores in the original drive comparison

@@ -89,7 +89,7 @@ static void bua_startup_normal_step114(void)
     RAM8(0x0086u)=STEP114_MIN_TPS;
     bua_common_tps_6p25ms();
 
-    segE_tcc_adc();
+    bua_battery_service(RAM8(0x7Eu)); /* LC9A9 enters at LDE72 with prior sample. */
     bua_startup_trace114.segment_e_called=1u;
     ram16be_set(0x00B2u,mpu16be_get(0x3FC8u));
     ram16be_set(0x00CEu,(bua_u16)CAL_STOICH_CODE);

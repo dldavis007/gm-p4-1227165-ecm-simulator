@@ -28,11 +28,11 @@ static bua_u8 bua_ac_signed_gain91(bua_u8 a)
     bua_u8 hi;
     if((a&0x80u)!=0u) {
         mag=(unsigned int)((bua_u8)(0u-a));
-        prod=mag*(unsigned int)STEP91_AC_PN_GAIN;
+        prod=mag*(unsigned int)STEP91_AC_PN_TF_GAIN;
         hi=(bua_u8)(prod>>8);
         return (bua_u8)(0u-hi);
     }
-    prod=(unsigned int)a*(unsigned int)STEP91_AC_PN_GAIN;
+    prod=(unsigned int)a*(unsigned int)STEP91_AC_PN_TF_GAIN;
     return (bua_u8)(prod>>8);
 }
 

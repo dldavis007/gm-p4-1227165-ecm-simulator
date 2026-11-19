@@ -17,7 +17,6 @@ static void record_write(unsigned int address, unsigned int value)
 void probe_reset(void)
 {
     memset(&mem, 0, sizeof(mem));
-    sim_ecm_ref.period_valid = 1u;
 }
 unsigned char *probe_io(void) { return mem.io4000; }
 unsigned char *probe_ram(void) { return mem.low; }
@@ -39,7 +38,10 @@ void probe_irq_setup(void)
     ecm_reset();
     sim_normal_fmd_enabled = 1u;
 }
-int probe_adc(unsigned int channel) { return adc_sample((bua_u8)channel); }
+int probe_adc(unsigned int channel)
+{
+    return channel == 0xB0u ? sim_factory_adc118[11] : adc_sample((bua_u8)channel);
+}
 int probe_fmd(unsigned int command)
 {
     return (command & 128u) ? sim_normal_fmd_byte2 : sim_normal_fmd_byte1;
@@ -59,4 +61,102 @@ int probe_injections(void) { return (int)stats.physical_injector_services; }
 int probe_product(unsigned int a, unsigned int b)
 {
     return bua_mul_u16_u16_lf2f0((bua_u16)a, (bua_u16)b, 0);
+}
+
+void probe_follower(void) { count = 0; bua_idle_motor_request(); }
+void probe_qualification(void) { count = 0; bua_diag_qualification_step108(); }
+
+void probe_major(unsigned int segment)
+{
+    count = 0;
+    major_segment((bua_u8)segment);
+}
+
+void probe_cold_boot(void)
+{
+    BuaPowerOnInput120 in;
+    memset(&in, 0, sizeof(in));
+    memset(&mem, 0, sizeof(mem));
+    count = 0;
+    in.socket_checksum_valid = 1u;
+    bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
+}
+
+void probe_boot_inputs(unsigned int battery, unsigned int pump,
+                       unsigned int diagnostic, unsigned int fmd)
+{
+    sim_volt_adc = (bua_u8)battery;
+    sim_pumpvolt_adc = (bua_u8)pump;
+    sim_diag_adc = (bua_u8)diagnostic;
+    sim_normal_fmd_byte1 = (bua_u8)fmd;
+}
+int probe_seeded_boot(unsigned int socket_valid, unsigned int checksum)
+{
+    BuaPowerOnInput120 in;
+    memset(&in, 0, sizeof(in));
+    in.err51_at_entry = RAM8(3u) & 8u;
+    in.socket_checksum_valid = (bua_u8)socket_valid;
+    in.whole_rom_checksum = (bua_u16)checksum;
+    count = 0;
+    return bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
+}
+
+int probe_map(void) { return mem.io5000; }
+
+int probe_feedback(void) { count = 0; return bua_live_o2_feedback(); }
+void probe_blm_select(void) { count = 0; bua_scheduler_blm_select_step103(); }
+void probe_afr(void) { count = 0; bua_select_live_afr(); }
+void probe_async(void) { count = 0; bua_scheduler_async_le436_step102(); }
+void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
+void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }
+void probe_homing(void) { count = 0; bua_iac_shutdown_homing_even_step111(); }
+void probe_injector(unsigned int event)
+{
+    count = 0;
+    sim_ecm_ref.injector_services_pending = event;
+    bua_common_injector_service_6p25ms();
+}
+void probe_motor(void) { count = 0; bua_iac_motor_service_6p25ms(); }
+void probe_mode4(void) { count = 0; bua_mode4_scheduler_step116(); }
+void probe_flash(void) { count = 0; bua_diag_flash_step109(); }
+void probe_factory(void)
+{
+    count = 0;
+    sim_factory_diagnostic_adc117 = sim_diag_adc;
+    sim_factory_battery_adc117 = sim_volt_adc;
+    bua_factory_irq_step117();
+}
+void probe_factory_hal(void) { count = 0; bua_lifecycle_irq_from_hal_step165(); }
+void probe_factory_inputs(void)
+{
+    sim_diag_adc = 60u;
+    sim_normal_fmd_byte1 = 0u;
+    sim_factory_adc118[11] = 0xA5u;
+}
+void probe_factory_mode(unsigned int mode) { sim_normal_fmd_byte1 = (bua_u8)mode; }
+
+int probe_frame(const bua_u8 *data, unsigned int length)
+{
+    return bua_sci115_receive(data, (bua_u8)length);
+}
+int probe_response_length(void) { return bua_sci115.output_count; }
+int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_stopped_airflow(unsigned int maf, unsigned int pump)
+{
+    sim_maf_adc = (bua_u8)maf;
+    sim_pumpvolt_adc = (bua_u8)pump;
+}
+void probe_o2_input(unsigned int sample) { sim_o2_adc = (bua_u8)sample; }
+void probe_warm_fuel(void) { count = 0; bua_odd_normal_fuel_after_load_12p5ms(); }
+void probe_blm_tail(void) { count = 0; bua_odd_50ms_tail_lddc2(); }
+void probe_road(unsigned int mph)
+{
+    sim_set_vss_mph(mph);
+    sim_normal_fmd_byte1 = mph ? 1u : 0u;
+}
+int probe_vss_capture(void) { return sim_vss_capture_reg; }
+void probe_temperature_inputs(unsigned int cts, unsigned int mat)
+{
+    sim_cts_adc = (bua_u8)cts;
+    sim_mat_adc = (bua_u8)mat;
 }

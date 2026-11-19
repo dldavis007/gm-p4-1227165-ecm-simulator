@@ -17,7 +17,7 @@
 #define STEP105_FOURTH_NV_TARGET       32.0
 #define STEP105_FOURTH_RATIO            0.70
 #define STEP105_RPM_PER_MPH_OUTPUT     (STEP105_FOURTH_NV_TARGET / STEP105_FOURTH_RATIO)
-#define STEP105_EXPECTED_SIGNATURE      0xC8414C20ul
+#define STEP105_EXPECTED_SIGNATURE      0x5636155Dul
 
 static const double step105_gear_ratio[5] = {
     0.0, 3.06, 1.62, 1.00, 0.70
@@ -228,7 +228,8 @@ static void run_step105_transmission_drive(void)
     printf(" time mph gear rpm  N/V  4th cmd phys brake TPS load fuel DFCO phase\n");
 
     step105_plant_init(&plant);
-    MODE_WORD3|=FUEL_VATS_OK_BIT;
+    mem.mpu[0x38] = 0x07u; /* VATS input capture, 2000 timer counts. */
+    mem.mpu[0x39] = 0xD0u;
     sim_o2_adc=128u;
     BLM=128u;
     CLOSED_LOOP_PW_CORR=128u;

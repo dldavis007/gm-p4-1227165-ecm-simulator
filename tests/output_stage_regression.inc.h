@@ -70,7 +70,7 @@ static void run_step110_output_stage_test(void)
     S110(mpu16be_get(0x3FCCu)==forced_count &&
          mpu16be_get(0x3FD4u)==forced_count);
     S110(mpu16be_get(0x3FD6u)==forced_count &&
-         mpu16be_get(0x3FD8u)==forced_count &&
+         mpu16be_get(0x3FD8u)==0xD2ABu &&
          mpu16be_get(0x3FD2u)==forced_count);
     S110(mem.io4000[4]==0x82u);
 
