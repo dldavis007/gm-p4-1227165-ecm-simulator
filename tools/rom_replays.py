@@ -89,6 +89,7 @@ def reset_vector(cpu, rom, lib):
 SEGMENTS = [
     ("in-gear EGR", 11, {0x37:0, 0x60:150, 0x82:110, 0x57:75, 0x63:110, 0x5B:180}),
     ("warm TCC lock", 14, {4:1,0x37:0,0x34:128,0x57:55,0x65:40,0x67:12,0x5B:160,0x82:70}),
+    ("TCC pass-by holds clutch state", 14, {4: 0x81, 0x36: 8, 0x37: 0x20, 0x57: 55, 0x65: 40}),
     ("warm TCC unlock", 14, {4:0x81,0x37:0x20,0x34:128,0x57:55,0x65:40,0x67:12,0x5B:160,0x82:240}),
     ("in-gear RPM/VSS", 14, {0x37:0,0x34:128,0x57:76,0x65:40,0x67:12,0x5B:50}),
     ("MAT open-circuit Error 23", 10, {0x1B:241, 0xAC:121}),
@@ -426,6 +427,46 @@ def slices(make_cpu, rom, lib):
             failures.append(str(err))
     if failures:
         raise AssertionError("\n".join(failures))
+
+
+def transmission_replays(make_cpu, rom, lib):
+    # At exactly 25 mph, the raw RPM/25 byte equals the computed N/V byte.
+    # Keep state within each drive so confirmation and lock delays can expire.
+    for initial_mode in (0x01, 0x05, 0x21, 0x41, 0x81, 0x93):
+        cpu = make_cpu()
+        ram, _, _ = hardware(cpu, rom, lib)
+        writes = []
+        def write(addr, value):
+            writes.append((addr, value))
+            cpu.mem[addr] = value
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        def set_input(addr, value):
+            cpu.mem[addr] = ram[addr] = value
+
+        for addr, value in ((4, initial_mode), (0x34, 128), (0x37, 0),
+                            (0x8D, 2), (0x8E, 8), (0x90, 2), (0x12C, 2)):
+            set_input(addr, value)
+        samples = [(25, rpm, 120, 70) for rpm in
+                   (41, 40, 29, 30, 31, 35, 36, 42) + (32,) * 10]
+        samples += [(mph, rpm, coolant, throttle)
+                    for coolant in (119, 120)
+                    for mph in (0, 15, 26, 32, 37, 60, 61, 100, 101)
+                    for rpm, throttle in ((128, 0), (129, 255), (55, 70))]
+        for tick, (mph, rpm, coolant, throttle) in enumerate(samples):
+            for addr, value in ((0x65, mph), (0x66, 0), (0x57, rpm),
+                                (0x5B, coolant), (0x82, throttle)):
+                set_input(addr, value)
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(cpu.read16(0xCCE4 + 2 * 14), max_steps=2000)
+            assert cpu.pc == 0xFFFE
+            lib.probe_major(14)
+            label = f"Segment E mode {initial_mode:02X} tick {tick}"
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), label
+            if mph == 25:
+                assert ram[0x8F] == rpm, label
+    print("Six retained Segment E drives matched across 432 dispatches")
 
 
 def mode4_commands(cpu_factory, rom, lib):

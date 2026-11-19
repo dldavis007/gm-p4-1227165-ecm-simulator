@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 213 | 53.15% |
 | Diagnostic qualification and retained-code logging | 185 | 55.96% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,832 | 83.72% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,879 | 84.43% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -188,8 +188,15 @@ $00B0 advancing from 95 through 97, then setting the high-MAF latch at $003F.
 The $CB5F region includes the following scheduler code and background RAM
 refresh loop. Its total is 138 of 173 instructions.
 
-Of 6,598 listing instructions, 1,074 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $E10F (62), $E75D (58), $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
+Six Segment E replays retain state across 72 dispatches apiece, comparing
+non-stack RAM, MPU state and ordered writes after every dispatch. At 25 mph
+they check the N/V ratio byte directly around the 30, 35 and 41 thresholds.
+The replays also exercise fourth-gear confirmation, the coolant threshold,
+and clutch command changes. A separate case exercises the pass-by hold.
+The $E10F region now reaches 189 of 205 instruction starts.
+
+Of 6,598 listing instructions, 1,027 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $E75D (58), $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
