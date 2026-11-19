@@ -76,10 +76,15 @@ static void bua_purge83(BuaPurge83 *s,bua_u8 runtime,bua_u8 minor35,
             unsigned int z=(unsigned int)maf*(unsigned int)load_gain*2u;
             req=(z>65535u)?255u:(bua_u8)((z>>8)&0xFFu);
         }
-        if(s->pw113==0u || s->min114==0u || req<s->min114) s->min114=req;
-        filtered=bua_lag_filter_8_8((bua_u16)((bua_u16)s->pw113<<8),req,STEP83_FILTER);
-        s->pw113=(bua_u8)(filtered>>8);
-        if(s->pw113>=s->min114) s->min114=0u;
+        /* LE7E0 uses the request directly once the minimum latch clears. */
+        if(s->pw113!=0u && s->min114==0u) {
+            s->pw113=req;
+        } else {
+            if(s->pw113==0u || req<s->min114) s->min114=req;
+            filtered=bua_lag_filter_8_8((bua_u16)((bua_u16)s->pw113<<8),req,STEP83_FILTER);
+            s->pw113=(bua_u8)(filtered>>8);
+            if(s->pw113>=s->min114) s->min114=0u;
+        }
     } else s->pw113=0u; /* LE808 */
     s->requested=req;
     s->status3b=(bua_u8)((s->status3b&0xFEu)|(s->pw113!=0u?1u:0u));

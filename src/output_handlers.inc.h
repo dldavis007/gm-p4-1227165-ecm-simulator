@@ -86,6 +86,8 @@ static void segC_canister_purge(void)
     BuaPurge83 c;
     c.runtime_latched=(bua_u8)((RAM8(0x0001u)&0x10u)!=0u);
     c.status3b=RAM8(0x003Bu);
+    /* LE75D..LE764 copies the previous purge status before qualification. */
+    RAM8(0x003Eu)=(bua_u8)((RAM8(0x003Eu)&0xFEu)|(c.status3b&1u));
     c.pw113=RAM8(0x0113u);
     c.min114=RAM8(0x0114u);
     c.requested=0u;

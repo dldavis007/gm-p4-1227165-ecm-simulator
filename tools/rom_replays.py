@@ -429,6 +429,42 @@ def slices(make_cpu, rom, lib):
         raise AssertionError("\n".join(failures))
 
 
+def purge_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    inputs = {1: 0, 0x1B: 80, 0x34: 128, 0x33: 0, 0x35: 0,
+              0x3B: 0, 0x3E: 0, 0x41: 0, 0x43: 0, 0x44: 128,
+              0x5B: 147, 0x67: 17, 0x82: 11, 0xEA: 16, 0xEB: 0,
+              0x113: 0, 0x114: 0}
+    # Retain the filter and minimum-duty latch while airflow rises, then
+    # falls. Cross the enable and hold thresholds independently.
+    changes = {1: {0x1B: 81}, 3: {0x67: 11, 0x82: 6},
+               8: {0xEA: 32}, 24: {0xEA: 1, 0xEB: 224},
+               26: {0xEA: 31, 0xEB: 255}, 30: {0x67: 10},
+               31: {0x67: 16}, 32: {0x67: 17, 0x82: 10},
+               33: {0x82: 11}, 34: {0x82: 5}, 35: {0x82: 11},
+               36: {0xEA: 0}, 37: {0xEA: 20, 0x35: 32},
+               38: {0x35: 0, 0x5B: 146}, 39: {0x5B: 147, 0x43: 2},
+               40: {0x43: 0, 0x44: 0}, 41: {0x41: 2}, 42: {0x1B: 0}}
+    writes = []
+    def write(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for tick in range(48):
+        for addr, value in (inputs if tick == 0 else changes.get(tick, {})).items():
+            cpu.mem[addr] = ram[addr] = value
+        for segment in (12, 1):
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(cpu.read16(0xCCE4 + 2 * segment), max_steps=2000)
+            assert cpu.pc == 0xFFFE
+            lib.probe_major(segment)
+            label = f"purge tick {tick} segment {segment}"
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), label
+    print("48 purge services and 48 output dispatches matched")
+
+
 def transmission_replays(make_cpu, rom, lib):
     # At exactly 25 mph, the raw RPM/25 byte equals the computed N/V byte.
     # Keep state within each drive so confirmation and lock delays can expire.

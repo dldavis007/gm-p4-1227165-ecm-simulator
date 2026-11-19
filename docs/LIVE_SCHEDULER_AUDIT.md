@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 213 | 53.15% |
 | Diagnostic qualification and retained-code logging | 185 | 55.96% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,879 | 84.43% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,936 | 85.30% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -195,8 +195,16 @@ The replays also exercise fourth-gear confirmation, the coolant threshold,
 and clutch command changes. A separate case exercises the pass-by hold.
 The $E10F region now reaches 189 of 205 instruction starts.
 
-Of 6,598 listing instructions, 1,027 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $E75D (58), $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
+The canister-purge replay alternates 48 Segment C services with 48 Segment 1
+output dispatches. Each dispatch compares non-stack RAM, MPU state and
+ordered writes, including the purge counter at $3FD8 on the output pass.
+Segment C copies the previous purge status to $003E bit 0 before testing
+eligibility. Once active duty is nonzero and the minimum latch at $0114
+clears, the next qualified request goes directly to $0113. The replay
+exercises 88 of 91 instructions in the $E75D region.
+
+Of 6,598 listing instructions, 970 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
