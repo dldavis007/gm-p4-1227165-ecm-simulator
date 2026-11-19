@@ -97,9 +97,9 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,198 | 92.41% |
-| Diagnostic serial receive window and timeout | 30 | 92.86% |
-| ROM-only background RAM refresh | 15 | 93.09% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,208 | 92.56% |
+| Diagnostic serial receive window and timeout | 30 | 93.01% |
+| ROM-only background RAM refresh | 15 | 93.24% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -147,6 +147,12 @@ MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
 purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
 $D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
 alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+Segment 3 at $EA28 executes all 50 instructions. A 512-dispatch replay
+sweeps the diagnostic-pin ADC from 0 through 255 with the SCI lock clear,
+then set. Counts below 40 select diagnostic mode. Counts 100 through 151
+select ALDL mode only when unlocked. Each dispatch checks non-stack RAM,
+MPU state, the ordered zero writes to $3FCE–$3FCF and the final $8F at $4003.
 
 The 160-baud transmitter at $F880 reaches all 57 instructions. The replay
 compares non-stack RAM, MPU state and ordered MPU writes after each of 756
@@ -316,7 +322,7 @@ each of 1,295 services. With the update timer saturated at 255, it checks
 the five-count integrator deadband, the O2 direction gate, timer reset on
 update, and both learned-cell limits (108 and 160).
 
-Of 6,598 listing instructions, 456 remain unexecuted. A hit records execution under the scenario inputs.
+Of 6,598 listing instructions, 446 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

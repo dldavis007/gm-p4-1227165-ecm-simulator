@@ -191,6 +191,37 @@ def ordered_writes(lib):
     return [(lib.probe_address(i), lib.probe_value(i)) for i in range(lib.probe_trace_size())]
 
 
+def diagnostic_pin_sweep(cpu, rom, lib):
+    ram, _, io = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 3)
+    writes = []
+
+    def write(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    # Retain the mode byte across samples to check that old selections clear.
+    for locked in (False, True):
+        for sample in range(256):
+            lib.probe_diag_adc(sample)
+            for addr, value in ((0x46, 8 if locked else 0), (0x34, 128 if sample & 1 else 0),
+                                (0x1B2, int(sample == 40)), (0x5B, 112 + (sample >= 2))):
+                cpu.mem[addr] = ram[addr] = value
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=500)
+            lib.probe_major(3)
+            label = f"Segment 3 diagnostic ADC {sample}, SCI lock {locked}"
+            assert cpu.pc == 0xFFFE, label
+            check_state(label, cpu, lib)
+            mode = 0x10 if sample < 40 else 0x20 if 100 <= sample < 152 and not locked else 0
+            assert ram[0x35] & 0x30 == mode, label
+            assert writes == ordered_writes(lib) == [(0x3FCE, 0), (0x3FCF, 0)], label
+            assert cpu.mem[0x4003] == io[3] == 0x8F, label
+    print("Segment 3 diagnostic pin matched for all 256 ADC counts with SCI unlocked and locked")
+
+
 def segments(make_cpu, rom, lib):
     for name, segment, inputs in SEGMENTS:
         cpu = make_cpu()

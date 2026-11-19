@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import serial_streams, blm_learning_cycle, blm_corrections, burnoff_cycle, ram_refresh, airflow_cycle, shift_light_cycle, air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
+from rom_replays import diagnostic_pin_sweep, serial_streams, blm_learning_cycle, blm_corrections, burnoff_cycle, ram_refresh, airflow_cycle, shift_light_cycle, air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
 
 
 class BuaCPU(HC11):
@@ -300,6 +300,7 @@ if __name__ == "__main__":
                                   reset_branches(BuaCPU, ROM.read_bytes(), lib)),
             "faults": lambda lib: diagnostic_transitions(BuaCPU, ROM.read_bytes(), lib),
             "targeted": lambda lib: (segments(BuaCPU, ROM.read_bytes(), lib),
+                                     diagnostic_pin_sweep(BuaCPU(), ROM.read_bytes(), lib),
                                      shutdown_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      async_fuel_cycle(BuaCPU, ROM.read_bytes(), lib),
                                      air_cycle(BuaCPU(), ROM.read_bytes(), lib),
