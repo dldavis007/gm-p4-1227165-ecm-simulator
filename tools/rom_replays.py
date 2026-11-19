@@ -722,6 +722,33 @@ def mode4_commands(cpu_factory, rom, lib):
     print("256 Mode 4 command bytes matched on entry, repeat and exit")
 
 
+def blm_learning_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    for addr, value in ((0xBF, 3), (0x1F, 128), (0xC0, 128), (0xCA, 0), (0x43, 0)):
+        cpu.mem[addr] = ram[addr] = value
+
+    def advance(count, integrator, rich, expected_cell, expected_timer):
+        cpu.mem[0xC9] = ram[0xC9] = integrator
+        cpu.mem[0x44] = ram[0x44] = 2 | (64 if rich else 0)
+        for tick in range(count):
+            cpu.mem[0] = ram[0] = (1 + 8 * tick) % 160
+            cpu.pc, cpu.sp = 0xDDC2, 0x1FF
+            assert cpu.run(until_pc=0xCCAC, max_steps=500) == "until_pc"
+            lib.probe_blm_tail()
+            check_state(f"BLM learn integrator {integrator} rich {rich} pass {tick + 1}", cpu, lib)
+        assert ram[0x1F] == ram[0xC0] == expected_cell
+        assert ram[0xCA] == expected_timer
+
+    advance(256, 123, True, 128, 255)  # At the deadband edge the timer saturates.
+    advance(1, 122, False, 128, 255)   # Wrong O2 direction still inhibits learning.
+    advance(1, 122, True, 126, 0)
+    advance(28 * 10, 122, True, 108, 0)
+    advance(28, 133, False, 108, 28)
+    advance(1, 134, False, 110, 0)
+    advance(28 * 26, 134, False, 160, 0)
+    print("Retained BLM learning matched at the deadband, timer and both cell limits")
+
+
 def blm_corrections(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     # At $DD7A D holds the base width and the proportional step is on
