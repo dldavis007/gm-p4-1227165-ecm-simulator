@@ -11,8 +11,7 @@ static void bua_mode4_scheduler_step116(void);
 static void air_fuel_12p5ms(void)
 {
     ++stats.air_fuel_loops;
-    if(sim_legacy_ignition_shutdown_freeze!=0u ||
-       bua_ignition_shutdown_odd_step111()==0u)
+    if(bua_ignition_shutdown_odd_step111()==0u)
         bua_odd_fuel_chain_12p5ms();
 }
 /* LCD05: merge the current L0035 reference/diagnostic bit into L0040 before
@@ -256,8 +255,7 @@ static void spark_vss_12p5ms(void)
     }
     bua_reference_state_12p5ms();
     bua_write_lf92a(ram16be_get(0x00C2u));
-    if(sim_legacy_ignition_shutdown_freeze==0u)
-        bua_iac_shutdown_homing_even_step111();
+    bua_iac_shutdown_homing_even_step111();
 }
 /* ---------------------------------------------------------------------- */
 /* PC VSS signal generator                                                */
@@ -865,10 +863,7 @@ static void major_segment(bua_u8 seg)
         case 0xAu: segA_mat_variables();      break;
         case 0xBu: segB_egr();                break;
         case 0xCu: segC_canister_purge();     break;
-        case 0xDu:
-            if(sim_legacy_segment_d_freeze==0u)
-                segD_diagnostics();
-            break;
+        case 0xDu: segD_diagnostics();         break;
         case 0xEu: segE_tcc_adc();            break;
         default:   segF_fuel_air_major();      break;
     }
@@ -878,11 +873,6 @@ static void ecm_reset(void)
     memset(&mem, 0, sizeof(mem));
     memset(&stats, 0, sizeof(stats));
     bua_vector_reset_step119();
-    sim_legacy_drive_trace = 0u;
-    sim_legacy_segment_d_freeze = 0u;
-    sim_legacy_segment1_output_freeze = 0u;
-    sim_legacy_ignition_shutdown_freeze = 0u;
-    sim_legacy_mode4_lifecycle_freeze = 0u;
     memset(&bua_factory_trace117, 0, sizeof(bua_factory_trace117));
     sim_factory_battery_adc117 = 128u;
     sim_factory_diagnostic_adc117 = 40u;

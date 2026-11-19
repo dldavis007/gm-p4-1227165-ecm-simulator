@@ -17,7 +17,7 @@
 #define STEP105_FOURTH_NV_TARGET       32.0
 #define STEP105_FOURTH_RATIO            0.70
 #define STEP105_RPM_PER_MPH_OUTPUT     (STEP105_FOURTH_NV_TARGET / STEP105_FOURTH_RATIO)
-#define STEP105_EXPECTED_SIGNATURE      0x5636155Dul
+#define STEP105_EXPECTED_SIGNATURE      0x7F96DC9Bul
 
 static const double step105_gear_ratio[5] = {
     0.0, 3.06, 1.62, 1.00, 0.70
@@ -210,17 +210,6 @@ static void run_step105_transmission_drive(void)
     bua_u8 dfco_seen;
 #define STEP105_CHECK(C,T) do { ++total; if(C) ++passed; \
     printf("  %-84s %s\n",T,(C)?"PASS":"FAIL"); } while(0)
-
-    /* Preserve the frozen Step-105 trace independently of Step-109 wiring. */
-    sim_legacy_segment_d_freeze=1u;
-    sim_legacy_drive_trace=1u;
-    sim_legacy_segment1_output_freeze=1u;
-    sim_legacy_ignition_shutdown_freeze=1u;
-    sim_legacy_mode4_lifecycle_freeze=1u;
-    /* Preserve the already-frozen Step-105 pre-Step-113 startup state. */
-    RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
-    RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;
-    memset(&mem.low[0x001Cu],120,16u);
 
     printf("\nStep-105 transmission-aware driving simulation:\n");
     printf("  PC plant: speed command -> selected 700R4 ratio -> slip/TCC -> engine RPM.\n");

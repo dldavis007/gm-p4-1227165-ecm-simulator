@@ -46,8 +46,7 @@ optional HUD ROM, SWI wait, MPU peripherals, and 8192-baud service. It does
 not use `bua-hac.txt` as firmware evidence.
 Step 113 translates the exact LF3A7 retained-error checksum and LF434 BLM/SAM
 initialization, corrects the live LF434 default from historical decimal 120 to
-the emitted `$80` (128), and preserves the older value only inside explicit
-Step-104/105/109 signature replays.
+the emitted `$80` (128) used by the scheduler and both drive simulations.
 Step 114 integrates the listing-ordered normal startup initializer at
 `$C93B..$C9F3` through a distinct power-on entry point. It reuses established
 coolant, TPS and Segment-E behavior, preserves the direct SCI/MPU/timer writes,
@@ -206,13 +205,13 @@ compilers from treating them as separate C source files.
 
 ## Behavioral baselines
 
-- Frozen Step-104 behavioral signature: `4BA6B7C6`
-- Step-105 transmission trace signature: `9732D09B`
+- Step-104 behavioral signature: `784BCD0B`
+- Step-105 transmission trace signature: `7F96DC9B`
 - Step-106 listing-coolant regression: 12/12
 - Step-107 diagnostic-stage regression: 17/17
 - Step-108 diagnostic-qualification regression: 22/22
 - Step-109 integrated Segment-D regression: 40/40
-- Step-109 integrated Segment-D signature: `F357A5F2`
+- Step-109 integrated Segment-D signature: `4EBD44B4`
 - Step-110 Segment-1 output regression: 22/22
 - Step-110 integrated output-stage signature: `FAADF8A6`
 - Step-111 ignition shutdown/IAC homing regression: 40/40
@@ -251,7 +250,7 @@ compilers from treating them as separate C source files.
 - Step-104 freeze regression: 10/10
 - Step-105 transmission-aware regression: 12/12
 
-The original Step-104 scenario remains present and unchanged.  Step 105 runs
+Both drives run the normal scheduler. Step 105 runs
 after a fresh reset and derives Drive RPM from vehicle speed, selected ratio,
 converter slip, and physical TCC state.  Its shift points, slip, and combined
 axle/tire factor are explicitly simulator parameters, not factory claims.
@@ -302,14 +301,10 @@ Steps 168 and 169 close both table-manager gaps;
 HAL boundary, and `docs/STEP171_WHOLE_IMAGE_RECLOSURE_AUDIT.txt` reconciles the
 whole-image closure conclusion. Earlier audits remain historical checkpoints.
 
-Normal simulator execution now runs Segment D once per 16 ordinary IRQs. The
-PC-only `sim_legacy_segment_d_freeze` switch is enabled only inside the frozen
-Step-104 and Step-105 replay scenarios, and those scenarios now exercise the live spark chain. It is not source RAM and is not part of the target ECM behavior.
-
-Normal simulator execution now also performs Segment 1's raw writes to MPU
-addresses `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8` and parallel-I/O `$4004`. Electrical
-polarity and the physical output devices remain HAL responsibilities. The
-PC-only Segment-1 replay switch is used only by frozen historical signatures.
+Both drive simulations run Segment D once per 16 ordinary IRQs. Segment 1
+writes the raw MPU outputs at `$3FCC/$3FD2/$3FD4/$3FD6/$3FD8` and the
+parallel-I/O register at `$4004`. Electrical polarity and the physical
+output devices remain HAL responsibilities.
 
 Ordinary odd minor loops now run the literal ignition-on/key-off front before
 the existing load/fuel chain. Ordinary even minor loops run the IAC homing

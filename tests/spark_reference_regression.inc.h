@@ -368,12 +368,6 @@ static bua_u8 bua_interp_u8_segment(const bua_u8 *table,
     bua_u8 first = table[index];
     bua_u8 second = table[index + 1u];
     bua_u8 fraction = (bua_u8)position;
-    if (sim_legacy_drive_trace) {
-        /* Both frozen drive signatures rounded the interpolated value upward. */
-        if (second >= first)
-            return (bua_u8)(first + (((second - first) * (unsigned int)fraction + 255u) >> 8));
-        return (bua_u8)(first - (((first - second) * (unsigned int)fraction) >> 8));
-    }
     return bua_interp_u8_lf2d6(first, second, fraction);
 }
 static bua_u16 bua_maf_unlimited_from_axis_lf7ee(bua_u16 maf_axis,

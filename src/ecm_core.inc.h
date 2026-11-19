@@ -529,16 +529,6 @@ typedef struct {
 } BuaStats;
 static BuaMemory mem;
 static BuaStats stats;
-/* The two historical driving signatures predate shift-light servicing and corrected MAF rounding. */
-static bua_u8 sim_legacy_drive_trace = 0u;
-/* PC regression switch: replay old frozen baselines without newly wired D. */
-static bua_u8 sim_legacy_segment_d_freeze = 0u;
-/* PC regression switch for pre-Step-110 software-only Segment-1 staging. */
-static bua_u8 sim_legacy_segment1_output_freeze = 0u;
-/* PC regression switch for signatures frozen before key-off integration. */
-static bua_u8 sim_legacy_ignition_shutdown_freeze = 0u;
-/* PC replay switch for signatures frozen before the Step-116 serial timer. */
-static bua_u8 sim_legacy_mode4_lifecycle_freeze = 0u;
 /* HAL-visible endpoint corresponding to the source's software-interrupt loop. */
 static bua_u8 sim_soft_powerdown_latched = 0u;
 static bua_u8 sim_iac_motor_on = 1u;

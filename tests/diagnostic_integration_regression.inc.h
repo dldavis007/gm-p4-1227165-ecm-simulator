@@ -109,24 +109,16 @@ static void run_step109_diagnostic_integration_test(void)
     S109(RAM8(0x0042u)==0u && RAM8(0x00BDu)==37u);
 
     ecm_reset();
-    sim_legacy_segment_d_freeze=1u;
     major_segment(0x0Du);
     S109(stats.major_segment_calls[0x0Du]==1ul &&
-         stats.diagnostic_segment_calls==0ul);
+         stats.diagnostic_segment_calls==1ul);
 
     ecm_reset();
-    sim_legacy_segment_d_freeze=0u;
     RAM8(0x0035u)=0x10u;
     major_segment(0x0Du);
     S109(stats.diagnostic_segment_calls==1ul && RAM8(0x0042u)==0x42u);
 
     ecm_reset();
-    sim_legacy_segment_d_freeze=0u;
-    sim_legacy_segment1_output_freeze=1u;
-    sim_legacy_ignition_shutdown_freeze=1u;
-    RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
-    RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;
-    memset(&mem.low[0x001Cu],120,16u);
     for(i=0u;i<16u;++i)
         irq_6p25ms();
     S109(stats.irq_ticks==16ul && stats.air_fuel_loops==8ul &&
@@ -138,7 +130,7 @@ static void run_step109_diagnostic_integration_test(void)
     signature=step109_diag_state_signature();
     printf("  Step-109 integrated Segment-D signature: %08lX\n",
            (unsigned long)signature);
-    S109(signature==0xB12D3084ul);
+    S109(signature==0x4EBD44B4ul);
 
     printf("  step-109 Segment-D integration regression result: %s (%u/%u)\n",
            pass==total?"PASS":"FAIL",pass,total);

@@ -571,8 +571,7 @@ static void bua_battery_service(bua_u8 sample)
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
         bua_tcc_after_shifter();
-        if (!sim_legacy_drive_trace)
-            bua_shift_light_service();
+        bua_shift_light_service();
     }
 }
 
@@ -601,14 +600,6 @@ static void seg1_output_bits(void)
     RAM8(0x0035u)=r.minor35;
     RAM8(0x003Eu)=r.major3e;
     RAM8(0x004Fu)=r.err4f;
-    if(sim_legacy_segment1_output_freeze!=0u) {
-        step91_outputs=bua_output_stage91(RAM8(0x003Eu),RAM8(0x0037u),
-                                          RAM8(0x0034u),RAM8(0x0113u),
-                                          RAM8(0x0112u),RAM8(0x00F4u),
-                                          r.force_discretes_off);
-        return;
-    }
-
     /* $EDBD..$EDF9: engine-off and high-voltage all-output path. */
     if(r.force_discretes_off!=0u || (RAM8(0x0034u)&0x80u)==0u) {
         if(r.force_discretes_off!=0u)

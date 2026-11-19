@@ -7,7 +7,7 @@
 /* ---------------------------------------------------------------------- */
 #define STEP104_FNV_OFFSET 2166136261ul
 #define STEP104_FNV_PRIME    16777619ul
-#define STEP104_EXPECTED_SIGNATURE 0x02BA4EA7ul
+#define STEP104_EXPECTED_SIGNATURE 0x784BCD0Bul
 static bua_u32 step104_sig_byte(bua_u32 sig,bua_u8 value)
 {
     sig^=(bua_u32)value;
@@ -80,18 +80,6 @@ static void run_dynamic_drive_cycle(void)
     bua_u8 engine_caught,dfco_seen,dfco_zero_seen,fuel_resumed,blm_store_seen;
     const DriveProfileSegment *segment;
 #define STEP99_CHECK(c,t) do { if(c) ++passed; printf("  %-84s %s\n",t,(c)?"PASS":"FAIL"); } while(0)
-
-    /* Replay the frozen Step-104 signature at its historical Segment-D
-       boundary; Step-109 has a separate full-diagnostics signature. */
-    sim_legacy_segment_d_freeze=1u;
-    sim_legacy_drive_trace=1u;
-    sim_legacy_segment1_output_freeze=1u;
-    sim_legacy_ignition_shutdown_freeze=1u;
-    sim_legacy_mode4_lifecycle_freeze=1u;
-    /* Step-104 was frozen before LF434's emitted $80 was reconciled. */
-    RAM8(0x000Au)=0u; RAM8(0x000Bu)=0u;
-    RAM8(0x000Cu)=0u; RAM8(0x000Du)=0u;
-    memset(&mem.low[0x001Cu],120,16u);
 
     printf("\nStep-99 integrated Corvette ECM driving simulation:\n");
     printf("  PC commands: TPS/MAF A-D stimuli plus phase-continuous reference and VSS sources.\n");
@@ -227,7 +215,7 @@ static void run_dynamic_drive_cycle(void)
                  "RPM/airflow trajectory moves through multiple hysteretic BLM cells");
     STEP99_CHECK(blm_store_seen!=0u && stats.scheduler_blm_store_qualifications>0u,
                  "Segment-5 closed-loop continuation enables live BLM-store permission");
-    STEP99_CHECK(stats.scheduler_blm_updates>0u && BLM!=120u, /* LF434 default */
+    STEP99_CHECK(stats.scheduler_blm_updates>0u && BLM!=128u, /* LF434 default */
                  "continued closed-loop idle performs a real selected-cell BLM update");
     STEP99_CHECK(behavior_signature==STEP104_EXPECTED_SIGNATURE,
                  "complete normal-operation trace matches the frozen Step-104 signature");
@@ -259,7 +247,7 @@ static void run_dynamic_drive_cycle(void)
     printf("  %-84s %s\n",T,(C)?"PASS":"FAIL"); } while(0)
     printf("\nStep-104 normal-operation baseline-freeze regression:\n");
     STEP104_CHECK(behavior_signature==STEP104_EXPECTED_SIGNATURE,
-                  "canonical RAM/MPU/I/O/statistics trace equals 02BA4EA7");
+                  "canonical RAM/MPU/I/O/statistics trace equals 784BCD0B");
     STEP104_CHECK(total_tick==4960u && stats.irq_ticks==4960ul,
                   "fixed warm-restart profile contains exactly 4,960 ordinary IRQ ticks");
     STEP104_CHECK(stats.air_fuel_loops==2480ul && stats.spark_vss_loops==2480ul,
@@ -280,10 +268,10 @@ static void run_dynamic_drive_cycle(void)
     STEP104_CHECK(stats.physical_injector_services==
                   stats.common_injector_bookkeeping,
                   "physical batch opportunities and LF67B bookkeeping remain one-to-one");
-    STEP104_CHECK(RAM8(0x00BFu)==1u && BLM==122u &&
+    STEP104_CHECK(RAM8(0x00BFu)==1u && BLM==130u &&
                   ram16be_get(TOTAL_AFR_ADDR)==445u &&
                   (AF_MODE_WORD2&0x82u)==0x82u,
-                  "frozen final state is cell1, BLM122, stoich, closed-loop/store enabled");
+                  "frozen final state is cell1, BLM130, stoich, closed-loop/store enabled");
     printf("  step-104 baseline-freeze regression result: %s (%u/%u)\n",
            (freeze_pass==freeze_total)?"PASS":"FAIL",freeze_pass,freeze_total);
 #undef STEP104_CHECK

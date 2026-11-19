@@ -318,8 +318,8 @@ The comparison boundaries above determine what behavior each replay verifies.
 in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
-signatures changed with live spark and startup execution. Their current values
-are 02BA4EA7, 5636155D and B12D3084 respectively. These are C regression
+signatures include normal scheduler execution and retained-memory initialization. Their current values
+are 784BCD0B, 7F96DC9B and 4EBD44B4 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
 The running RPM and dwell paths follow ROM arithmetic for $0000 and $FFFF

@@ -108,7 +108,6 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     bua_u8 flow_band;
     bua_u8 stays;
     bua_u8 value;
-    bua_u8 default_value;
     unsigned int i;
     r.cell=current_cell;
     r.current_blm=128u;
@@ -155,17 +154,12 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     value=cells[r.cell];
     if(value>STEP103_BLM_MAX || value<STEP103_BLM_MIN) {
         /* LDB1C calls LF434. LF434 starts with CLRB, so LDB25 then selects
-         * cell zero. Step 113 corrects the historical decimal-120 value to
-         * emitted immediate $80; explicit frozen replays retain 120. */
-        default_value=(bua_u8)((sim_legacy_segment_d_freeze!=0u ||
-                                sim_legacy_segment1_output_freeze!=0u ||
-                                sim_legacy_ignition_shutdown_freeze!=0u)?120u:
-                                                                        128u);
+         * cell zero after resetting all cells to the emitted immediate $80. */
         r.air_mode_word|=0x40u;
         for(i=0u;i<STEP103_BLM_CELL_COUNT;++i)
-            cells[i]=default_value;
+            cells[i]=STEP103_BLM_DEFAULT;
         r.cell=0u;
-        value=default_value;
+        value=STEP103_BLM_DEFAULT;
         r.reinitialized=1u;
     }
     r.current_blm=value;
