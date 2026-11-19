@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, attach_spi
+from rom_replays import idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, attach_spi
 
 
 class BuaCPU(HC11):
@@ -273,6 +273,7 @@ if __name__ == "__main__":
                                      passby_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      decel_fuel_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      warm_fuel_cycle(BuaCPU(), ROM.read_bytes(), lib),
+                                     idle_speed_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      follower_motion(BuaCPU(), ROM.read_bytes(), lib),
                                      slices(BuaCPU, ROM.read_bytes(), lib),
                                      serial(BuaCPU, ROM.read_bytes(), lib)),

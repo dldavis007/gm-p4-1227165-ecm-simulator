@@ -94,12 +94,81 @@ static void bua_idle_motor_request(void)
     }
 }
 
+/* LD4CD doubles D and rotates B through carry. On negative overflow the
+ * CLRB at LD4D3 also clears carry, so the returned byte is zero. */
+static int bua_idle_signed_byte(long value)
+{
+    if (value < -128)
+        return 0;
+    return value > 127 ? 127 : (int)value;
+}
+
+/* LD59A..LD6C3. RPM and the previous RPM are both 8.8 fixed point. */
+static void bua_idle_feedback(int error)
+{
+    long change = (long)ram16be_get(0xFFu) - ram16be_get(0x58u);
+    int rate = bua_idle_signed_byte(change < 0 ? -((-change + 15) / 16) : change / 16);
+    int neutral = RAM8(0xF3u) & 128u;
+    int deadband = neutral ? STEP37_PN_DEADBAND_RAW : STEP37_DRIVE_DEADBAND_RAW;
+    unsigned int magnitude = (unsigned int)abs(error);
+    int linear = 0, fraction, residual, steps;
+    unsigned int product, word, gain;
+    bua_u8 coolant_gain;
+    if (magnitude > (unsigned int)deadband)
+        linear = step37_mul_gain_signed(error, STEP37_PROP_UNDER_GAIN);
+    if (abs(rate) >= 16) { /* LC67C */
+        if (error > 4 && rate > 22) /* LC658, LC656, LC654+LC657 */
+            linear += step37_clamp127(rate + step37_mul_gain_signed(rate, 15u));
+        else
+            linear += step37_mul_gain_signed(rate, rate < 0 ? STEP37_DERIV_NEG_GAIN : STEP37_DERIV_POS_GAIN);
+    }
+    linear = bua_idle_signed_byte(linear);
+    magnitude = abs(linear);
+    if (neutral)
+        magnitude = step37_mul_gain_signed(magnitude, STEP37_PN_SCALE);
+    RAM8(0x101u) = 0u;
+    if (magnitude >= STEP59_INV_QUANT) {
+        RAM8(0x103u) = 0u;
+    } else {
+        if (abs(rate) > STEP59_RATE_LIMIT || !error) {
+            RAM8(0x103u) = 0u;
+            return;
+        }
+        gain = STEP59_INT_GAIN_PN;
+        if (abs(error) <= deadband)
+            gain = neutral ? STEP59_LOW_INT_GAIN_PN : STEP59_LOW_INT_GAIN_DRIVE;
+        fraction = RAM8(0x103u);
+        if (fraction >= 128)
+            fraction -= 256;
+        magnitude = (unsigned int)abs(error) * gain / 128u;
+        linear = fraction + (error < 0 ? -(int)magnitude : (int)magnitude);
+        if (linear > 127 || linear < -128)
+            linear = linear < 0 ? -127 : 127;
+        RAM8(0x103u) = (bua_u8)linear;
+        magnitude = abs(linear);
+        if (magnitude < STEP59_INV_QUANT)
+            return;
+    }
+    product = magnitude * STEP59_QUANT_GAIN;
+    word = (step59_round_high_byte(product) << 8) | (product & 255u);
+    residual = step59_round_high_byte((product & 255u) * STEP59_INV_QUANT);
+    coolant_gain = bua_interp_u8_lf2d6(step37_iac_cool_mult[COOLANT >> 5],
+                    step37_iac_cool_mult[(COOLANT >> 5) + 1], (bua_u8)(COOLANT << 3));
+    steps = step59_round_high_byte(bua_mul_u8_u16_lf266(coolant_gain, (bua_u16)word));
+    RAM8(0x101u) = (bua_u8)(linear < 0 ? steps | 128 : steps);
+    if (steps)
+        RAM8(0xF3u) |= 0x20u;
+    if (RAM8(0x103u))
+        RAM8(0x103u) = (bua_u8)(linear < 0 ? -residual : residual);
+}
+
 /* LD3F0..LD450 and LD6CA. The commanded idle update runs every eighth
  * minor loop. LD468 compares A after the Mode-4 option tests. */
 static void bua_running_idle_speed(void)
 {
     BuaIacCommandStep36 target;
     bua_u8 compare;
+    int error, idle, inhibited;
     RAM8(0x85u) = RAM8(0x84u);
     if (RAM8(0x82u) != RAM8(0x84u))
         RAM8(0x84u) = RAM8(0x82u);
@@ -119,11 +188,18 @@ static void bua_running_idle_speed(void)
     }
     if (compare < RAM8(0x58u))
         RAM8(0xF2u) |= 2u;
+    error = bua_idle_signed_byte((int)RAM8(0x102u) - RAM8(0x58u));
+    if (abs(error) > 2)
+        RAM8(0x107u) = 0u;
+    else if (RAM8(0x107u) != 255u)
+        ++RAM8(0x107u);
     /* LD4AE..LD503: count down the transition inhibit and sample the
      * park/neutral switch while the throttle is closed and speed is zero. */
     if (RAM8(0x10Bu))
         --RAM8(0x10Bu);
-    if (!RAM8(0x10Bu) && RAM8(0x84u) < 3u && !RAM8(0x67u)) {
+    idle = RAM8(0x84u) < 3u && RAM8(0x67u) <= 6u;
+    inhibited = idle && !RAM8(0x67u) && RAM8(0x10Bu);
+    if (idle && !inhibited && !RAM8(0x67u)) {
         if ((RAM8(0xF3u) & 0x90u) == 0x10u) {
             RAM8(0x10Bu) = 16u;
             RAM8(0xF3u) &= (bua_u8)~0x10u;
@@ -132,22 +208,33 @@ static void bua_running_idle_speed(void)
             RAM8(0xF3u) |= 0x10u;
             RAM8(0x107u) = 0u;
         }
+        if (!(RAM8(0xF3u) & 0x81u) && RAM8(0x107u) > 20u &&
+            !(RAM8(0x3Au) & 0x20u) && MINOR_COUNT == 0x30u && RAM8(0x10Fu)) {
+            if (RAM8(0x10Fu) & 0x80u) {
+                if (--RAM8(0x109u) == 0u)
+                    ++RAM8(0x109u);
+            } else if (++RAM8(0x109u) > RAM8(0x10Cu)) {
+                RAM8(0x109u) = RAM8(0x10Cu);
+            }
+        }
     }
-    /* LD53C direct PID path with no throttle follower, steering load or
-     * anticipation delay. LD4B7 selects this path only at idle. */
-    if (RAM8(0x84u) < 3u && RAM8(0x67u) <= 6u &&
-        (RAM8(0xF2u) & 0x1Cu) == 4u && !(RAM8(0x37u) & 8u) &&
-        !RAM8(0x106u) && !RAM8(0x10Bu)) {
-        int fraction = RAM8(0x103u);
-        BuaIacReg59 pid;
-        if (fraction >= 128)
-            fraction -= 256;
-        pid = bua_iac_regulator_step59(RAM8(0x102u), RAM8(0x58u),
-                  RAM8(0xFFu), COOLANT, fraction, RAM8(0xF3u) & 128u);
-        RAM8(0x103u) = (bua_u8)pid.fractional_after;
-        RAM8(0x101u) = pid.request;
-        if (pid.request & 0x7Fu)
+    if (!idle)
+        RAM8(0xF2u) &= (bua_u8)~1u;
+    if (idle && (RAM8(0xF2u) & 0x1Cu) == 4u && !(RAM8(0x37u) & 8u) &&
+        !RAM8(0x106u) && !inhibited) {
+        bua_idle_feedback(error);
+    } else if (error > 4 && (!idle || inhibited || (RAM8(0xF2u) & 4u))) {
+        RAM8(0xF2u) &= (bua_u8)~0x18u;
+        bua_idle_feedback(error);
+    } else {
+        RAM8(0x107u) = 0u;
+        if (RAM8(0x84u) >= 8u && RAM8(0x67u) > 6u &&
+            RAM8(0x10Fu) && RAM8(0x10Fu) < 128u &&
+            (MINOR_COUNT & 0x18u) == 0x18u && !(RAM8(0xF2u) & 8u)) {
+            RAM8(0xF2u) &= (bua_u8)~16u;
+            RAM8(0x101u) = 0x81u;
             RAM8(0xF3u) |= 0x20u;
+        }
     }
     ram16be_set(0xFFu, ram16be_get(0x58u));
 }

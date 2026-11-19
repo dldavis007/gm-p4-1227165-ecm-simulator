@@ -16,7 +16,7 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 162 |
+| Observed on the IRQ path | 164 |
 | Static IRQ path, unobserved in this scenario | 38 |
 | Outside the IRQ call graph | 104 |
 
@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,566 | 78.83% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,700 | 80.86% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -153,8 +153,18 @@ pulse, checksum and shutdown outputs. Each pass compares non-stack RAM,
 MPU state, ordered MPU writes, and final I/O registers $4002, $4004, $4006,
 $400B and $400C. Serial IRQ dispatch before $FCA2 is outside this trace.
 
-Of 6,598 listing instructions, 1,397 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $D59A (74), $DF9D (66) and $F67B (66). A hit records execution under the scenario inputs.
+The idle-speed PID region at $D59A reaches 152 of 153 instructions. The
+remaining instruction at $D684 caps a rounded product at 127. With the stock
+quantizer constant of 8 and an eight-bit remainder, this product rounds to
+at most 8. The replay starts at $D370, compares non-stack RAM, MPU state
+and ordered MPU writes, and stops at $D6CE before major-loop dispatch.
+An 18-pass trace retains the RPM history and integrator while speed dips
+below and rises above an 800 RPM setpoint. Additional cases exercise signed
+overflow, fractional RPM, derivative gain, the drive and neutral deadbands,
+throttle and gear transitions, and the learned warm motor-position limits.
+
+Of 6,598 listing instructions, 1,263 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $DF9D (66), $F67B (66) and $CB5F (63). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

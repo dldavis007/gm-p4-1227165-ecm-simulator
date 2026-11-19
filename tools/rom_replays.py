@@ -317,6 +317,46 @@ for name, overrides in TRANSIENT_CASES:
     SLICES.append((name, "accel", 0xD86B, 0xD9A9, inputs))
 
 
+# Values at $58:$59 and $FF:$0100 are current and previous 8.8 RPM.
+# Mode 4 supplies a repeatable 800 RPM setpoint through the normal idle entry.
+for name, actual, previous, fraction, neutral in [
+    ("steady on target", 0x4000, 0x4000, 24, True),
+    ("drive deadband edge", 0x3C00, 0x3C00, 7, False),
+    ("neutral deadband edge", 0x3A00, 0x3A00, 7, True),
+    ("integral opening", 0x3800, 0x3800, 7, True),
+    ("integral closing", 0x4800, 0x4800, -7, False),
+    ("positive integral overflow", 0x3800, 0x3800, 127, False),
+    ("negative integral overflow", 0x4800, 0x4800, -127, True),
+    ("derivative threshold", 0x3A00, 0x3B00, 4, True),
+    ("derivative rate inhibit", 0x4000, 0x40D0, 14, False),
+    ("falling RPM high gain", 0x3100, 0x3290, 0, False),
+    ("falling RPM saturation", 0x1800, 0x2200, 0, True),
+    ("rising RPM direct close", 0x5000, 0x4800, 0, True),
+    ("fractional RPM crossing", 0x4401, 0x4320, 0, False),
+    ("large overspeed", 0xD000, 0xD000, 0, False),
+]:
+    inputs = {0: 8, 0x34: 128, 0x35: 8, 0x158: 3, 0x159: 64, 0xF2: 4,
+              0xF3: 0x90 if neutral else 0, 0x37: int(neutral), 0x5B: 160,
+              0x58: actual >> 8, 0x59: actual & 255, 0xFF: previous >> 8,
+              0x100: previous & 255, 0x103: fraction & 255}
+    SLICES.append(("idle PID " + name, "homing", 0xD370, 0xD6CE, inputs))
+
+
+# The entry gate and learned warm position precede the feedback law.
+for name, overrides in [
+    ("coolant gain interpolation", {0x58: 20, 0xFF: 22, 0x5B: 67}),
+    ("exact signed integral minimum", {0x58: 72, 0xFF: 72, 0x103: 130}),
+    ("neutral to drive", {0xF3: 0x10}),
+    ("blocked feedback underspeed", {0x10B: 2, 0x58: 46}),
+    ("drive learner upper stop", {0x107: 20, 0x10F: 1, 0x109: 42, 0x10C: 42}),
+    ("drive learner lower stop", {0x107: 20, 0x10F: 255, 0x109: 1}),
+    ("moving open throttle close", {0: 24, 0x82: 10, 0x67: 8, 0x10F: 1, 0x58: 80}),
+]:
+    inputs = {0: 48, 0x34: 128, 0x35: 8, 0x158: 3, 0x159: 64, 0xF2: 4,
+              0xF3: 0, 0x58: 64, 0xFF: 64, 0x5B: 160}
+    SLICES.append(("idle PID " + name, "homing", 0xD370, 0xD6CE, {**inputs, **overrides}))
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -494,6 +534,37 @@ def warm_fuel_cycle(cpu, rom, lib):
         endpoints.append(ram[0xC9])
     assert endpoints[0] > 128 and endpoints[1] < endpoints[0], endpoints
     print(f"128 warm fuel passes: lean/rich integrator endpoints {endpoints}, RAM and MPU writes matched")
+
+
+def idle_speed_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    for addr, value in {0x34: 128, 0x35: 8, 0x37: 1, 0x158: 3, 0x159: 64,
+                        0xF2: 4, 0xF3: 0x90, 0xFF: 64, 0x5B: 160}.items():
+        cpu.mem[addr] = ram[addr] = value
+    writes = []
+
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    requests = []
+    for tick, rpm in enumerate([64, 62, 59, 55, 52, 52, 52, 57, 62, 68, 76, 80,
+                                80, 80, 70, 65, 64, 64]):
+        ram[0] = cpu.mem[0] = (8 * tick) % 160
+        ram[0x58] = cpu.mem[0x58] = rpm
+        cpu.pc, cpu.sp = 0xD370, 0x1FD
+        writes.clear()
+        assert cpu.run(until_pc=0xD6CE, max_steps=4000) == "until_pc"
+        lib.probe_homing()
+        label = f"idle PID pass {tick + 1}"
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        requests.append(ram[0x101])
+    assert any(0 < r < 128 for r in requests[:7]), requests
+    assert any(r > 128 for r in requests[7:14]), requests
+    assert requests[-1] == 0 and ram[0x103] == 0
+    print("18 idle PID services: opening, closing and return to the 800 RPM setpoint matched")
 
 
 def follower_motion(cpu, rom, lib):
