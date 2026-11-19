@@ -97,8 +97,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,123 | 91.27% |
-| ROM-only background RAM refresh | 15 | 91.50% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,157 | 91.79% |
+| ROM-only background RAM refresh | 15 | 92.01% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -278,7 +278,12 @@ The $F10E replay compares RAM, MPU state and ordered writes over 1,165 lamp
 services. Codes 12, 13, 24, 51 and 52 each appear three times before the
 scan ends. The suite executes all 89 instructions in the code-flash region.
 
-Of 6,598 listing instructions, 561 remain unexecuted. A hit records execution under the scenario inputs.
+The Segment 7 burn-off replay covers all 62 instructions at $EA95. It follows
+the delay, active timer writes, Error 36 qualification and recovery at ADC
+counts 20 and 95, then checks fault reporting after burn-off. With start
+enabled, $0472 advances unless all three bits of mask $32 at $33 are set.
+
+Of 6,598 listing instructions, 527 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

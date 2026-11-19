@@ -297,7 +297,7 @@ static void seg7_coolant_variables(void)
     RAM8(0x00D8u)=bua_lookup_spacing32(cal_async_cool_factor,9u,coolant);
     RAM8(0x00D0u)=bua_lookup_spacing32(cal_pe_coolant_change,9u,coolant);
 
-    if((RAM8(0x003Bu)&0x02u)!=0u && (RAM8(0x0033u)&0x32u)==0u) {
+    if((RAM8(0x003Bu)&0x02u)!=0u && (RAM8(0x0033u)&0x32u)!=0x32u) {
         RAM8(0x0472u)=(bua_u8)(RAM8(0x0472u)+1u);
         if(RAM8(0x0472u)==0u)
             RAM8(0x0472u)=0xFFu;

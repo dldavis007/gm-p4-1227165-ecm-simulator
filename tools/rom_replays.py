@@ -531,6 +531,35 @@ def air_cycle(cpu, rom, lib):
     print("Segment 9 injection-air request bits, timers, RAM and MPU matched")
 
 
+def burnoff_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    writes = []
+    def record(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+    cpu.on_write(0x3FC0, 0x3FFF, record)
+    inputs = {0x33: 0x10, 0x3B: 2, 0x3E: 64, 0x3F: 0, 3: 0, 0x4E: 0,
+              0xB8: 1, 0xB7: 15, 0x11F: 0, 0x120: 0, 0x472: 254, 0x5B: 209}
+    for addr, value in inputs.items():
+        cpu.mem[addr] = ram[addr] = value
+    # Delay, settle, alternate just-outside ADC values, recover at both
+    # inclusive limits, then latch again and report on the inactive pass.
+    samples = [19] * 4 + [19, 96] * 3 + [96, 20, 95, 96, 96, 96, 96]
+    for tick, sample in enumerate(samples):
+        lib.probe_stopped_airflow(sample, 0)
+        writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(cpu.read16(0xCCE4 + 2 * 7), max_steps=1000)
+        lib.probe_major(7)
+        label = f"MAF burn-off pass {tick + 1}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert bool(ram[3] & 64) == (tick == 10 or tick >= 13), label
+    assert ram[0x4E] & 128
+    print("MAF burn-off delay, Error 36 latch, recovery and reporting matched")
+
+
 def purge_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     inputs = {1: 0, 0x1B: 80, 0x34: 128, 0x33: 0, 0x35: 0,
