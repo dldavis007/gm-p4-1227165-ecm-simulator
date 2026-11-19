@@ -886,6 +886,46 @@ def diagnostic_transitions(make_cpu, rom, lib):
             assert ram[addr] == value, (name, hex(addr), ram[addr], value)
         print(f"{name}: RAM and MPU matched")
 
+    # Alternate open/closed loop and the rich/lean indication while retaining
+    # the display phase and lamp register between Segment D services.
+    cpu, ram = fixture({0x34: 128, 0x35: 16, 0x3C: 0, 0x3F: 2, 0xB1: 19})
+    for tick in range(64):
+        inputs = {0: (13 + 16 * tick) % 160, 0x1B: tick // 10,
+                  0x44: (0, 128, 192, 128)[(tick // 12) % 4]}
+        if tick == 60:
+            inputs[0x34] = 0  # Switch from running lamp display to stopped code flash.
+        if tick == 30:
+            inputs[0x3C] = ram[0x3C] | 16
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        service(cpu, f"field-service lamp tick {tick}", segment=True)
+    print("Field-service lamp and ordered MPU writes matched for 64 dispatches")
+
+    # Error 51 has an immediate retention path, ahead of normal logging.
+    for enabled in (0, 1):
+        cpu, ram = fixture({0x34: 0, 0x35: 0, 0x4E: 1, 0x53: enabled,
+                            7: 32, 0x19: 0, 0x33: 16, 0xB0: 9})
+        service(cpu, f"Error 51 mask {enabled}", segment=True)
+        assert ram[7] == 32 + enabled
+        if enabled:
+            assert (ram[0x18] << 8 | ram[0x19]) == 1 + sum(ram[5:10])
+        else:
+            assert ram[0xB0] == 0
+
+    # The no-error counter retains the five bytes at 50 and clears them
+    # on the next eligible start. Re-entering Segment D in the same run
+    # must not increment the counter a second time.
+    for initial in (49, 50):
+        codes = [4, 8, 16, 32, 64]
+        cpu, ram = fixture({0x34: 128, 0x35: 16, 0x3F: 0, 0x17: initial,
+                            **dict(enumerate(codes, 5))})
+        for tick in range(2):
+            service(cpu, f"retained code expiry {initial} pass {tick}", segment=True)
+            assert list(ram[5:10]) == (codes if initial == 49 else [0] * 5)
+            assert ram[0x17] == (50 if initial == 49 else 0)
+            if initial == 50:
+                assert ram[0x18] == 0 and ram[0x19] == 1
+
     # Keep the two machines independent through qualification, confirmation,
     # retained-code checksum and the service-engine lamp transition.
     cpu, ram = fixture({0x34:128, 0x81:129, 0xA7:20, 0xB6:11})

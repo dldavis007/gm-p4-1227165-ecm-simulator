@@ -96,8 +96,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Mode 4 timeout | 25 | 49.44% |
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 213 | 53.15% |
-| Diagnostic qualification and retained-code logging | 185 | 55.96% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,936 | 85.30% |
+| Diagnostic qualification and retained-code logging | 283 | 57.44% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,913 | 86.44% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -203,8 +203,15 @@ eligibility. Once active duty is nonzero and the minimum latch at $0114
 clears, the next qualified request goes directly to $0113. The replay
 exercises 88 of 91 instructions in the $E75D region.
 
-Of 6,598 listing instructions, 970 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $EF04 (56) and $C800 (56). A hit records execution under the scenario inputs.
+The $EF04 diagnostic entry region reaches all 98 instructions. A 64-dispatch
+Segment D replay compares field-service lamp operation in open and closed
+loop, then switches to stopped-engine code flash. Separate dispatches check
+the Error 51 mask, immediate retention and checksum, and the no-error counter
+at 50 and 51. Each dispatch compares non-stack RAM, MPU state and ordered
+MPU writes.
+
+Of 6,598 listing instructions, 895 remain unexecuted. The largest remaining
+region by unexecuted instructions begins at $C800 (56). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
