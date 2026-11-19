@@ -98,7 +98,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
 | Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,197 | 92.39% |
-| ROM-only background RAM refresh | 15 | 92.62% |
+| Diagnostic serial receive window and timeout | 30 | 92.85% |
+| ROM-only background RAM refresh | 15 | 93.07% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -154,6 +155,13 @@ their terminal frames and a deselected factory stream. With selector zero and
 index $FF after a factory mode change, $F892 exits without writing the CSR.
 The C timer handler previously inferred a line transition from the nonzero
 index and issued an extra write to $3FFC–$3FFD on that framing cell.
+
+A separate 32-tick full-IRQ replay starts on the last bit of diagnostic
+byte 24 with both timer compares armed. It executes all nine instructions
+of the 8192-baud SCI initializer at $FA7A. With no incoming SCI byte, the
+receive window expires on tick 9 and the 160-baud manager loads its $FF
+terminal frame on tick 10. Each tick compares the timer match and SCI
+control registers ($4006–$4007), non-stack RAM and ordered MPU writes.
 
 All 84 instructions in the factory output region at $FDED execute. Starting
 at factory service entry $FCA2, 96 consecutive passes retain state through
@@ -301,7 +309,7 @@ each of 1,295 services. With the update timer saturated at 255, it checks
 the five-count integrator deadband, the O2 direction gate, timer reset on
 update, and both learned-cell limits (108 and 160).
 
-Of 6,598 listing instructions, 510 remain unexecuted. A hit records execution under the scenario inputs.
+Of 6,598 listing instructions, 457 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

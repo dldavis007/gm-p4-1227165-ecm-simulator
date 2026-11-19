@@ -120,7 +120,7 @@ def compare_error43(lib):
             assert ram[address] == cpu.mem[address], (call, hex(address))
 
 
-def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=False, mode4_timeout=False, stopped_airflow=False):
+def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=False, mode4_timeout=False, stopped_airflow=False, serial_window=False):
     """Diagnostic full scheduler comparison, reporting detail on the first unequal tick."""
     cpu = BuaCPU()
     cpu.load(ROM.read_bytes(), 0xC000)
@@ -133,6 +133,11 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=Fal
     lib.probe_io.restype = ctypes.POINTER(ctypes.c_ubyte)
     cpu.load(bytes(lib.probe_io()[:16]), 0x4000)
     attach_spi(cpu, lib)
+    if serial_window:
+        # Last bit of diagnostic byte 24 with both timer compares pending.
+        for address, value in ((0x35, 0x20), (0x46, 3), (0x189, 1),
+                               (0x18A, 25), (0x18B, 0x80)):
+            cpu.mem[address] = ram[address] = value
     if stopped_airflow:
         lib.probe_stopped_airflow(240, 180)
         for address, value in ((0xB0, 95), (0x7F, 180), (0x82, 255)):
@@ -196,6 +201,15 @@ def compare_irq(lib, drive=False, check_outputs=False, trace_tick=None, road=Fal
         reason = cpu.run(until_pc=0xCCC6, max_steps=20000)
         if reason != "until_pc":
             raise SystemExit(f"IRQ {tick}: ROM stopped at ${cpu.pc:04X} ({reason})")
+        if serial_window:
+            io = lib.probe_io()
+            assert bytes(cpu.mem[0x4006:0x4008]) == bytes(io[6:8]), (tick, "timer/SCI control")
+            if tick <= 9:
+                assert ram[0x12E] == 9 - tick, (tick, "listen timer")
+                assert ram[0x46] == (4 if tick < 9 else 3), (tick, "serial flags")
+                assert io[7] == (0x27 if tick < 9 else 1), (tick, "SCI control")
+            if tick == 10:
+                assert (ram[0x189], ram[0x18A], ram[0x18B]) == (8, 0, 255), "terminal frame"
         if stopped_airflow and tick <= 3:
             assert cpu.mem[0xB0] == min(95 + tick, 97), (tick, "MAF timer")
             assert bool(cpu.mem[0x3F] & 128) == (tick == 3), (tick, "high MAF")
@@ -307,6 +321,7 @@ if __name__ == "__main__":
                                      slices(BuaCPU, ROM.read_bytes(), lib),
                                      serial_streams(BuaCPU, ROM.read_bytes(), lib),
                                      serial(BuaCPU, ROM.read_bytes(), lib)),
+            "serial_window": lambda lib: compare_irq(lib, serial_window=True),
             "rom_idle": lambda lib: ram_refresh(BuaCPU(), ROM.read_bytes()),
         }
         selected = ("faults" if args.faults else "reset" if args.reset_vector else "targeted" if args.segments
