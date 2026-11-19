@@ -99,7 +99,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Diagnostic qualification and retained-code logging | 343 | 59.17% |
 | Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,208 | 92.63% |
 | Diagnostic serial receive window and timeout | 30 | 93.09% |
-| ROM-only background RAM refresh | 15 | 93.32% |
+| Segment E battery thresholds and ignition recovery | 7 | 93.19% |
+| ROM-only background RAM refresh | 15 | 93.42% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -147,6 +148,10 @@ MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
 purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
 $D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
 alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+The Segment E battery replay covers all 20 instructions at $DE72. ADC count
+39 sets the ignition-off flag, counts 40 through 89 retain its state, and
+count 90 clears it and captures the spark period on ignition recovery.
 
 Segment 3 at $EA28 executes all 50 instructions. A 512-dispatch replay
 sweeps the diagnostic-pin ADC from 0 through 255 with the SCI lock clear,
@@ -328,7 +333,7 @@ each of 1,295 services. With the update timer saturated at 255, it checks
 the five-count integrator deadband, the O2 direction gate, timer reset on
 update, and both learned-cell limits (108 and 160).
 
-Of 6,598 listing instructions, 441 remain unexecuted. A hit records execution under the scenario inputs.
+Of 6,598 listing instructions, 434 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

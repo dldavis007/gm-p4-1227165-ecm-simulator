@@ -226,6 +226,36 @@ def diagnostic_pin_sweep(cpu, rom, lib):
     print("Segment 3 diagnostic pin matched for all 256 ADC counts with SCI unlocked and locked")
 
 
+def battery_cycle(cpu, rom, lib):
+    ram, mpu, _ = hardware(cpu, rom, lib)
+    for addr, value in ((0x33, 0), (0x3E, 64), (0xB2, 1), (0xB3, 2),
+                        (0xB4, 7), (0x11F, 3), (0x120, 4)):
+        cpu.mem[addr] = ram[addr] = value
+    cpu.mem[0x3FC8:0x3FCA] = bytes((0x12, 0x34))
+    mpu[8], mpu[9] = 0x12, 0x34
+    writes = []
+
+    def write(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for sample, off in ((40, False), (39, True), (40, True), (89, True),
+                        (90, False), (89, False)):
+        lib.probe_volt_adc(sample)
+        writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(cpu.read16(0xCCE4 + 2 * 14), max_steps=2000)
+        lib.probe_major(14)
+        label = f"Segment E battery ADC {sample}, ignition off {off}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert ram[0x7E] == sample and bool(ram[0x33] & 16) == off, label
+    assert bytes(ram[0xB2:0xB5]) == bytes((0x12, 0x34, 0))
+    print("Segment E battery thresholds and ignition recovery matched")
+
+
 def segments(make_cpu, rom, lib):
     for name, segment, inputs in SEGMENTS:
         cpu = make_cpu()

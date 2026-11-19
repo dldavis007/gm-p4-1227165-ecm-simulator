@@ -66,6 +66,7 @@ int probe_product(unsigned int a, unsigned int b)
 void probe_follower(void) { count = 0; bua_idle_motor_request(); }
 void probe_qualification(void) { count = 0; bua_diag_qualification_step108(); }
 
+void probe_volt_adc(unsigned int sample) { bua_hal_set_volt_adc((bua_u8)sample); }
 void probe_diag_adc(unsigned int sample) { bua_hal_set_diag_adc((bua_u8)sample); }
 
 void probe_major(unsigned int segment)
