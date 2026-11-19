@@ -47,10 +47,9 @@ static void segB_egr(void)
 /* LE816..LE879: pump diagnostics and injector voltage compensation. */
 static const bua_u8 cal_injector_voltage_offset[17] =
     {21,21,21,227,227,95,59,41,30,21,16,11,10,8,7,6,5};
-static void bua_update_injector_voltage_offset(void)
+static void bua_update_injector_voltage_offset(bua_u8 pump)
 {
     bua_u8 mode = RAM8(0x40u);
-    bua_u8 pump = hw_adc(0x60u);
     bua_u8 timer;
     RAM8(0x7Fu) = pump;
     if (!(mode & 0x10u) && (mode & 8u) && RAM8(0x7Eu) >= 20u) {
@@ -100,7 +99,7 @@ static void segC_canister_purge(void)
     RAM8(0x003Bu)=c.status3b;
     RAM8(0x0113u)=c.pw113;
     RAM8(0x0114u)=c.min114;
-    bua_update_injector_voltage_offset();
+    bua_update_injector_voltage_offset(hw_adc(0x60u));
 }
 
 /* Step 128: make the explicit hardware abstraction boundary part of the

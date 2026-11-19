@@ -84,6 +84,44 @@ def reset_vector(cpu, rom, lib):
     print("Cold reset vector: RAM, MPU and I/O matched at $CCC6")
 
 
+def reset_branches(make_cpu, rom, lib):
+    cases = [
+        ("battery threshold", 100, 160, 40, 1, True, 1),
+        ("pump below threshold", 99, 159, 40, 1, True, 1),
+        ("diagnostic below window", 99, 160, 39, 1, True, 1),
+        ("diagnostic above window", 99, 160, 100, 1, True, 1),
+        ("factory RAM fill", 99, 160, 40, 0, True, 2),
+        ("factory preserves RAM", 99, 160, 99, 1, True, 2),
+        ("Error 51 normal handoff", 100, 0, 39, 0, False, 1),
+        ("Error 51 SWI boundary", 100, 0, 40, 0, False, 3),
+    ]
+    for name, battery, pump, diag, fmd, valid, outcome in cases:
+        image = bytearray(rom)
+        if not valid:
+            image[6] ^= 1  # Change only the stored socket checksum.
+        cpu = make_cpu()
+        ram, _, _ = hardware(cpu, image, lib, reset=True)
+        lib.probe_reset()
+        lib.probe_boot_inputs(battery, pump, diag, fmd)
+        # Valid retained fault checksum; distinct BLM, IAC and volatile bytes.
+        for addr, value in ((1, 8), (3, 8), (5, 32), (0x19, 33),
+                            (0x1C, 149), (0x2C, 75), (0x2E, 77), (0x1B2, 99)):
+            cpu.mem[addr] = ram[addr] = value
+        writes = []
+        def write(addr, value):
+            cpu.mem[addr] = value
+            writes.append((addr, value))
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        cpu.sp, cpu.pc = 0x1FF, cpu.read16(0xFFFE)
+        stop = 0xC938 if outcome == 3 else 0xCCC6
+        assert cpu.run(until_pc=stop, max_steps=300000) == "until_pc", name
+        assert lib.probe_seeded_boot(valid, sum(image) & 0xFFFF) == outcome, name
+        check_state(name, cpu, lib, include_io=True)
+        assert cpu.mem[0x5000] == lib.probe_map(), name
+        assert writes == ordered_writes(lib), (name, writes, ordered_writes(lib))
+    print("Eight seeded reset-vector cases matched RAM, MPU, I/O and ordered MPU writes")
+
+
 # Preloads are scenario inputs. Each dispatch compares the rest of RAM as well
 # as the complete MPU backing and ordered writes.
 SEGMENTS = [

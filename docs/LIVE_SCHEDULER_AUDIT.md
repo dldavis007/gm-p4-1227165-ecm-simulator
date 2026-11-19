@@ -69,8 +69,8 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --all --coverage
 - Cold power-on. The ROM starts at its reset vector with zero-filled memory.
   At $CCC6 its non-stack RAM, MPU and modeled I/O match the C power-on
   lifecycle entry. The historical `ecm_reset()` fixture used to seed the
-  full IRQ replays differs from cold startup at 29 addresses. Reset checks
-  final register state; intermediate reset write order is unverified.
+  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Eight additional cases
+  start with valid retained RAM and compare ordered MPU writes as well.
 - Targeted replays. Major-segment dispatches and routine slices use equal
   sensor inputs and RAM preloads and compare non-stack RAM, MPU state and
   ordered MPU writes at their endpoints. Cases include acceleration and PE,
@@ -95,9 +95,9 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Mode 4 timeout | 25 | 49.44% |
 | Stopped engine with high airflow | 32 | 49.92% |
-| Independent reset vector | 213 | 53.15% |
-| Diagnostic qualification and retained-code logging | 283 | 57.44% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,913 | 86.44% |
+| Independent reset vector | 262 | 53.90% |
+| Diagnostic qualification and retained-code logging | 283 | 58.18% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,913 | 87.18% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -210,8 +210,15 @@ the Error 51 mask, immediate retention and checksum, and the no-error counter
 at 50 and 51. Each dispatch compares non-stack RAM, MPU state and ordered
 MPU writes.
 
-Of 6,598 listing instructions, 895 remain unexecuted. The largest remaining
-region by unexecuted instructions begins at $C800 (56). A hit records execution under the scenario inputs.
+The reset-vector replays reach 203 of 210 instructions at $C800. They test
+both edges of the diagnostic ADC window and the battery and pump thresholds
+for factory boot, including the FMD-controlled retained-RAM fill. Two cases
+flip one bit of the stored socket checksum. The simulator receives the
+checksum verdict as input, while the ROM computes it. Normal and factory
+paths compare state at $CCC6. The Error 51 wait case stops before SWI at $C938.
+
+Of 6,598 listing instructions, 846 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $E436 and $D6D1 (53 each). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

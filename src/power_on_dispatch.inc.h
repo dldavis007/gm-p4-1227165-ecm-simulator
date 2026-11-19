@@ -44,6 +44,8 @@ static void bua_power_error_lamp_step120(void)
     mpu16be_set(0x3FFCu,(bua_u16)(((bua_u16)hi<<8)|lo));
 }
 
+static void bua_update_injector_voltage_offset(bua_u8 pump);
+
 static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
 {
     bua_u16 address;
@@ -90,6 +92,7 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
         RAM8(0x0047u)=(bua_u8)(RAM8(0x0047u)|0x10u);
     mpu16be_set(0x3FFCu,in.err51_at_entry ? STEP112_MPU_RUN_ERR51 :
                                              STEP112_MPU_RUN_NORMAL);
+    RAM8(0x64u)=in.battery_adc;
     RAM8(0x007Eu)=in.battery_adc;
 
     retained_valid=(bua_u8)(bua_error_word_checksum_step113()==
@@ -109,6 +112,10 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
     /* $C895..$C8DF: executable unsigned tests choose factory first. */
     if(in.battery_adc<100u) {
         RAM8(0x0040u)=(bua_u8)(RAM8(0x0040u)|0x20u);
+        RAM8(0x64u)=in.pump_adc;
+        bua_update_injector_voltage_offset(in.pump_adc); /* LC89C calls LE816. */
+        if(in.pump_adc>=160u)
+            RAM8(0x64u)=in.diagnostic_adc;
         if(in.pump_adc>=160u && in.diagnostic_adc>=40u &&
            in.diagnostic_adc<100u) {
             bua_factory_boot_step117(in.whole_rom_checksum,
@@ -139,6 +146,7 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
         RAM8(0x0007u)=(bua_u8)(RAM8(0x0007u)|0x01u);
         RAM8(0x0047u)=(bua_u8)(RAM8(0x0047u)|0x10u);
         ram16be_set(0x0018u,bua_error_word_checksum_step113());
+        RAM8(0x64u)=in.diagnostic_adc;
         if((RAM8(0x0047u)&0x80u)==0u && in.diagnostic_adc>=40u) {
             bua_vector_note_swi_step119(0xC938u);
             ++bua_power_on_trace120.swi_boundaries;

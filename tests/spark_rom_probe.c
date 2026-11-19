@@ -82,6 +82,25 @@ void probe_cold_boot(void)
     bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
 }
 
+void probe_boot_inputs(unsigned int battery, unsigned int pump,
+                       unsigned int diagnostic, unsigned int fmd)
+{
+    sim_volt_adc = (bua_u8)battery;
+    sim_pumpvolt_adc = (bua_u8)pump;
+    sim_diag_adc = (bua_u8)diagnostic;
+    sim_normal_fmd_byte1 = (bua_u8)fmd;
+}
+int probe_seeded_boot(unsigned int socket_valid, unsigned int checksum)
+{
+    BuaPowerOnInput120 in;
+    memset(&in, 0, sizeof(in));
+    in.err51_at_entry = RAM8(3u) & 8u;
+    in.socket_checksum_valid = (bua_u8)socket_valid;
+    in.whole_rom_checksum = (bua_u16)checksum;
+    count = 0;
+    return bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
+}
+
 int probe_map(void) { return mem.io5000; }
 
 int probe_feedback(void) { count = 0; return bua_live_o2_feedback(); }
