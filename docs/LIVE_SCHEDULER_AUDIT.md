@@ -97,8 +97,8 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,157 | 91.79% |
-| ROM-only background RAM refresh | 15 | 92.01% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,160 | 91.83% |
+| ROM-only background RAM refresh | 15 | 92.06% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -283,7 +283,12 @@ the delay, active timer writes, Error 36 qualification and recovery at ADC
 counts 20 and 95, then checks fault reporting after burn-off. With start
 enabled, $0472 advances unless all three bits of mask $32 at $33 are set.
 
-Of 6,598 listing instructions, 527 remain unexecuted. A hit records execution under the scenario inputs.
+A 1,200-case replay compares fuel corrections from $DD7A to $DDBC,
+including BLM scaling, integrator underflow, odd-step rounding and the
+final unsigned 16-bit add or subtract. It compares RAM and MPU state
+before acceleration enrichment.
+
+Of 6,598 listing instructions, 524 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

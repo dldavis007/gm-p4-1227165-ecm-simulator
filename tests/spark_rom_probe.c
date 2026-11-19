@@ -104,6 +104,13 @@ int probe_seeded_boot(unsigned int socket_valid, unsigned int checksum)
 int probe_map(void) { return mem.io5000; }
 
 int probe_feedback(void) { count = 0; return bua_live_o2_feedback(); }
+void probe_blm_correction(unsigned int base, unsigned int step)
+{
+    bua_u16 result = bua_apply_blm_closed_loop_ldd7a((bua_u16)base, BLM,
+        CLOSED_LOOP_PW_CORR, (bua_u8)step, AF_MODE_WORD2, AIR_MODE_WORD);
+    ram16be_set(0xC2u, result);
+}
+
 void probe_blm_select(void) { count = 0; bua_scheduler_blm_select_step103(); }
 void probe_afr(void) { count = 0; bua_select_live_afr(); }
 void probe_async(void) { count = 0; bua_scheduler_async_le436_step102(); }

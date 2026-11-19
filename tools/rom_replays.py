@@ -722,6 +722,26 @@ def mode4_commands(cpu_factory, rom, lib):
     print("256 Mode 4 command bytes matched on entry, repeat and exit")
 
 
+def blm_corrections(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    # At $DD7A D holds the base width and the proportional step is on
+    # the stack. Stop just before the downstream enrichment service.
+    for base in (0, 127, 128, 0x8001, 0xFFFF):
+        for blm in (108, 128, 160):
+            for correction in (0, 127, 128, 129, 255):
+                for step in (0, 1, 2, 255):
+                    for flags in range(4):
+                        for addr, value in ((0xC0, blm), (0xC6, correction),
+                                            (0x3D, flags & 1), (0x44, (flags & 2) << 5)):
+                            cpu.mem[addr] = ram[addr] = value
+                        cpu.pc, cpu.sp, cpu.d = 0xDD7A, 0x1FE, base
+                        cpu.mem[0x1FF] = step
+                        assert cpu.run(until_pc=0xDDBC, max_steps=200) == "until_pc"
+                        lib.probe_blm_correction(base, step)
+                        check_state(f"BLM {base}/{blm}/{correction}/{step}/{flags}", cpu, lib)
+    print("1200 BLM and proportional fuel corrections matched")
+
+
 def airflow_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     # Keep the four filter samples and the byte-sized write index across
