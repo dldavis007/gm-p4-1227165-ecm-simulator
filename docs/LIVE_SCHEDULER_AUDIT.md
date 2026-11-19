@@ -97,9 +97,9 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 343 | 59.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,197 | 92.39% |
-| Diagnostic serial receive window and timeout | 30 | 92.85% |
-| ROM-only background RAM refresh | 15 | 93.07% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,198 | 92.41% |
+| Diagnostic serial receive window and timeout | 30 | 92.86% |
+| ROM-only background RAM refresh | 15 | 93.09% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -304,12 +304,19 @@ including BLM scaling, integrator underflow, odd-step rounding and the
 final unsigned 16-bit add or subtract. It compares RAM and MPU state
 before acceleration enrichment.
 
+Eight seeded acceleration-enrichment cases run from $F901 to $F92A, before
+injector output shaping. With enrichment factor $80, base widths $AAA9,
+$AAAA and $AAAB produce $FFFE, $FFFF and $FFFF. Only the last takes the
+overflow clamp at $F925. Decay exactly to zero preserves the active flag,
+while subtraction below zero clears it. The suite reaches all 16 instructions
+in this region.
+
 The 50 ms block-learning replay at $DDC2 compares RAM and MPU state after
 each of 1,295 services. With the update timer saturated at 255, it checks
 the five-count integrator deadband, the O2 direction gate, timer reset on
 update, and both learned-cell limits (108 and 160).
 
-Of 6,598 listing instructions, 457 remain unexecuted. A hit records execution under the scenario inputs.
+Of 6,598 listing instructions, 456 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

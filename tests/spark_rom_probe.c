@@ -115,6 +115,14 @@ void probe_blm_select(void) { count = 0; bua_scheduler_blm_select_step103(); }
 void probe_afr(void) { count = 0; bua_select_live_afr(); }
 void probe_async(void) { count = 0; bua_scheduler_async_le436_step102(); }
 void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
+void probe_ae_apply(void)
+{
+    bua_u16 pulse;
+    count = 0;
+    pulse = bua_ae_apply_lf901(ram16be_get(0xC2u), &ACCEL_LOAD_FACTOR,
+                               RAM8(0xE3u), &RAM8(0x38u));
+    ram16be_set(0xC2u, pulse);
+}
 void probe_sync_fuel(void) { count = 0; bua_write_lf92a(ram16be_get(0xC2u)); }
 void probe_odd_fuel(void) { count = 0; air_fuel_12p5ms(); }
 void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }

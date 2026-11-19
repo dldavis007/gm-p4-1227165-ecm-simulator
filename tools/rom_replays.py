@@ -844,6 +844,23 @@ for delivered in (77, 78):
                     0xD9: 0, 0xDA: delivered}))
 
 
+# LF901 adds the enrichment before LF92A shapes the injector output.
+# With factor $80, $AAAA is the largest base whose sum fits in 16 bits.
+for name, base, factor, decay, flags in [
+    ("below ceiling", 0xAAA9, 128, 0, 8),
+    ("exact ceiling", 0xAAAA, 128, 0, 8),
+    ("above ceiling", 0xAAAB, 128, 0, 8),
+    ("no injection since last pass", 1000, 31, 32, 10),
+    ("first injection", 1000, 31, 32, 12),
+    ("decay below zero", 1000, 31, 32, 14),
+    ("decay to zero", 1000, 32, 32, 14),
+    ("decay to one", 1000, 33, 32, 14),
+]:
+    SLICES.append((f"acceleration enrichment {name}", "ae_apply", 0xF901, 0xF92A,
+                   {0xC2: base >> 8, 0xC3: base & 255, 0xE2: factor,
+                    0xE3: decay, 0x38: flags}))
+
+
 # LF92A synchronous injector output, including limits based on fuel already
 # supplied. Each case starts with a distinct previous diagnostic pulse width.
 for name, base, previous, delivered, extra in [
