@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,996 | 88.44% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,010 | 88.65% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -226,8 +226,19 @@ The stock pulse factors at $C315 are all 32, so even maximum base width
 cannot reach the overflow clamp at $E478. The optional HUD call at $E4EB
 is outside the modeled configuration.
 
-Of 6,598 listing instructions, 763 remain unexecuted. The largest remaining
-region by unexecuted instructions begins at $D6D1 (53). A hit records execution under the scenario inputs.
+The odd fuel/shutdown region at $D6D1 reaches 150 of 189 instructions.
+Thirteen independent dispatches exercise crank fuel, load saturation,
+throttle changes and key-off conditions. A retained replay compares RAM,
+MPU state and ordered writes across 902 odd services. The running flag
+clears on pass 9. The timer reaches $0385 on pass 901, and the ROM reaches
+the powerdown SWI on pass 902 before fuel dispatch. The comparison stops
+before executing SWI. Of the 39 remaining instructions, 36 belong to crank
+RPM blend paths disabled by the all-zero $C35B table. Two are the SWI and
+its wait loop. The remaining saturation at $D7ED would require a crank
+width beyond the stock $C36C scale and TPS multipliers.
+
+Of 6,598 listing instructions, 749 remain unexecuted. The largest remaining
+region by unexecuted instructions begins at $E34E (49). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

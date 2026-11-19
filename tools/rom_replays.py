@@ -420,6 +420,28 @@ for name, overrides in [
     SLICES.append(("idle PID " + name, "homing", 0xD370, 0xD6CE, {**inputs, **overrides}))
 
 
+# Enter at the odd minor-loop dispatch and follow cranking fuel to the
+# major-loop handoff. The retained shutdown replay below reaches the SWI.
+for name, overrides in [
+    ("running load saturation", {0x34: 128, 0xEA: 56, 0xEB: 0, 0x95: 4, 0x96: 0}),
+    ("cold crank", {0x5B: 0}),
+    ("fractional coolant and throttle", {0x5B: 135, 0x82: 195, 0x118: 37}),
+    ("clear flood", {0x82: 224}),
+    ("maximum coolant and load", {0x5B: 255, 0x95: 255, 0xEA: 255}),
+    ("zero reference period", {0x95: 0, 0x96: 0}),
+    ("rising throttle A/C request", {0x82: 255, 0x83: 0, 0x106: 0}),
+    ("falling throttle", {0x82: 4, 0x83: 240}),
+    ("key-off before housekeeping", {0x33: 48, 0x8C: 7}),
+    ("moving key-off", {0x33: 48, 0x8C: 8, 0x34: 128, 0x65: 3}),
+    ("stationary key-off", {0x33: 48, 0x8C: 8, 0x34: 128}),
+    ("burnoff inhibited", {0x33: 48, 0x8C: 8, 0x34: 128, 0x3E: 16}),
+    ("last fuel pass before powerdown", {0x33: 16, 0x8B: 3, 0x8C: 132}),
+]:
+    inputs = {0: 3, 0x34: 0, 0x33: 0, 0x5B: 160, 0x82: 0, 0x81: 20,
+              0x95: 24, 0x96: 33, 0xEA: 5, 0xEB: 17, 0x65: 0, 0x129: 9}
+    SLICES.append((name, "odd_fuel", 0xD6D1, 0xCCAC, {**inputs, **overrides}))
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -623,6 +645,35 @@ for delivered in (77, 78):
                     0xD7: 12, 0xD8: 128, 0x5B: 100, 0xCB: 30,
                     0xC2: 1, 0xC3: 44, 0xD5: 1, 0xD6: 44,
                     0xD9: 0, 0xDA: delivered}))
+
+
+def shutdown_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    inputs = {0x33: 0x30, 0x34: 128, 0x65: 0, 0x8B: 0, 0x8C: 0,
+              0x3E: 0, 0x1B: 25, 0x81: 11, 0x5B: 140, 0x95: 12,
+              0x96: 200, 0xEA: 4, 0xCB: 32, 0x7E: 160}
+    for addr, value in inputs.items():
+        cpu.mem[addr] = ram[addr] = value
+    writes = []
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for tick in range(902):
+        cpu.mem[0] = ram[0] = (2 * tick + 1) % 160
+        writes.clear()
+        cpu.pc, cpu.sp = 0xD6D1, 0x1FD
+        stop = 0xD6EA if tick == 901 else 0xCCAC
+        assert cpu.run(until_pc=stop, max_steps=10000) == "until_pc"
+        lib.probe_odd_fuel()
+        label = f"odd-loop shutdown pass {tick + 1}"
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert cpu.read16(0x8B) == min(tick + 1, 901), label
+        assert bool(ram[0x34] & 128) == (tick < 8), label
+        if tick == 901:
+            assert not writes, label
+    print("902 odd-loop shutdown services matched through the powerdown SWI boundary")
 
 
 def async_fuel_cycle(make_cpu, rom, lib):
