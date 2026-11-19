@@ -428,6 +428,52 @@ def slices(make_cpu, rom, lib):
         raise AssertionError("\n".join(failures))
 
 
+def injector_replays(make_cpu, rom, lib):
+    # Stop before the MAF service. The ROM sees the captured MPU event bit
+    # while the scheduler-facing C service consumes a pending HAL event.
+    def setup(inputs):
+        cpu = make_cpu()
+        ram, _, _ = hardware(cpu, rom, lib)
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        writes = []
+        def write(addr, value):
+            writes.append((addr, value))
+            cpu.mem[addr] = value
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        return cpu, ram, writes
+
+    def service(name, cpu, writes, event):
+        cpu.mem[0xA0] = (cpu.mem[0xA0] & 0xBF) | (event << 6)
+        cpu.pc, cpu.sp = 0xF67B, 0x1FF
+        writes.clear()
+        assert cpu.run(until_pc=0xF76A, max_steps=1000) == "until_pc", name
+        lib.probe_injector(event)
+        check_state(name, cpu, lib)
+        assert writes == ordered_writes(lib) == [], name
+
+    initial = {0x34: 128, 0x36: 0, 0x3B: 0, 0x0E: 3, 0x0F: 1,
+               0x10: 0, 0x11: 0, 0xCC: 0, 0x13: 0, 0x14: 70,
+               0x15: 0, 0x16: 0}
+    for coolant in range(256):
+        cpu, _, writes = setup({**initial, 0x5F: coolant})
+        service(f"injector startup coolant {coolant}", cpu, writes, 1)
+
+    cpu, ram, writes = setup({**initial, 0x5F: 35, 0x11: 2, 0x16: 2,
+                              0x2F: 8, 0x39: 16, 0x38: 64, 0x3E: 160,
+                              0xDF: 12, 0xE0: 0, 0x18D: 254, 0x11A: 255,
+                              0x11B: 250, 0x11C: 0, 0x11D: 10})
+    for tick in range(64):
+        if tick == 4:
+            cpu.mem[0x3E] = ram[0x3E] = 32  # Release the limiter hold.
+        if tick == 48:
+            cpu.mem[0x36] = ram[0x36] = 32  # Spark blend inhibits decay.
+        if tick == 56:
+            cpu.mem[0x34] = ram[0x34] = 0   # Stopped-engine bookkeeping.
+        service(f"retained injector tick {tick}", cpu, writes, int(tick % 4 != 0))
+    print("Injector service matched for 256 coolant inputs and 64 retained ticks")
+
+
 def passby_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     # LC29C is $FFFF. A seeded hold exercises the countdown independently

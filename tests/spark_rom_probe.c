@@ -90,6 +90,12 @@ void probe_afr(void) { count = 0; bua_select_live_afr(); }
 void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
 void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }
 void probe_homing(void) { count = 0; bua_iac_shutdown_homing_even_step111(); }
+void probe_injector(unsigned int event)
+{
+    count = 0;
+    sim_ecm_ref.injector_services_pending = event;
+    bua_common_injector_service_6p25ms();
+}
 void probe_motor(void) { count = 0; bua_iac_motor_service_6p25ms(); }
 void probe_mode4(void) { count = 0; bua_mode4_scheduler_step116(); }
 void probe_flash(void) { count = 0; bua_diag_flash_step109(); }

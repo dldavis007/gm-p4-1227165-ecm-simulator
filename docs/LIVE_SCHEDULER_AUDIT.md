@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,774 | 81.98% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,839 | 82.96% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -169,8 +169,17 @@ suite they execute all 120 instructions at $DF9D. In park/neutral the ROM
 uses $C66A (128) to scale measured position travel and $C664 (255) to
 scale the signed change applied to the accumulator at $0105.
 
-Of 6,598 listing instructions, 1,189 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $F67B (66), $CB5F (63) and $E10F (62). A hit records execution under the scenario inputs.
+The injector replay enters at $F67B and stops at the airflow service ($F76A).
+It checks all 256 startup coolant inputs, then retains state across 64 ticks
+with 48 reported injections. It compares non-stack RAM, MPU state and the
+empty MPU write trace after each service. These inputs execute 103 of 104
+instructions. The underflow clamp at $F6CF is unreachable here because the
+test at $F695 requires enrichment of at least 256 and the decay amount is
+one byte. This replay supplies the event indication independently of its
+upstream physical generation.
+
+Of 6,598 listing instructions, 1,124 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $CB5F (63), $E10F (62) and $E75D (58). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
