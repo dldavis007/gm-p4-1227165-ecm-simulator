@@ -96,9 +96,9 @@ at their ROM address. Repeated ticks do not increase the count.
 | Mode 4 timeout | 25 | 49.44% |
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
-| Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,149 | 90.75% |
-| ROM-only background RAM refresh | 15 | 90.98% |
+| Diagnostic qualification and retained-code logging | 343 | 59.09% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,123 | 91.27% |
+| ROM-only background RAM refresh | 15 | 91.50% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -274,7 +274,11 @@ stop at $CCC6. Of the 20 instructions still unexecuted in this region, 11
 require a bad EPROM signature, eight require unequal stock throttle limits
 at $C67D/$C67E (both 255), and one requires the fan polarity option at $C017.
 
-Of 6,598 listing instructions, 595 remain unexecuted. A hit records execution under the scenario inputs.
+The $F10E replay compares RAM, MPU state and ordered writes over 1,165 lamp
+services. Codes 12, 13, 24, 51 and 52 each appear three times before the
+scan ends. The suite executes all 89 instructions in the code-flash region.
+
+Of 6,598 listing instructions, 561 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

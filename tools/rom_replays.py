@@ -1150,6 +1150,28 @@ def diagnostic_transitions(make_cpu, rom, lib):
         check_state(label, cpu, lib)
         assert cpu.timer_writes == ordered_writes(lib), (label, cpu.timer_writes, ordered_writes(lib))
 
+    # Follow the lamp through all three presentations of each stored code.
+    # Include masked bits and the fifth error byte to exercise the end scan.
+    cpu, ram = fixture({0x42: 0, 5: 0x48, 6: 0x80, 7: 1, 8: 0x80, 9: 255})
+    presentations = []
+    for tick in range(2000):
+        cpu.timer_writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(0xF10E, max_steps=1000)
+        lib.probe_flash()
+        label = f"code flash pass {tick + 1}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert cpu.timer_writes == ordered_writes(lib), label
+        if ram[0xBD] == 28:
+            presentations.append(10 * ram[0xB9] + ram[0xBA])
+        if ram[0x42] == 0:
+            break
+    assert ram[0x42] == 0 and presentations == [
+        code for code in (12, 13, 24, 51, 52) for _ in range(3)
+    ], presentations
+    print(f"Stored-code lamp cycle matched for {tick + 1} services")
+
     for code, inputs, (address, mask) in FAULT_TRANSITIONS:
         cpu, ram = fixture(inputs)
         assert not ram[address] & mask
