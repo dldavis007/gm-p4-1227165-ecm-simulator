@@ -102,6 +102,30 @@ SEGMENTS = [
 ]
 
 
+# Segment 5 enters the A/C service from both the fan and closed-loop halves.
+ac_inputs = {0: 5, 0x34: 128, 0x37: 0, 0xF3: 8, 0xF2: 1, 0x84: 0,
+             0x5B: 160, 0x10B: 0, 0x106: 1, 0x107: 20, 0x108: 10,
+             0x2C: 30, 0x2D: 8, 0x105: 30}
+for name, overrides in [
+    ("PID inhibit", {0x10B: 1}),
+    ("homing", {0xF3: 12}),
+    ("throttle cutout", {0x34: 160, 0x84: 240}),
+    ("coolant cutout", {0x34: 160, 0x5B: 249}),
+    ("disengage countdown", {0x37: 128, 0xF2: 128, 0x106: 2}),
+    ("disengage expiry", {0x37: 128, 0xF2: 128}),
+    ("disengage delay load", {0x37: 128, 0x106: 0}),
+    ("engage delay hold", {0xF2: 128, 0x106: 2}),
+    ("learn position capture", {0xF2: 128}),
+    ("learning time below threshold", {0x107: 19}),
+    ("steady compressor", {0xF2: 0, 0x106: 0}),
+    ("drive learning increase limit", {0: 0x15}),
+    ("neutral learning upper clamp", {0xF3: 136, 0x2C: 90}),
+    ("neutral learning decrease", {0xF3: 136, 0x2C: 5}),
+    ("drive learning at prior value", {0x2C: 18}),
+]:
+    SEGMENTS.append(("A/C " + name, 5, {**ac_inputs, **overrides}))
+
+
 # Exercise each enable bit separately. Unselected channels use their normal
 # requests, including distinct purge and EGR duties.
 output_inputs = {0x34: 0x88, 0x35: 8, 0x37: 32, 0x3E: 6, 0x7E: 170,

@@ -95,7 +95,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Independent reset vector | 213 | 52.29% |
 | Diagnostic qualification and retained-code logging | 185 | 55.09% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,700 | 80.86% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,774 | 81.98% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -163,8 +163,14 @@ below and rises above an 800 RPM setpoint. Additional cases exercise signed
 overflow, fractional RPM, derivative gain, the drive and neutral deadbands,
 throttle and gear transitions, and the learned warm motor-position limits.
 
-Of 6,598 listing instructions, 1,263 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $DF9D (66), $F67B (66) and $CB5F (63). A hit records execution under the scenario inputs.
+Fifteen Segment 5 dispatches exercise A/C timer expiry, cutouts, and IAC
+learning through the fan and closed-loop paths. Together with the existing
+suite they execute all 120 instructions at $DF9D. In park/neutral the ROM
+uses $C66A (128) to scale measured position travel and $C664 (255) to
+scale the signed change applied to the accumulator at $0105.
+
+Of 6,598 listing instructions, 1,189 remain unexecuted. The largest remaining
+regions by unexecuted instructions begin at $F67B (66), $CB5F (63) and $E10F (62). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
