@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
+from rom_replays import shift_light_cycle, air_cycle, shutdown_cycle, async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
 
 
 class BuaCPU(HC11):
@@ -290,6 +290,7 @@ if __name__ == "__main__":
                                      async_fuel_cycle(BuaCPU, ROM.read_bytes(), lib),
                                      air_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      purge_cycle(BuaCPU(), ROM.read_bytes(), lib),
+                                     shift_light_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      transmission_replays(BuaCPU, ROM.read_bytes(), lib),
                                      mode4_commands(BuaCPU, ROM.read_bytes(), lib),
                                      injector_replays(BuaCPU, ROM.read_bytes(), lib),

@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,058 | 89.38% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,104 | 90.07% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -244,8 +244,13 @@ delay expiry. It also checks a separately seeded enrichment counter wrap.
 The remaining branch at $E3A9 requires the high-RPM counter to wrap after
 passing a guard that only admits values up to 10.
 
-Of 6,598 listing instructions, 701 remain unexecuted. The largest remaining
-region by unexecuted instructions begins at $E2BE (46). A hit records execution under the scenario inputs.
+The suite executes all 66 instructions in the $E2BE region. Segment E now
+services the shift-light request at $E2D1 after N/V calculation on both
+transmission paths. The replay compares RAM and MPU state through the
+300-count delay, RPM hysteresis, forced-on and cutout conditions.
+
+Of 6,598 listing instructions, 655 remain unexecuted. The largest gaps are
+$D6D1 and $F92A (39 each). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

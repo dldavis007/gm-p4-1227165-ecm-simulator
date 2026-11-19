@@ -871,6 +871,7 @@ static void ecm_reset(void)
     memset(&mem, 0, sizeof(mem));
     memset(&stats, 0, sizeof(stats));
     bua_vector_reset_step119();
+    sim_legacy_shift_light_freeze = 0u;
     sim_legacy_segment_d_freeze = 0u;
     sim_legacy_segment1_output_freeze = 0u;
     sim_legacy_ignition_shutdown_freeze = 0u;

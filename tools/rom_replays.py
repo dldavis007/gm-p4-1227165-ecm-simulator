@@ -607,6 +607,35 @@ def transmission_replays(make_cpu, rom, lib):
     print("Six retained Segment E drives matched across 432 dispatches")
 
 
+def shift_light_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 14)
+
+    def services(label, count, inputs, light, delay):
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        for tick in range(count):
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=2000)
+            assert cpu.pc == 0xFFFE, label
+            lib.probe_major(14)
+            check_state(f"shift light {label} pass {tick + 1}", cpu, lib)
+        assert bool(ram[0x35] & 128) == light, label
+        assert (ram[0x91] << 8 | ram[0x92]) == delay, label
+
+    services("start delay", 1, {0x34: 128, 0x35: 0, 0x36: 8, 0x5B: 121,
+             0x63: 1, 0x65: 41, 0x66: 0, 0x57: 128, 0x82: 128}, False, 299)
+    services("count down", 299, {}, False, 0)
+    services("delay elapsed", 1, {}, True, 0)
+    services("hysteresis", 1, {0x57: 55, 0x82: 0}, True, 0)
+    services("lower RPM cutout", 1, {0x57: 52}, False, 0)
+    services("forced on", 1, {0x57: 209}, True, 0)
+    services("throttle above curve", 1, {0x57: 128, 0x82: 198}, False, 0)
+    services("normal transmission path", 1, {0x36: 0, 0x82: 64}, False, 299)
+    services("speed cutout", 1, {0x65: 40}, False, 299)
+    print("Segment E shift-light delay, qualification and hysteresis matched")
+
+
 def mode4_commands(cpu_factory, rom, lib):
     # Start with distinct error latches, IAC position and learned BLM cells
     # so each command's side effects are observable in the RAM comparison.

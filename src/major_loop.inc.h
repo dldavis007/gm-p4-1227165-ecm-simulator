@@ -455,6 +455,46 @@ coast:
     return bua_tcc_tail73(mode, RPM_DIV25, VSS_MPH_HI, &RAM8(0x8Du));
 }
 
+/* LE2D1..LE34D: qualify and delay the raw shift-light request. */
+static void bua_shift_light_service(void)
+{
+    static const bua_u8 on_tps[7] = {13,46,118,192,192,255,255};
+    static const bua_u8 hold_tps[7] = {18,51,123,197,197,255,255};
+    bua_u8 active = MINOR_MODE_WORD2 & 0x80u;
+    bua_u8 rpm = RPM_DIV25;
+    bua_u8 arg;
+    bua_u16 delay;
+
+    if (COOLANT <= 120u || VSS_MPH_HI <= 40u || FILTERED_LOAD == 0u ||
+        RAM8(0x8Fu) <= 30u || rpm <= (active ? 52u : 56u))
+        goto disqualify;
+    if (rpm > (active ? 204u : 208u)) {
+        ram16be_set(0x91u, 0u);
+        SPARK_MODE_WORD |= 0x10u;
+    } else {
+        arg = (bua_u8)((rpm >> 1) - 16u);
+        if (TPS_LOAD_AXIS > bua_lookup_spacing16(active ? hold_tps : on_tps, 7u, arg))
+            goto disqualify;
+        delay = ram16be_get(0x91u);
+        if (!(SPARK_MODE_WORD & 0x10u)) {
+            SPARK_MODE_WORD |= 0x10u;
+            /* Every point at LC2EB is 150, with multiplier 2 at LC2EA. */
+            delay = 300u;
+        }
+        if (delay != 0u) {
+            ram16be_set(0x91u, (bua_u16)(delay - 1u));
+            MINOR_MODE_WORD2 &= (bua_u8)~0x80u;
+            return;
+        }
+    }
+    MINOR_MODE_WORD2 |= 0x80u;
+    return;
+
+disqualify:
+    SPARK_MODE_WORD &= (bua_u8)~0x10u;
+    MINOR_MODE_WORD2 &= (bua_u8)~0x80u;
+}
+
 /* LE10F..LE2B9 automatic-transmission path after shifter sampling. */
 static void bua_tcc_after_shifter(void)
 {
@@ -531,6 +571,8 @@ static void bua_battery_service(bua_u8 sample)
                                   RAM8(0x0065u),0u);
         RAM8(0x0045u)=sh;
         bua_tcc_after_shifter();
+        if (!sim_legacy_shift_light_freeze)
+            bua_shift_light_service();
     }
 }
 
