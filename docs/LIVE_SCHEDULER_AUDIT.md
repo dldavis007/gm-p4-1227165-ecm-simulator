@@ -97,7 +97,7 @@ at their ROM address. Repeated ticks do not increase the count.
 | Stopped engine with high airflow | 32 | 49.92% |
 | Independent reset vector | 262 | 53.90% |
 | Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,913 | 87.18% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,996 | 88.44% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -217,8 +217,17 @@ flip one bit of the stored socket checksum. The simulator receives the
 checksum verdict as input, while the ROM computes it. Normal and factory
 paths compare state at $CCC6. The Error 51 wait case stops before SWI at $C938.
 
-Of 6,598 listing instructions, 846 remain unexecuted. The largest remaining
-regions by unexecuted instructions begin at $E436 and $D6D1 (53 each). A hit records execution under the scenario inputs.
+Six retained asynchronous fuel-pulse replays compare 84 services at $E436,
+including the pulse counter at $3FF2 and ordered CSR trigger writes. Two
+additional dispatches check limiter headroom of 110 and 111 counts. The
+first suppresses the pulse and the second emits 171 timer counts with a
+30-count injector offset applied twice. Of 85 instruction starts, 83 run.
+The stock pulse factors at $C315 are all 32, so even maximum base width
+cannot reach the overflow clamp at $E478. The optional HUD call at $E4EB
+is outside the modeled configuration.
+
+Of 6,598 listing instructions, 763 remain unexecuted. The largest remaining
+region by unexecuted instructions begins at $D6D1 (53). A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage

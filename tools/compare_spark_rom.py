@@ -8,7 +8,7 @@ import tempfile
 
 from m68hc11 import HC11
 from rom_coverage import report
-from rom_replays import purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
+from rom_replays import async_fuel_cycle, purge_cycle, transmission_replays, mode4_commands, injector_replays, idle_speed_cycle, factory_cycle, decel_fuel_cycle, passby_cycle, warm_fuel_cycle, follower_motion, diagnostic_transitions, segments, slices, serial, reset_vector, reset_branches, attach_spi
 
 
 class BuaCPU(HC11):
@@ -286,6 +286,7 @@ if __name__ == "__main__":
                                   reset_branches(BuaCPU, ROM.read_bytes(), lib)),
             "faults": lambda lib: diagnostic_transitions(BuaCPU, ROM.read_bytes(), lib),
             "targeted": lambda lib: (segments(BuaCPU, ROM.read_bytes(), lib),
+                                     async_fuel_cycle(BuaCPU, ROM.read_bytes(), lib),
                                      purge_cycle(BuaCPU(), ROM.read_bytes(), lib),
                                      transmission_replays(BuaCPU, ROM.read_bytes(), lib),
                                      mode4_commands(BuaCPU, ROM.read_bytes(), lib),

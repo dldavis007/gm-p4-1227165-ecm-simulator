@@ -615,6 +615,59 @@ def injector_replays(make_cpu, rom, lib):
     print("Injector service matched for 256 coolant inputs and 64 retained ticks")
 
 
+# The trigger limiter permits 188 counts above the previous 300-count
+# injection. Delivered fuel of 77 or 78 leaves exactly 111 or 110.
+for delivered in (77, 78):
+    SLICES.append((f"async headroom {188 - delivered}", "async", 0xE436, 0xFFFE,
+                   {0x34: 128, 0x38: 224, 0x39: 0, 0x3D: 0, 0xDF: 0,
+                    0xD7: 12, 0xD8: 128, 0x5B: 100, 0xCB: 30,
+                    0xC2: 1, 0xC3: 44, 0xD5: 1, 0xD6: 44,
+                    0xD9: 0, 0xDA: delivered}))
+
+
+def async_fuel_cycle(make_cpu, rom, lib):
+    # The injector counter receives the commanded width plus two offsets.
+    # Retain the pulse count, limiter state and delivered-fuel accumulator.
+    for name, base, previous, flags, single, factor, stall in [
+        ("ordinary", 300, 300, 128, 0, 128, 0),
+        ("single fire below minimum", 300, 300, 128, 128, 128, 0),
+        ("capped pulse width", 2000, 300, 128, 0, 255, 0),
+        ("trigger headroom", 300, 300, 224, 0, 128, 0),
+        ("post-injection headroom", 640, 512, 192, 0, 128, 0),
+        ("stall saver saturation", 300, 300, 128, 0, 128, 2),
+    ]:
+        cpu = make_cpu()
+        ram, _, _ = hardware(cpu, rom, lib)
+        inputs = {0x34: 128, 0x33: 0, 0x38: flags, 0x39: single, 0xDF: 0,
+                  0x5B: 100, 0xCB: 30, 0xD7: 12, 0xD8: factor, 0x8A: stall,
+                  0x3D: 16 if stall else 0, 0xC2: base >> 8, 0xC3: base & 255,
+                  0xD5: previous >> 8, 0xD6: previous & 255,
+                  0xD9: 255 if stall else 0, 0xDA: 255 if stall else 0,
+                  0x11A: 255, 0x11B: 240}
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        writes = []
+        def write(addr, value):
+            cpu.mem[addr] = value
+            writes.append((addr, value))
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        for tick in range(14):
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(0xE436, max_steps=1500)
+            assert cpu.pc == 0xFFFE
+            lib.probe_async()
+            label = f"async {name} pulse pass {tick}"
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+            width = cpu.read16(0xDB)
+            if width:
+                assert cpu.read16(0x3FF2) == width + 60, label
+            else:
+                assert not writes, label
+    print("84 asynchronous fuel services matched RAM and ordered timer writes")
+
+
 def passby_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     # LC29C is $FFFF. A seeded hold exercises the countdown independently
