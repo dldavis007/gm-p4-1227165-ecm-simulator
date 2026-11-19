@@ -489,6 +489,48 @@ def slices(make_cpu, rom, lib):
         raise AssertionError("\n".join(failures))
 
 
+def air_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 9)
+
+    def services(label, count, changes, expected_requests):
+        for addr, value in changes.items():
+            cpu.mem[addr] = ram[addr] = value
+        for tick in range(count):
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=500)
+            assert cpu.pc == 0xFFFE, label
+            lib.probe_major(9)
+            check_state(f"{label} pass {tick + 1}", cpu, lib)
+        assert ram[0x3E] & 6 == expected_requests, label
+
+    # Retain the ROM and C timers separately between calls. Check raw
+    # request bits without assigning a physical polarity to the valves.
+    services("warm open loop", 1, {0x5B: 73, 0x3B: 0, 0x34: 128,
+             0x44: 0, 0x3D: 0, 0x43: 0, 0x56: 160, 0x63: 100,
+             0x73: 170, 0xFB: 100, 0xFC: 0, 0xF7: 0, 0xF8: 0}, 6)
+    services("load drop", 10, {0x63: 35}, 2)
+    services("hold expired", 1, {}, 6)
+    services("high load at speed threshold", 1, {0x63: 101, 0x65: 60}, 6)
+    services("above speed threshold", 1, {0x65: 61}, 0)
+    services("below minimum load", 1, {0x63: 24, 0x44: 128}, 0)
+    services("high RPM delay", 11, {0x63: 25, 0x56: 161}, 2)
+    services("high RPM divert", 1, {}, 0)
+    services("rich O2 delay", 200, {0x56: 160, 0x73: 171}, 2)
+    services("rich O2 latch", 1, {}, 0)
+    services("rich counter decay", 200, {0x73: 170}, 0)
+    services("rich latch clear", 1, {}, 2)
+    services("lean O2 delay", 201, {0x73: 55}, 2)
+    services("lean O2 divert", 1, {}, 0)
+    services("open loop after closed loop", 254, {0x44: 0}, 2)
+    services("open-loop delay expired", 1, {}, 0)
+    services("power enrichment", 1, {0x44: 128, 0x43: 32}, 0)
+    # Exercise the nonzero retained PE counter separately from normal entry.
+    services("seeded PE counter wrap", 1, {0xFE: 255}, 6)
+    services("wrapped PE counter", 1, {}, 0)
+    print("Segment 9 injection-air request bits, timers, RAM and MPU matched")
+
+
 def purge_cycle(cpu, rom, lib):
     ram, _, _ = hardware(cpu, rom, lib)
     inputs = {1: 0, 0x1B: 80, 0x34: 128, 0x33: 0, 0x35: 0,
