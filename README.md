@@ -8,9 +8,8 @@ Mode 4 timeout, stopped-engine high airflow and the 8192-baud receive window,
 Each tick compares RAM below $0500 outside the stack and ordered timer-chip
 writes. The cold power-on entries also agree at the scheduler handoff.
 
-Run `make test` in Codespaces or CI. To see instruction coverage by routine
-address, run `PYTHONPATH=build/m68hc11 python3 tools/compare_spark_rom.py --all --coverage`
-afterward. The complete suite executes **6,164 of 6,598 instructions
+Run `make test` in Codespaces or CI. It reports coverage by routine address and
+checks every unexecuted ROM block against the documented inventory. The complete suite executes **6,164 of 6,598 instructions
 (93.42%)**. The total includes targeted routine and serial replays, plus 15
 ROM-only idle-loop instructions beyond the IRQ comparison boundary.
 The audit describes which state each comparison checks.

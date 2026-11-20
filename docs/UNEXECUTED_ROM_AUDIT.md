@@ -9,7 +9,7 @@ On simulator baseline `c821166`, the complete ROM replay suite executed 6,164 of
 
 The first group requires an immutable option, a fixed table value, or an arithmetic bound that excludes the path in the intact stock image. The second includes reachable behavior and candidates whose complete path from reset is still unverified. Fault inputs and optional external hardware are identified where relevant. Artificially seeding a RAM flag does not establish stock reachability.
 
-Ranges give the first and last instruction **start**, inclusive. Blocks split at transfer targets, calls and returns, vectors, scheduler entries, and gaps in the listing or execution trace. To check the inventory against the current suite, run `make test`, then `PYTHONPATH=build/m68hc11 python3 tools/compare_spark_rom.py --audit-unrun`. The check validates address ranges and counts. The reachability reasons are manually reviewed against [the listing](../evidence/firmware/bua-hac.lst).
+Ranges give the first and last instruction **start**, inclusive. Blocks split at transfer targets, calls and returns, vectors, scheduler entries, and gaps in the listing or execution trace. The ROM replay in `make test` uses `--audit-unrun` to check the documented address ranges and instruction counts. The reachability reasons are manually reviewed against [the listing](../evidence/firmware/bua-hac.lst).
 
 ## Unreachable with stock BUA
 
