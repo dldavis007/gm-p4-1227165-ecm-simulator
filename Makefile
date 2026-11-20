@@ -24,7 +24,7 @@ test-rom:
 	@test -d "$(HC11_DIR)" || git clone -q https://github.com/anarkiwi/m68hc11 "$(HC11_DIR)"
 	@if [ "$(HC11_DIR)" = build/m68hc11 ]; then git -C "$(HC11_DIR)" checkout -q --detach $(HC11_REV); fi
 	@test "$$(git -C "$(HC11_DIR)" rev-parse HEAD)" = "$(HC11_REV)"
-	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --all
+	PYTHONPATH="$(HC11_DIR)" python3 tools/compare_spark_rom.py --audit-unrun
 
 test: $(TARGET) test-rom
 	$(CC) $(CFLAGS) tests/rom_calibration.c -o build/rom_calibration
