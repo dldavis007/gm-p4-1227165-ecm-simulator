@@ -363,30 +363,12 @@ static bua_u8 bua_interp_u8_segment(const bua_u8 *table,
                                      bua_u8 intervals,
                                      bua_u8 arg)
 {
-    unsigned int p;
-    unsigned int index;
-    unsigned int frac;
-    unsigned int y0;
-    unsigned int y1;
-    unsigned int delta;
-    unsigned int v;
-    p = (unsigned int)arg * (unsigned int)intervals;
-    index = p >> 8;
-    frac = p & 0xFFu;
-    if (index >= (unsigned int)intervals)
-        return table[intervals];
-    y0 = table[index];
-    y1 = table[index + 1u];
-    if (y1 >= y0) {
-        delta = y1 - y0;
-        /* LF2D6 labels this the increasing-table round-up path. */
-        v = y0 + ((delta * frac + 255u) >> 8);
-    } else {
-        delta = y0 - y1;
-        v = y0 - ((delta * frac) >> 8);
-    }
-    if (v > 255u) v = 255u;
-    return (bua_u8)v;
+    unsigned int position = (unsigned int)arg * intervals;
+    unsigned int index = position >> 8;
+    bua_u8 first = table[index];
+    bua_u8 second = table[index + 1u];
+    bua_u8 fraction = (bua_u8)position;
+    return bua_interp_u8_lf2d6(first, second, fraction);
 }
 static bua_u16 bua_maf_unlimited_from_axis_lf7ee(bua_u16 maf_axis,
                                                   bua_u8 *table_number,

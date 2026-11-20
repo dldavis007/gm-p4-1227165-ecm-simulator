@@ -30,14 +30,14 @@ test: $(TARGET) test-rom
 	$(CC) $(CFLAGS) tests/rom_calibration.c -o build/rom_calibration
 	build/rom_calibration
 	$(TARGET) > $(OUTPUT)
-	grep -q "Step-104 normal-operation behavioral signature: 02BA4EA7" $(OUTPUT)
+	grep -q "Step-104 normal-operation behavioral signature: 784BCD0B" $(OUTPUT)
 	grep -q "step-104 baseline-freeze regression result: PASS (10/10)" $(OUTPUT)
-	grep -q "Step-105 transmission trace signature: 5636155D" $(OUTPUT)
+	grep -q "Step-105 transmission trace signature: 7F96DC9B" $(OUTPUT)
 	grep -q "step-105 transmission-aware regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-106 listing-coolant regression result: PASS (12/12)" $(OUTPUT)
 	grep -q "step-107 diagnostic-stage1 regression result: PASS (17/17)" $(OUTPUT)
 	grep -q "step-108 diagnostic-qualification regression result: PASS (22/22)" $(OUTPUT)
-	grep -q "Step-109 integrated Segment-D signature: B12D3084" $(OUTPUT)
+	grep -q "Step-109 integrated Segment-D signature: 4EBD44B4" $(OUTPUT)
 	grep -q "step-109 Segment-D integration regression result: PASS (40/40)" $(OUTPUT)
 	grep -q "Step-110 integrated output-stage signature: FAADF8A6" $(OUTPUT)
 	grep -q "step-110 Segment-1 output regression result: PASS (22/22)" $(OUTPUT)

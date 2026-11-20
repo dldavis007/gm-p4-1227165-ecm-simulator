@@ -66,6 +66,9 @@ int probe_product(unsigned int a, unsigned int b)
 void probe_follower(void) { count = 0; bua_idle_motor_request(); }
 void probe_qualification(void) { count = 0; bua_diag_qualification_step108(); }
 
+void probe_volt_adc(unsigned int sample) { bua_hal_set_volt_adc((bua_u8)sample); }
+void probe_diag_adc(unsigned int sample) { bua_hal_set_diag_adc((bua_u8)sample); }
+
 void probe_major(unsigned int segment)
 {
     count = 0;
@@ -81,6 +84,8 @@ void probe_cold_boot(void)
     in.socket_checksum_valid = 1u;
     bua_lifecycle_power_cycle_from_hal_step163(0xFFFEu, in);
 }
+
+void probe_tps_adc(unsigned int sample) { bua_hal_set_tps_adc((bua_u8)sample); }
 
 void probe_boot_inputs(unsigned int battery, unsigned int pump,
                        unsigned int diagnostic, unsigned int fmd)
@@ -104,10 +109,27 @@ int probe_seeded_boot(unsigned int socket_valid, unsigned int checksum)
 int probe_map(void) { return mem.io5000; }
 
 int probe_feedback(void) { count = 0; return bua_live_o2_feedback(); }
+void probe_blm_correction(unsigned int base, unsigned int step)
+{
+    bua_u16 result = bua_apply_blm_closed_loop_ldd7a((bua_u16)base, BLM,
+        CLOSED_LOOP_PW_CORR, (bua_u8)step, AF_MODE_WORD2, AIR_MODE_WORD);
+    ram16be_set(0xC2u, result);
+}
+
 void probe_blm_select(void) { count = 0; bua_scheduler_blm_select_step103(); }
 void probe_afr(void) { count = 0; bua_select_live_afr(); }
 void probe_async(void) { count = 0; bua_scheduler_async_le436_step102(); }
 void probe_accel(void) { count = 0; bua_odd_transient_front_12p5ms(); }
+void probe_ae_apply(void)
+{
+    bua_u16 pulse;
+    count = 0;
+    pulse = bua_ae_apply_lf901(ram16be_get(0xC2u), &ACCEL_LOAD_FACTOR,
+                               RAM8(0xE3u), &RAM8(0x38u));
+    ram16be_set(0xC2u, pulse);
+}
+void probe_sync_fuel(void) { count = 0; bua_write_lf92a(ram16be_get(0xC2u)); }
+void probe_odd_fuel(void) { count = 0; air_fuel_12p5ms(); }
 void probe_keyoff(void) { count = 0; bua_ignition_shutdown_odd_step111(); }
 void probe_homing(void) { count = 0; bua_iac_shutdown_homing_even_step111(); }
 void probe_injector(unsigned int event)
@@ -141,6 +163,7 @@ int probe_frame(const bua_u8 *data, unsigned int length)
 }
 int probe_response_length(void) { return bua_sci115.output_count; }
 int probe_response(unsigned int i) { return bua_sci115.output[i]; }
+void probe_maf_service(void) { count = 0; bua_common_maf_6p25ms(); }
 void probe_stopped_airflow(unsigned int maf, unsigned int pump)
 {
     sim_maf_adc = (bua_u8)maf;
@@ -159,4 +182,10 @@ void probe_temperature_inputs(unsigned int cts, unsigned int mat)
 {
     sim_cts_adc = (bua_u8)cts;
     sim_mat_adc = (bua_u8)mat;
+}
+
+void probe_serial_manager(unsigned int cell)
+{
+    count = 0;
+    (void)bua_lf880_manager(cell * SERIAL_T_CELL + SERIAL_T_FIRST);
 }

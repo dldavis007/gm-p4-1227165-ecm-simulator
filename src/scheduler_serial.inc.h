@@ -11,8 +11,7 @@ static void bua_mode4_scheduler_step116(void);
 static void air_fuel_12p5ms(void)
 {
     ++stats.air_fuel_loops;
-    if(sim_legacy_ignition_shutdown_freeze!=0u ||
-       bua_ignition_shutdown_odd_step111()==0u)
+    if(bua_ignition_shutdown_odd_step111()==0u)
         bua_odd_fuel_chain_12p5ms();
 }
 /* LCD05: merge the current L0035 reference/diagnostic bit into L0040 before
@@ -256,8 +255,7 @@ static void spark_vss_12p5ms(void)
     }
     bua_reference_state_12p5ms();
     bua_write_lf92a(ram16be_get(0x00C2u));
-    if(sim_legacy_ignition_shutdown_freeze==0u)
-        bua_iac_shutdown_homing_even_step111();
+    bua_iac_shutdown_homing_even_step111();
 }
 /* ---------------------------------------------------------------------- */
 /* PC VSS signal generator                                                */
@@ -593,6 +591,13 @@ static bua_u8 bua_160_load_next_factory_byte(void)
     ALCL_TABLE_INDEX=(bua_u8)(i+1u); ++stats.display_bytes_loaded;
     return 1u;
 }
+/* LF8F3 drives the line high through LF4A8 on this cell. */
+static void bua_160_first_high(bua_u32 t)
+{
+    bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
+    serial_line_high_at(t);
+}
+
 static int bua_lf880_manager(bua_u32 t)
 {
     bua_u8 msb;
@@ -601,7 +606,7 @@ static int bua_lf880_manager(bua_u32 t)
         ALCL_BIT_COUNT=(bua_u8)(ALCL_BIT_COUNT-1u);
         msb=(bua_u8)((ALCL_XMIT_BYTE&0x80u)!=0u);
         ALCL_XMIT_BYTE=(bua_u8)(ALCL_XMIT_BYTE<<1);
-        if(msb==0u) serial_line_high_at(t);
+        if(msb==0u) bua_160_first_high(t);
         return msb!=0u?1:0;
     }
     ALCL_BIT_COUNT=8u;
@@ -609,7 +614,7 @@ static int bua_lf880_manager(bua_u32 t)
         if(bua_160_load_next_factory_byte()==0u) return -1;
     } else if((MINOR_MODE_WORD2&0x30u)!=0u) bua_160_load_next_diagnostic_byte();
     else bua_160_load_next_normal_byte();
-    if(ALCL_TABLE_INDEX!=0u) serial_line_high_at(t);
+    if(ALCL_TABLE_INDEX!=0u) bua_160_first_high(t);
     return -1;
 }
 /* One complete 6.25-ms cell, corresponding to LCAA4 then LCA2C then LCA3B. */
@@ -858,10 +863,7 @@ static void major_segment(bua_u8 seg)
         case 0xAu: segA_mat_variables();      break;
         case 0xBu: segB_egr();                break;
         case 0xCu: segC_canister_purge();     break;
-        case 0xDu:
-            if(sim_legacy_segment_d_freeze==0u)
-                segD_diagnostics();
-            break;
+        case 0xDu: segD_diagnostics();         break;
         case 0xEu: segE_tcc_adc();            break;
         default:   segF_fuel_air_major();      break;
     }
@@ -871,10 +873,6 @@ static void ecm_reset(void)
     memset(&mem, 0, sizeof(mem));
     memset(&stats, 0, sizeof(stats));
     bua_vector_reset_step119();
-    sim_legacy_segment_d_freeze = 0u;
-    sim_legacy_segment1_output_freeze = 0u;
-    sim_legacy_ignition_shutdown_freeze = 0u;
-    sim_legacy_mode4_lifecycle_freeze = 0u;
     memset(&bua_factory_trace117, 0, sizeof(bua_factory_trace117));
     sim_factory_battery_adc117 = 128u;
     sim_factory_diagnostic_adc117 = 40u;
@@ -925,11 +923,7 @@ static void bua_serial_timer_irq(bua_u32 tick)
     if (SERIAL_MODE_WORD & SERIAL_FLAG_FIRST) {
         mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 143u);
         SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
-        {
-            int bit = bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
-            if (bit == 0 || (bit < 0 && ALCL_TABLE_INDEX != 0u))
-                bua_write_control_low((bua_u8)(mpu16be_get(MPU_CPU_CONTROL_ADDR) | 4u));
-        }
+        (void)bua_lf880_manager(start - SERIAL_T_CELL + SERIAL_T_FIRST);
     }
     if (SERIAL_MODE_WORD & SERIAL_FLAG_SECOND) {
         mem.io4000[6] = (bua_u8)(TIMER_SNAPSHOT + 205u);
@@ -1199,20 +1193,15 @@ static bua_u16 bua_ae_apply_lf901(bua_u16 base_pw,
     *ae_flags_io = flags;
     return (bua_u16)sum;
 }
-static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
+static BuaFuelOutputResult bua_fuel_cutoff(bua_u16 corrected_base_pw,
                                                  bua_u8 mode_word3,
                                                  bua_u8 ign_mode_word,
                                                  bua_u8 af_mode_word,
                                                  bua_u8 spark_mode_word,
-                                                 bua_u8 single_fire_word,
                                                  bua_u8 speed_raw,
-                                                 bua_u16 ref_period,
-                                                 bua_u8 injector_batt_offset)
+                                                 bua_u16 ref_period)
 {
     BuaFuelOutputResult r;
-    bua_u16 pending;
-    bua_u16 shaped;
-    bua_u8 small_offset;
     bua_u8 cut;
     bua_u8 high_cut_active;
     bua_u8 speed_limit;
@@ -1221,7 +1210,6 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
     r.corrected_base_pw = corrected_base_pw;
     r.af_mode_word = af_mode_word;
     r.ign_mode_word = ign_mode_word;
-    pending = corrected_base_pw;
     cut = 0u;
     if ((mode_word3 & FUEL_VATS_OK_BIT) == 0u ||
         (ign_mode_word & FUEL_IGN_OFF_BIT) != 0u ||
@@ -1242,13 +1230,21 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
             cut = 1u;
         }
     }
-    if (cut != 0u)
-        pending = 0u;
+    r.fuel_cut = cut;
+    return r;
+}
+
+static BuaFuelOutputResult bua_shape_fuel_output(BuaFuelOutputResult r,
+                                               bua_u16 pending,
+                                               bua_u8 single_fire_word,
+                                               bua_u8 injector_batt_offset)
+{
+    bua_u16 shaped;
+    bua_u8 small_offset;
     if ((single_fire_word & SINGLE_FIRE_BIT) != 0u &&
         (single_fire_word & SINGLE_FIRE_ZERO_PW_BIT) != 0u)
         pending = 0u;
     r.pending_pw = pending;
-    r.fuel_cut = cut;
     if (pending == 0u) {
         r.hardware_pw = 0u;
         return r;
@@ -1269,6 +1265,22 @@ static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
         shaped = 0x7FFFu;
     r.hardware_pw = shaped;
     return r;
+}
+static BuaFuelOutputResult bua_fuel_output_lf92a(bua_u16 corrected_base_pw,
+                                                 bua_u8 mode_word3,
+                                                 bua_u8 ign_mode_word,
+                                                 bua_u8 af_mode_word,
+                                                 bua_u8 spark_mode_word,
+                                                 bua_u8 single_fire_word,
+                                                 bua_u8 speed_raw,
+                                                 bua_u16 ref_period,
+                                                 bua_u8 injector_batt_offset)
+{
+    BuaFuelOutputResult r = bua_fuel_cutoff(corrected_base_pw, mode_word3,
+                                           ign_mode_word, af_mode_word,
+                                           spark_mode_word, speed_raw, ref_period);
+    return bua_shape_fuel_output(r, r.fuel_cut ? 0u : corrected_base_pw,
+                                 single_fire_word, injector_batt_offset);
 }
 /* ---------------------------------------------------------------------- */
 /* Step 27: LF95E/LF9E5 special fuel limiting.                            */

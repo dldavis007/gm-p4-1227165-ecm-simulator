@@ -69,7 +69,7 @@ PYTHONPATH=../m68hc11 python3 tools/compare_spark_rom.py --all --coverage
 - Cold power-on. The ROM starts at its reset vector with zero-filled memory.
   At $CCC6 its non-stack RAM, MPU and modeled I/O match the C power-on
   lifecycle entry. The historical `ecm_reset()` fixture used to seed the
-  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Eight additional cases
+  full IRQ replays differs from cold startup at 29 addresses. The zero-filled case checks final register state. Fourteen additional cases
   start with valid retained RAM and compare ordered MPU writes as well.
 - Targeted replays. Major-segment dispatches and routine slices use equal
   sensor inputs and RAM preloads and compare non-stack RAM, MPU state and
@@ -95,9 +95,12 @@ at their ROM address. Repeated ticks do not increase the count.
 | 512-tick road input | 237 | 49.06% |
 | Mode 4 timeout | 25 | 49.44% |
 | Stopped engine with high airflow | 32 | 49.92% |
-| Independent reset vector | 262 | 53.90% |
-| Diagnostic qualification and retained-code logging | 283 | 58.18% |
-| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 1,996 | 88.44% |
+| Independent reset vector | 267 | 53.97% |
+| Diagnostic qualification and retained-code logging | 343 | 59.17% |
+| Targeted segments, IAC motion, warm fuel, spark/reference slices, factory and SCI | 2,208 | 92.63% |
+| Diagnostic serial receive window and timeout | 30 | 93.09% |
+| Segment E battery thresholds and ignition recovery | 7 | 93.19% |
+| ROM-only background RAM refresh | 15 | 93.42% |
 
 The suite executes all 275 instruction starts in the $E4F7 qualification routine.
 Run `--faults` to check the pre-latch and latch passes of nine faults, counter
@@ -145,6 +148,31 @@ MPU state, ordered MPU writes and the fan latch at $4004. The ROM complements
 purge duty for both normal and Mode 4 commands. A Mode 4 duty of $55 produces
 $D2AB for purge and $D157 for EGR. The ten unexecuted instructions select
 alternate A/C and shift-lamp outputs disabled by the stock $C017 and $C014.
+
+The Segment E battery replay covers all 20 instructions at $DE72. ADC count
+39 sets the ignition-off flag, counts 40 through 89 retain its state, and
+count 90 clears it and captures the spark period on ignition recovery.
+
+Segment 3 at $EA28 executes all 50 instructions. A 512-dispatch replay
+sweeps the diagnostic-pin ADC from 0 through 255 with the SCI lock clear,
+then set. Counts below 40 select diagnostic mode. Counts 100 through 151
+select ALDL mode only when unlocked. Each dispatch checks non-stack RAM,
+MPU state, the ordered zero writes to $3FCE–$3FCF and the final $8F at $4003.
+
+The 160-baud transmitter at $F880 reaches all 57 instructions. The replay
+compares non-stack RAM, MPU state and ordered MPU writes after each of 756
+cells across the display, diagnostic and three factory streams, including
+their terminal frames and a deselected factory stream. With selector zero and
+index $FF after a factory mode change, $F892 exits without writing the CSR.
+The C timer handler previously inferred a line transition from the nonzero
+index and issued an extra write to $3FFC–$3FFD on that framing cell.
+
+A separate 32-tick full-IRQ replay starts on the last bit of diagnostic
+byte 24 with both timer compares armed. It executes all nine instructions
+of the 8192-baud SCI initializer at $FA7A. With no incoming SCI byte, the
+receive window expires on tick 9 and the 160-baud manager loads its $FF
+terminal frame on tick 10. Each tick compares the timer match and SCI
+control registers ($4006–$4007), non-stack RAM and ordered MPU writes.
 
 All 84 instructions in the factory output region at $FDED execute. Starting
 at factory service entry $FCA2, 96 consecutive passes retain state through
@@ -217,6 +245,12 @@ flip one bit of the stored socket checksum. The simulator receives the
 checksum verdict as input, while the ROM computes it. Normal and factory
 paths compare state at $CCC6. The Error 51 wait case stops before SWI at $C938.
 
+Six normal-startup TPS cases reach all 39 instructions at $F35A, including
+axis saturation and the immediate high-TPS fault above ADC count 246.
+Startup samples the axis but leaves the transient TPS word at $00DD alone.
+At ADC count 180, the C startup previously wrote $1FC0 there. The ROM first
+applies that filter at $CC2E during the periodic IRQ.
+
 Six retained asynchronous fuel-pulse replays compare 84 services at $E436,
 including the pulse counter at $3FF2 and ordered CSR trigger writes. Two
 additional dispatches check limiter headroom of 110 and 111 counts. The
@@ -226,8 +260,80 @@ The stock pulse factors at $C315 are all 32, so even maximum base width
 cannot reach the overflow clamp at $E478. The optional HUD call at $E4EB
 is outside the modeled configuration.
 
-Of 6,598 listing instructions, 763 remain unexecuted. The largest remaining
-region by unexecuted instructions begins at $D6D1 (53). A hit records execution under the scenario inputs.
+The odd fuel/shutdown region at $D6D1 reaches 150 of 189 instructions.
+Thirteen independent dispatches exercise crank fuel, load saturation,
+throttle changes and key-off conditions. A retained replay compares RAM,
+MPU state and ordered writes across 902 odd services. The running flag
+clears on pass 9. The timer reaches $0385 on pass 901, and the ROM reaches
+the powerdown SWI on pass 902 before fuel dispatch. The comparison stops
+before executing SWI. Of the 39 remaining instructions, 36 belong to crank
+RPM blend paths disabled by the all-zero $C35B table. Two are the SWI and
+its wait loop. The remaining saturation at $D7ED would require a crank
+width beyond the stock $C36C scale and TPS multipliers.
+
+Segment 9 ($E34E) executes 113 of 114 instructions across the suite. The
+retained-state replay compares raw air requests, RAM and MPU state after each
+service through rich and lean qualification, high RPM, load drop and open-loop
+delay expiry. It also checks a separately seeded enrichment counter wrap.
+The remaining branch at $E3A9 requires the high-RPM counter to wrap after
+passing a guard that only admits values up to 10.
+
+The suite executes all 66 instructions in the $E2BE region. Segment E now
+services the shift-light request at $E2D1 after N/V calculation on both
+transmission paths. The replay compares RAM and MPU state through the
+300-count delay, RPM hysteresis, forced-on and cutout conditions.
+
+Fourteen synchronous injector-output replays compare RAM, MPU state and
+ordered writes from $F92A through return. The scheduler applies the fixed or
+coolant-dependent fuel allowance before single-fire suppression and injector
+offsets. With a base width of 300, a fixed allowance of 300 and 489 counts
+already supplied, the pending width is 111 and the hardware width is 116.
+One more count supplied suppresses the pulse. The suite executes all 84
+instructions at $F92A and all 35 in its $F9E5 limiter helper.
+
+The $F76A airflow replay retains the filter across four 256-sample sweeps
+through normal operation, Error 34, Error 33 and recovery. The C lookup uses
+the ROM interpolation rounding for measured and fallback airflow. The two
+historical driving signatures retain their original rounding. The suite hits
+110/144 instructions here. Of the 34 remaining, 31 are the digital MAF path
+bypassed by $C014 bit 2. The analog entry also clears A before $F7EE and
+cannot exceed an input axis of 255 × 7, excluding $F7F1 and $F7FA. The
+fallback sum cannot overflow at $F7E4 with the stock TPS cap and IAC scale.
+
+The region starting at $CB5F includes the background loop at $CCC6.
+A ROM-only replay checks the read/write refresh of 256 words, the pointer
+decrements, the wrap to $01FE and the final RAM contents. IRQ comparisons
+stop at $CCC6. Of the 20 instructions still unexecuted in this region, 11
+require a bad EPROM signature, eight require unequal stock throttle limits
+at $C67D/$C67E (both 255), and one requires the fan polarity option at $C017.
+
+The $F10E replay compares RAM, MPU state and ordered writes over 1,165 lamp
+services. Codes 12, 13, 24, 51 and 52 each appear three times before the
+scan ends. The suite executes all 89 instructions in the code-flash region.
+
+The Segment 7 burn-off replay covers all 62 instructions at $EA95. It follows
+the delay, active timer writes, Error 36 qualification and recovery at ADC
+counts 20 and 95, then checks fault reporting after burn-off. With start
+enabled, $0472 advances unless all three bits of mask $32 at $33 are set.
+
+A 1,200-case replay compares fuel corrections from $DD7A to $DDBC,
+including BLM scaling, integrator underflow, odd-step rounding and the
+final unsigned 16-bit add or subtract. It compares RAM and MPU state
+before acceleration enrichment.
+
+Eight seeded acceleration-enrichment cases run from $F901 to $F92A, before
+injector output shaping. With enrichment factor $80, base widths $AAA9,
+$AAAA and $AAAB produce $FFFE, $FFFF and $FFFF. Only the last takes the
+overflow clamp at $F925. Decay exactly to zero preserves the active flag,
+while subtraction below zero clears it. The suite reaches all 16 instructions
+in this region.
+
+The 50 ms block-learning replay at $DDC2 compares RAM and MPU state after
+each of 1,295 services. With the update timer saturated at 255, it checks
+the five-count integrator deadband, the O2 direction gate, timer reset on
+update, and both learned-cell limits (108 and 160).
+
+Of 6,598 listing instructions, 434 remain unexecuted. A hit records execution under the scenario inputs.
 The comparison boundaries above determine what behavior each replay verifies.
 
 ## C regression and calibration coverage
@@ -236,8 +342,8 @@ The comparison boundaries above determine what behavior each replay verifies.
 in the assembled ROM, including strided MAF scalars. Standalone scalar
 constants and other images are outside this table check. The eighth injector
 offset byte is $01 at $C3C3. The historical drive, transmission and Segment-D
-signatures changed with live spark and startup execution. Their current values
-are 02BA4EA7, 5636155D and B12D3084 respectively. These are C regression
+signatures include normal scheduler execution and retained-memory initialization. Their current values
+are 784BCD0B, 7F96DC9B and 4EBD44B4 respectively. These are C regression
 signatures. The ROM comparison is independent.
 
 The running RPM and dwell paths follow ROM arithmetic for $0000 and $FFFF

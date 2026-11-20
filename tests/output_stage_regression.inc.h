@@ -102,16 +102,14 @@ static void run_step110_output_stage_test(void)
          mpu16be_get(0x3FD8u)==0xD000u);
 
     ecm_reset();
-    sim_legacy_segment1_output_freeze=1u;
     RAM8(0x0034u)=0x88u; RAM8(0x003Eu)=0x06u;
     mpu16be_set(0x3FCCu,0x1234u);
     seg1_output_bits();
-    S110(mpu16be_get(0x3FCCu)==0x1234u &&
+    S110(mpu16be_get(0x3FCCu)==0xDFFFu &&
          step91_outputs.air_arc_count==0xDFFFu);
 
     ecm_reset();
     MINOR_COUNT=0u; RAM8(0x0034u)=0x88u;
-    sim_legacy_ignition_shutdown_freeze=1u;
     RAM8(0x003Eu)=0x06u; RAM8(0x0037u)=0x20u;
     RAM8(0x0113u)=0x44u; RAM8(0x0112u)=0x99u;
     RAM8(0x00F4u)=1u;

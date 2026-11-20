@@ -86,16 +86,19 @@ def reset_vector(cpu, rom, lib):
 
 def reset_branches(make_cpu, rom, lib):
     cases = [
-        ("battery threshold", 100, 160, 40, 1, True, 1),
-        ("pump below threshold", 99, 159, 40, 1, True, 1),
-        ("diagnostic below window", 99, 160, 39, 1, True, 1),
-        ("diagnostic above window", 99, 160, 100, 1, True, 1),
-        ("factory RAM fill", 99, 160, 40, 0, True, 2),
-        ("factory preserves RAM", 99, 160, 99, 1, True, 2),
-        ("Error 51 normal handoff", 100, 0, 39, 0, False, 1),
-        ("Error 51 SWI boundary", 100, 0, 40, 0, False, 3),
+        ("battery threshold", 100, 160, 40, 1, True, 1, 35),
+        ("pump below threshold", 99, 159, 40, 1, True, 1, 35),
+        ("diagnostic below window", 99, 160, 39, 1, True, 1, 35),
+        ("diagnostic above window", 99, 160, 100, 1, True, 1, 35),
+        ("factory RAM fill", 99, 160, 40, 0, True, 2, 35),
+        ("factory preserves RAM", 99, 160, 99, 1, True, 2, 35),
+        ("Error 51 normal handoff", 100, 0, 39, 0, False, 1, 35),
+        ("Error 51 SWI boundary", 100, 0, 40, 0, False, 3, 35),
     ]
-    for name, battery, pump, diag, fmd, valid, outcome in cases:
+    # Cross the axis saturation and immediate high-TPS fault thresholds at boot.
+    for sample in (0, 180, 181, 182, 246, 247):
+        cases.append((f"startup TPS {sample}", 100, 160, 40, 1, True, 1, sample))
+    for name, battery, pump, diag, fmd, valid, outcome, tps in cases:
         image = bytearray(rom)
         if not valid:
             image[6] ^= 1  # Change only the stored socket checksum.
@@ -103,6 +106,7 @@ def reset_branches(make_cpu, rom, lib):
         ram, _, _ = hardware(cpu, image, lib, reset=True)
         lib.probe_reset()
         lib.probe_boot_inputs(battery, pump, diag, fmd)
+        lib.probe_tps_adc(tps)
         # Valid retained fault checksum; distinct BLM, IAC and volatile bytes.
         for addr, value in ((1, 8), (3, 8), (5, 32), (0x19, 33),
                             (0x1C, 149), (0x2C, 75), (0x2E, 77), (0x1B2, 99)):
@@ -119,7 +123,7 @@ def reset_branches(make_cpu, rom, lib):
         check_state(name, cpu, lib, include_io=True)
         assert cpu.mem[0x5000] == lib.probe_map(), name
         assert writes == ordered_writes(lib), (name, writes, ordered_writes(lib))
-    print("Eight seeded reset-vector cases matched RAM, MPU, I/O and ordered MPU writes")
+    print(f"{len(cases)} seeded reset-vector cases matched RAM, MPU, I/O and ordered MPU writes")
 
 
 # Preloads are scenario inputs. Each dispatch compares the rest of RAM as well
@@ -189,6 +193,67 @@ for name, overrides in [
 
 def ordered_writes(lib):
     return [(lib.probe_address(i), lib.probe_value(i)) for i in range(lib.probe_trace_size())]
+
+
+def diagnostic_pin_sweep(cpu, rom, lib):
+    ram, _, io = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 3)
+    writes = []
+
+    def write(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    # Retain the mode byte across samples to check that old selections clear.
+    for locked in (False, True):
+        for sample in range(256):
+            lib.probe_diag_adc(sample)
+            for addr, value in ((0x46, 8 if locked else 0), (0x34, 128 if sample & 1 else 0),
+                                (0x1B2, int(sample == 40)), (0x5B, 112 + (sample >= 2))):
+                cpu.mem[addr] = ram[addr] = value
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=500)
+            lib.probe_major(3)
+            label = f"Segment 3 diagnostic ADC {sample}, SCI lock {locked}"
+            assert cpu.pc == 0xFFFE, label
+            check_state(label, cpu, lib)
+            mode = 0x10 if sample < 40 else 0x20 if 100 <= sample < 152 and not locked else 0
+            assert ram[0x35] & 0x30 == mode, label
+            assert writes == ordered_writes(lib) == [(0x3FCE, 0), (0x3FCF, 0)], label
+            assert cpu.mem[0x4003] == io[3] == 0x8F, label
+    print("Segment 3 diagnostic pin matched for all 256 ADC counts with SCI unlocked and locked")
+
+
+def battery_cycle(cpu, rom, lib):
+    ram, mpu, _ = hardware(cpu, rom, lib)
+    for addr, value in ((0x33, 0), (0x3E, 64), (0xB2, 1), (0xB3, 2),
+                        (0xB4, 7), (0x11F, 3), (0x120, 4)):
+        cpu.mem[addr] = ram[addr] = value
+    cpu.mem[0x3FC8:0x3FCA] = bytes((0x12, 0x34))
+    mpu[8], mpu[9] = 0x12, 0x34
+    writes = []
+
+    def write(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for sample, off in ((40, False), (39, True), (40, True), (89, True),
+                        (90, False), (89, False)):
+        lib.probe_volt_adc(sample)
+        writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(cpu.read16(0xCCE4 + 2 * 14), max_steps=2000)
+        lib.probe_major(14)
+        label = f"Segment E battery ADC {sample}, ignition off {off}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert ram[0x7E] == sample and bool(ram[0x33] & 16) == off, label
+    assert bytes(ram[0xB2:0xB5]) == bytes((0x12, 0x34, 0))
+    print("Segment E battery thresholds and ignition recovery matched")
 
 
 def segments(make_cpu, rom, lib):
@@ -420,6 +485,28 @@ for name, overrides in [
     SLICES.append(("idle PID " + name, "homing", 0xD370, 0xD6CE, {**inputs, **overrides}))
 
 
+# Enter at the odd minor-loop dispatch and follow cranking fuel to the
+# major-loop handoff. The retained shutdown replay below reaches the SWI.
+for name, overrides in [
+    ("running load saturation", {0x34: 128, 0xEA: 56, 0xEB: 0, 0x95: 4, 0x96: 0}),
+    ("cold crank", {0x5B: 0}),
+    ("fractional coolant and throttle", {0x5B: 135, 0x82: 195, 0x118: 37}),
+    ("clear flood", {0x82: 224}),
+    ("maximum coolant and load", {0x5B: 255, 0x95: 255, 0xEA: 255}),
+    ("zero reference period", {0x95: 0, 0x96: 0}),
+    ("rising throttle A/C request", {0x82: 255, 0x83: 0, 0x106: 0}),
+    ("falling throttle", {0x82: 4, 0x83: 240}),
+    ("key-off before housekeeping", {0x33: 48, 0x8C: 7}),
+    ("moving key-off", {0x33: 48, 0x8C: 8, 0x34: 128, 0x65: 3}),
+    ("stationary key-off", {0x33: 48, 0x8C: 8, 0x34: 128}),
+    ("burnoff inhibited", {0x33: 48, 0x8C: 8, 0x34: 128, 0x3E: 16}),
+    ("last fuel pass before powerdown", {0x33: 16, 0x8B: 3, 0x8C: 132}),
+]:
+    inputs = {0: 3, 0x34: 0, 0x33: 0, 0x5B: 160, 0x82: 0, 0x81: 20,
+              0x95: 24, 0x96: 33, 0xEA: 5, 0xEB: 17, 0x65: 0, 0x129: 9}
+    SLICES.append((name, "odd_fuel", 0xD6D1, 0xCCAC, {**inputs, **overrides}))
+
+
 def slices(make_cpu, rom, lib):
     failures = []
     for name, fn, start, end, inputs in SLICES:
@@ -465,6 +552,77 @@ def slices(make_cpu, rom, lib):
             failures.append(str(err))
     if failures:
         raise AssertionError("\n".join(failures))
+
+
+def air_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 9)
+
+    def services(label, count, changes, expected_requests):
+        for addr, value in changes.items():
+            cpu.mem[addr] = ram[addr] = value
+        for tick in range(count):
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=500)
+            assert cpu.pc == 0xFFFE, label
+            lib.probe_major(9)
+            check_state(f"{label} pass {tick + 1}", cpu, lib)
+        assert ram[0x3E] & 6 == expected_requests, label
+
+    # Retain the ROM and C timers separately between calls. Check raw
+    # request bits without assigning a physical polarity to the valves.
+    services("warm open loop", 1, {0x5B: 73, 0x3B: 0, 0x34: 128,
+             0x44: 0, 0x3D: 0, 0x43: 0, 0x56: 160, 0x63: 100,
+             0x73: 170, 0xFB: 100, 0xFC: 0, 0xF7: 0, 0xF8: 0}, 6)
+    services("load drop", 10, {0x63: 35}, 2)
+    services("hold expired", 1, {}, 6)
+    services("high load at speed threshold", 1, {0x63: 101, 0x65: 60}, 6)
+    services("above speed threshold", 1, {0x65: 61}, 0)
+    services("below minimum load", 1, {0x63: 24, 0x44: 128}, 0)
+    services("high RPM delay", 11, {0x63: 25, 0x56: 161}, 2)
+    services("high RPM divert", 1, {}, 0)
+    services("rich O2 delay", 200, {0x56: 160, 0x73: 171}, 2)
+    services("rich O2 latch", 1, {}, 0)
+    services("rich counter decay", 200, {0x73: 170}, 0)
+    services("rich latch clear", 1, {}, 2)
+    services("lean O2 delay", 201, {0x73: 55}, 2)
+    services("lean O2 divert", 1, {}, 0)
+    services("open loop after closed loop", 254, {0x44: 0}, 2)
+    services("open-loop delay expired", 1, {}, 0)
+    services("power enrichment", 1, {0x44: 128, 0x43: 32}, 0)
+    # Exercise the nonzero retained PE counter separately from normal entry.
+    services("seeded PE counter wrap", 1, {0xFE: 255}, 6)
+    services("wrapped PE counter", 1, {}, 0)
+    print("Segment 9 injection-air request bits, timers, RAM and MPU matched")
+
+
+def burnoff_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    writes = []
+    def record(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+    cpu.on_write(0x3FC0, 0x3FFF, record)
+    inputs = {0x33: 0x10, 0x3B: 2, 0x3E: 64, 0x3F: 0, 3: 0, 0x4E: 0,
+              0xB8: 1, 0xB7: 15, 0x11F: 0, 0x120: 0, 0x472: 254, 0x5B: 209}
+    for addr, value in inputs.items():
+        cpu.mem[addr] = ram[addr] = value
+    # Delay, settle, alternate just-outside ADC values, recover at both
+    # inclusive limits, then latch again and report on the inactive pass.
+    samples = [19] * 4 + [19, 96] * 3 + [96, 20, 95, 96, 96, 96, 96]
+    for tick, sample in enumerate(samples):
+        lib.probe_stopped_airflow(sample, 0)
+        writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(cpu.read16(0xCCE4 + 2 * 7), max_steps=1000)
+        lib.probe_major(7)
+        label = f"MAF burn-off pass {tick + 1}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert bool(ram[3] & 64) == (tick == 10 or tick >= 13), label
+    assert ram[0x4E] & 128
+    print("MAF burn-off delay, Error 36 latch, recovery and reporting matched")
 
 
 def purge_cycle(cpu, rom, lib):
@@ -543,6 +701,66 @@ def transmission_replays(make_cpu, rom, lib):
     print("Six retained Segment E drives matched across 432 dispatches")
 
 
+def shift_light_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    entry = cpu.read16(0xCCE4 + 2 * 14)
+
+    def services(label, count, inputs, light, delay):
+        for addr, value in inputs.items():
+            cpu.mem[addr] = ram[addr] = value
+        for tick in range(count):
+            cpu.sp = 0x1FF
+            cpu.call(entry, max_steps=2000)
+            assert cpu.pc == 0xFFFE, label
+            lib.probe_major(14)
+            check_state(f"shift light {label} pass {tick + 1}", cpu, lib)
+        assert bool(ram[0x35] & 128) == light, label
+        assert (ram[0x91] << 8 | ram[0x92]) == delay, label
+
+    services("start delay", 1, {0x34: 128, 0x35: 0, 0x36: 8, 0x5B: 121,
+             0x63: 1, 0x65: 41, 0x66: 0, 0x57: 128, 0x82: 128}, False, 299)
+    services("count down", 299, {}, False, 0)
+    services("delay elapsed", 1, {}, True, 0)
+    services("hysteresis", 1, {0x57: 55, 0x82: 0}, True, 0)
+    services("lower RPM cutout", 1, {0x57: 52}, False, 0)
+    services("forced on", 1, {0x57: 209}, True, 0)
+    services("throttle above curve", 1, {0x57: 128, 0x82: 198}, False, 0)
+    services("normal transmission path", 1, {0x36: 0, 0x82: 64}, False, 299)
+    services("speed cutout", 1, {0x65: 40}, False, 299)
+    print("Segment E shift-light delay, qualification and hysteresis matched")
+
+
+def ram_refresh(cpu, rom):
+    # The tick-driven simulator returns at $CCC6. Characterize the ROM's
+    # background loop separately without assuming an idle duration per IRQ.
+    cpu.load(rom, 0xC000)
+    initial = bytes((37 * addr + 11) & 255 for addr in range(512))
+    cpu.load(initial, 0)
+    cpu.write16(0x110, 0x1FE)
+    writes = []
+
+    def record(addr, value):
+        writes.append((addr, value))
+        cpu.mem[addr] = value
+
+    cpu.on_write(0, 0x1FF, record)
+    cpu.pc = 0xCCC6
+    for address in range(0x1FE, -1, -2):
+        writes.clear()
+        word = cpu.read16(address)
+        # Step off the loop head before asking the emulator to stop there.
+        cpu.step()
+        assert cpu.run(until_pc=0xCCCC, max_steps=32) == "until_pc"
+        expected = [(address, word >> 8), (address + 1, word & 255)]
+        decremented = (address - 2) & 0xFFFF
+        expected.extend(((0x110, decremented >> 8), (0x111, decremented & 255)))
+        if address == 0:
+            expected.extend(((0x110, 1), (0x111, 0xFE)))
+        assert writes == expected, (hex(address), writes, expected)
+    assert bytes(cpu.mem[:512]) == initial[:0x110] + bytes((1, 254)) + initial[0x112:]
+    print("ROM background refresh rewrote 256 words and wrapped the pointer to $01FE")
+
+
 def mode4_commands(cpu_factory, rom, lib):
     # Start with distinct error latches, IAC position and learned BLM cells
     # so each command's side effects are observable in the RAM comparison.
@@ -567,6 +785,72 @@ def mode4_commands(cpu_factory, rom, lib):
             lib.probe_mode4()
             check_state(f"Mode 4 command {command:02X} {stage}", cpu, lib)
     print("256 Mode 4 command bytes matched on entry, repeat and exit")
+
+
+def blm_learning_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    for addr, value in ((0xBF, 3), (0x1F, 128), (0xC0, 128), (0xCA, 0), (0x43, 0)):
+        cpu.mem[addr] = ram[addr] = value
+
+    def advance(count, integrator, rich, expected_cell, expected_timer):
+        cpu.mem[0xC9] = ram[0xC9] = integrator
+        cpu.mem[0x44] = ram[0x44] = 2 | (64 if rich else 0)
+        for tick in range(count):
+            cpu.mem[0] = ram[0] = (1 + 8 * tick) % 160
+            cpu.pc, cpu.sp = 0xDDC2, 0x1FF
+            assert cpu.run(until_pc=0xCCAC, max_steps=500) == "until_pc"
+            lib.probe_blm_tail()
+            check_state(f"BLM learn integrator {integrator} rich {rich} pass {tick + 1}", cpu, lib)
+        assert ram[0x1F] == ram[0xC0] == expected_cell
+        assert ram[0xCA] == expected_timer
+
+    advance(256, 123, True, 128, 255)  # At the deadband edge the timer saturates.
+    advance(1, 122, False, 128, 255)   # Wrong O2 direction still inhibits learning.
+    advance(1, 122, True, 126, 0)
+    advance(28 * 10, 122, True, 108, 0)
+    advance(28, 133, False, 108, 28)
+    advance(1, 134, False, 110, 0)
+    advance(28 * 26, 134, False, 160, 0)
+    print("Retained BLM learning matched at the deadband, timer and both cell limits")
+
+
+def blm_corrections(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    # At $DD7A D holds the base width and the proportional step is on
+    # the stack. Stop just before the downstream enrichment service.
+    for base in (0, 127, 128, 0x8001, 0xFFFF):
+        for blm in (108, 128, 160):
+            for correction in (0, 127, 128, 129, 255):
+                for step in (0, 1, 2, 255):
+                    for flags in range(4):
+                        for addr, value in ((0xC0, blm), (0xC6, correction),
+                                            (0x3D, flags & 1), (0x44, (flags & 2) << 5)):
+                            cpu.mem[addr] = ram[addr] = value
+                        cpu.pc, cpu.sp, cpu.d = 0xDD7A, 0x1FE, base
+                        cpu.mem[0x1FF] = step
+                        assert cpu.run(until_pc=0xDDBC, max_steps=200) == "until_pc"
+                        lib.probe_blm_correction(base, step)
+                        check_state(f"BLM {base}/{blm}/{correction}/{step}/{flags}", cpu, lib)
+    print("1200 BLM and proportional fuel corrections matched")
+
+
+def airflow_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    # Keep the four filter samples and the byte-sized write index across
+    # sweeps, including entry to and recovery from both MAF fault flags.
+    for fault, samples in ((0, range(256)), (0x40, range(256)),
+                           (0x80, range(255, -1, -1)), (0, range(255, -1, -1))):
+        for sample in samples:
+            for addr, value in ((0x3F, fault), (0x56, sample), (0x57, 255 - sample),
+                                (0x82, sample), (0x2C, 255 - sample)):
+                cpu.mem[addr] = ram[addr] = value
+            lib.probe_stopped_airflow(sample, 0)
+            cpu.sp = 0x1FF
+            cpu.call(0xF76A, max_steps=1000)
+            assert cpu.pc == 0xFFFE
+            lib.probe_maf_service()
+            check_state(f"airflow fault {fault:02X} sample {sample}", cpu, lib)
+    print("1024 retained analog MAF services matched across fault and recovery")
 
 
 def injector_replays(make_cpu, rom, lib):
@@ -623,6 +907,78 @@ for delivered in (77, 78):
                     0xD7: 12, 0xD8: 128, 0x5B: 100, 0xCB: 30,
                     0xC2: 1, 0xC3: 44, 0xD5: 1, 0xD6: 44,
                     0xD9: 0, 0xDA: delivered}))
+
+
+# LF901 adds the enrichment before LF92A shapes the injector output.
+# With factor $80, $AAAA is the largest base whose sum fits in 16 bits.
+for name, base, factor, decay, flags in [
+    ("below ceiling", 0xAAA9, 128, 0, 8),
+    ("exact ceiling", 0xAAAA, 128, 0, 8),
+    ("above ceiling", 0xAAAB, 128, 0, 8),
+    ("no injection since last pass", 1000, 31, 32, 10),
+    ("first injection", 1000, 31, 32, 12),
+    ("decay below zero", 1000, 31, 32, 14),
+    ("decay to zero", 1000, 32, 32, 14),
+    ("decay to one", 1000, 33, 32, 14),
+]:
+    SLICES.append((f"acceleration enrichment {name}", "ae_apply", 0xF901, 0xF92A,
+                   {0xC2: base >> 8, 0xC3: base & 255, 0xE2: factor,
+                    0xE3: decay, 0x38: flags}))
+
+
+# LF92A synchronous injector output, including limits based on fuel already
+# supplied. Each case starts with a distinct previous diagnostic pulse width.
+for name, base, previous, delivered, extra in [
+    ("fixed allowance unused", 300, 100, 0, {0x3E: 32}),
+    ("fixed allowance exhausted", 300, 300, 0, {0x3E: 128}),
+    ("limited to minimum", 300, 400, 89, {0x3E: 32}),
+    ("limited below minimum", 300, 400, 90, {0x3E: 32}),
+    ("excess exceeds requested fuel", 300, 600, 1, {0x3E: 32}),
+    ("trigger coolant factor", 300, 400, 100, {0x38: 128}),
+    ("post-injection coolant factor", 300, 400, 100, {0x38: 80}),
+    ("saturated supplied fuel", 65535, 65530, 10, {0x38: 128, 0x5B: 0}),
+    ("cut clears enrichment", 300, 300, 100, {3: 0, 0x38: 128}),
+    ("single fire inhibited", 300, 400, 89, {0x3E: 32, 0x39: 192}),
+    ("cutoff reenable speed", 300, 0, 0, {0x43: 64, 0x65: 255}),
+    ("cutoff reenable period", 300, 0, 0, {0x43: 64, 0x96: 103}),
+    ("hardware saturation", 32767, 0, 0, {}),
+    ("low width default", 1, 0, 0, {}),
+]:
+    inputs = {3: 32, 0x33: 0, 0x34: 128, 0x38: 0, 0x39: 0, 0x3E: 0,
+              0x43: 0, 0x65: 0, 0x95: 0, 0x96: 104, 0x5B: 100, 0xCB: 0,
+              0x466: 0x12, 0x467: 0x34, 0xC2: base >> 8, 0xC3: base & 255,
+              0xD5: previous >> 8, 0xD6: previous & 255,
+              0xD9: delivered >> 8, 0xDA: delivered & 255, **extra}
+    SLICES.append((f"synchronous fuel {name}", "sync_fuel", 0xF92A, 0xFFFE, inputs))
+
+
+def shutdown_cycle(cpu, rom, lib):
+    ram, _, _ = hardware(cpu, rom, lib)
+    inputs = {0x33: 0x30, 0x34: 128, 0x65: 0, 0x8B: 0, 0x8C: 0,
+              0x3E: 0, 0x1B: 25, 0x81: 11, 0x5B: 140, 0x95: 12,
+              0x96: 200, 0xEA: 4, 0xCB: 32, 0x7E: 160}
+    for addr, value in inputs.items():
+        cpu.mem[addr] = ram[addr] = value
+    writes = []
+    def write(addr, value):
+        cpu.mem[addr] = value
+        writes.append((addr, value))
+    cpu.on_write(0x3FC0, 0x3FFF, write)
+    for tick in range(902):
+        cpu.mem[0] = ram[0] = (2 * tick + 1) % 160
+        writes.clear()
+        cpu.pc, cpu.sp = 0xD6D1, 0x1FD
+        stop = 0xD6EA if tick == 901 else 0xCCAC
+        assert cpu.run(until_pc=stop, max_steps=10000) == "until_pc"
+        lib.probe_odd_fuel()
+        label = f"odd-loop shutdown pass {tick + 1}"
+        check_state(label, cpu, lib)
+        assert writes == ordered_writes(lib), label
+        assert cpu.read16(0x8B) == min(tick + 1, 901), label
+        assert bool(ram[0x34] & 128) == (tick < 8), label
+        if tick == 901:
+            assert not writes, label
+    print("902 odd-loop shutdown services matched through the powerdown SWI boundary")
 
 
 def async_fuel_cycle(make_cpu, rom, lib):
@@ -952,6 +1308,28 @@ def diagnostic_transitions(make_cpu, rom, lib):
         check_state(label, cpu, lib)
         assert cpu.timer_writes == ordered_writes(lib), (label, cpu.timer_writes, ordered_writes(lib))
 
+    # Follow the lamp through all three presentations of each stored code.
+    # Include masked bits and the fifth error byte to exercise the end scan.
+    cpu, ram = fixture({0x42: 0, 5: 0x48, 6: 0x80, 7: 1, 8: 0x80, 9: 255})
+    presentations = []
+    for tick in range(2000):
+        cpu.timer_writes.clear()
+        cpu.sp = 0x1FF
+        cpu.call(0xF10E, max_steps=1000)
+        lib.probe_flash()
+        label = f"code flash pass {tick + 1}"
+        assert cpu.pc == 0xFFFE, label
+        check_state(label, cpu, lib)
+        assert cpu.timer_writes == ordered_writes(lib), label
+        if ram[0xBD] == 28:
+            presentations.append(10 * ram[0xB9] + ram[0xBA])
+        if ram[0x42] == 0:
+            break
+    assert ram[0x42] == 0 and presentations == [
+        code for code in (12, 13, 24, 51, 52) for _ in range(3)
+    ], presentations
+    print(f"Stored-code lamp cycle matched for {tick + 1} services")
+
     for code, inputs, (address, mask) in FAULT_TRANSITIONS:
         cpu, ram = fixture(inputs)
         assert not ram[address] & mask
@@ -1027,3 +1405,44 @@ def diagnostic_transitions(make_cpu, rom, lib):
         assert bool(cpu.mem[0x3FFD] & 8) == (count < 52), label
     assert ram[0x18] * 256 + ram[0x19] == 1 + sum(ram[5:10])
     print("Segment D: retained Error 21, checksum and lamp matched over 52 services")
+
+
+def serial_streams(make_cpu, rom, lib):
+    # One framing cell and eight shifts per byte, including the terminal $FF.
+    for name, mode, selector, index, frames in [
+        ("display", 0x05, None, 0, 6),
+        ("diagnostic", 0x25, None, 0, 26),
+        ("factory RAM", 0, 1, 0, 17),
+        ("factory mixed", 0, 2, 0, 17),
+        ("factory MPU", 0, 3, 0, 17),
+        ("factory deselected", 0, 0, 0xFF, 1),
+    ]:
+        cpu = make_cpu()
+        ram, mpu, _ = hardware(cpu, rom, lib)
+        for addr in range(0x173, 0x189):
+            cpu.mem[addr] = ram[addr] = (addr * 13) & 255
+        for addr, value in [(0x35, mode), (0x47, 128 if selector is not None else 0),
+                            (0x48, selector or 0), (0x189, 0), (0x18A, index),
+                            (0x18B, 0xA5)]:
+            cpu.mem[addr] = ram[addr] = value
+        writes = []
+
+        def write(addr, value):
+            cpu.mem[addr] = value
+            writes.append((addr, value))
+
+        cpu.on_write(0x3FC0, 0x3FFF, write)
+        for cell in range(frames * 9):
+            # Begin each cell with its line driven low by the timer service.
+            cpu.mem[0x3FFD] &= 0xFB
+            mpu[0x3D] &= 0xFB
+            writes.clear()
+            cpu.sp = 0x1FF
+            cpu.call(0xF880, max_steps=100)
+            lib.probe_serial_manager(cell)
+            label = f"160-baud {name} cell {cell}"
+            assert cpu.pc == 0xFFFE, label
+            check_state(label, cpu, lib)
+            assert writes == ordered_writes(lib), (label, writes, ordered_writes(lib))
+        assert ram[0x189] == 0 and ram[0x18A] == index, name
+    print("160-baud display, diagnostic and factory streams matched cell by cell")

@@ -108,7 +108,6 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     bua_u8 flow_band;
     bua_u8 stays;
     bua_u8 value;
-    bua_u8 default_value;
     unsigned int i;
     r.cell=current_cell;
     r.current_blm=128u;
@@ -155,17 +154,12 @@ static BuaBlmSelect103 bua_blm_select_step103(bua_u8 current_cell,
     value=cells[r.cell];
     if(value>STEP103_BLM_MAX || value<STEP103_BLM_MIN) {
         /* LDB1C calls LF434. LF434 starts with CLRB, so LDB25 then selects
-         * cell zero. Step 113 corrects the historical decimal-120 value to
-         * emitted immediate $80; explicit frozen replays retain 120. */
-        default_value=(bua_u8)((sim_legacy_segment_d_freeze!=0u ||
-                                sim_legacy_segment1_output_freeze!=0u ||
-                                sim_legacy_ignition_shutdown_freeze!=0u)?120u:
-                                                                        128u);
+         * cell zero after resetting all cells to the emitted immediate $80. */
         r.air_mode_word|=0x40u;
         for(i=0u;i<STEP103_BLM_CELL_COUNT;++i)
-            cells[i]=default_value;
+            cells[i]=STEP103_BLM_DEFAULT;
         r.cell=0u;
-        value=default_value;
+        value=STEP103_BLM_DEFAULT;
         r.reinitialized=1u;
     }
     r.current_blm=value;
@@ -256,7 +250,7 @@ static void bua_common_maf_6p25ms(void)
  * The physical A/D source remains in the HAL.  L0086 is the 8.8 learned
  * closed-throttle voltage, L0082 the normalized load-axis byte, and L00DD
  * the 8.8 transient TPS consumed by LFA1E. */
-static void bua_common_tps_6p25ms(void)
+static void bua_sample_tps_axis(void)
 {
     bua_u8 raw;
     bua_u8 used;
@@ -295,6 +289,13 @@ static void bua_common_tps_6p25ms(void)
             TPS_LOAD_AXIS=(bua_u8)(d>>8);
         }
     }
+}
+
+/* Only the periodic path continues at $CC2E to filter transient TPS. */
+static void bua_common_tps_6p25ms(void)
+{
+    bua_u16 filtered;
+    bua_sample_tps_axis();
     filtered=bua_lag_filter_8_8(ram16be_get(0x00DDu),TPS_LOAD_AXIS,32u);
     ram16be_set(0x00DDu,filtered);
     ++stats.common_tps_calls;
@@ -350,14 +351,18 @@ static void bua_odd_load_producer_12p5ms(void)
 static void bua_write_lf92a(bua_u16 pulse_width)
 {
     BuaFuelOutputResult out;
-    out = bua_fuel_output_lf92a(pulse_width, MODE_WORD3, IGN_MODE_WORD,
-                                AF_MODE_WORD, ENGINE_MODE_WORD,
-                                INJECT_MODE_WORD, VSS_MPH_HI,
-                                ram16be_get(REF_PERIOD_ADDR), RAM8(0x00CBu));
+    BuaFuelLimitResult limit;
+    out = bua_fuel_cutoff(pulse_width, MODE_WORD3, IGN_MODE_WORD, AF_MODE_WORD,
+                          ENGINE_MODE_WORD, VSS_MPH_HI, ram16be_get(REF_PERIOD_ADDR));
     if (out.fuel_cut) {
         ram16be_set(ACCEL_FUEL_ADDR, 0u);
         ram16be_set(0x00C2u, 0u);
+        pulse_width = 0u;
     }
+    limit = bua_fuel_limit_lf95e(pulse_width, ram16be_get(0xD5u),
+                                 ram16be_get(ACCEL_FUEL_ADDR), COOLANT,
+                                 RAM8(0x38u), RAM8(0x3Eu));
+    out = bua_shape_fuel_output(out, limit.output_pw, INJECT_MODE_WORD, RAM8(0xCBu));
     AF_MODE_WORD = out.af_mode_word;
     IGN_MODE_WORD = out.ign_mode_word;
     ram16be_set(0x011Cu, out.pending_pw);

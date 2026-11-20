@@ -56,8 +56,6 @@ static void bua_mode4_scheduler_step116(void)
 static void bua_mode4_timeout_step116(void)
 {
     bua_u8 timer;
-    if(sim_legacy_mode4_lifecycle_freeze!=0u)
-        return;
     timer=(bua_u8)(RAM8(0x0171u)+1u);
     RAM8(0x0171u)=timer;
     if(timer>30u) {
