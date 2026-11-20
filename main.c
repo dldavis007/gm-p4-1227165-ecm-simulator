@@ -7,17 +7,22 @@
  *
  * Directory roles:
  *   src/        translated ECM behavior and scheduler-facing support
- *   simulation/ PC-only vehicle/engine driving model
+ *   simulation/ PC peripherals, signal generators, reset fixture and drive models
  *   tests/      regression models and regression entry points
  */
 
 /* Base platform, RAM/MPU model, translated algorithms, and scheduler. */
 #include "src/ecm_core.inc.h"
+#include "simulation/peripherals.inc.h"
 #include "src/startup_reset.inc.h"
 #include "src/vector_boundaries.inc.h"
 #include "src/factory_test_control.inc.h"
 #include "src/factory_test_execution.inc.h"
+#include "simulation/irq_inputs.inc.h"
 #include "src/scheduler_serial.inc.h"
+#include "simulation/serial_trace.inc.h"
+#include "simulation/reset_fixture.inc.h"
+#include "simulation/drive_profile.inc.h"
 #include "src/ignition_shutdown.inc.h"
 #include "src/diagnostics.inc.h"
 #include "tests/diagnostics_regression.inc.h"
@@ -64,7 +69,7 @@
 #include "src/major_loop.inc.h"
 #include "src/startup_normal.inc.h"
 #include "src/power_on_dispatch.inc.h"
-#include "src/lifecycle_integration.inc.h"
+#include "simulation/lifecycle_integration.inc.h"
 #include "src/sci_8192.inc.h"
 #include "src/mode4_lifecycle.inc.h"
 #include "tests/major_loop_regression.inc.h"
@@ -82,6 +87,7 @@
 #include "tests/lifecycle_integration_regression.inc.h"
 #include "tests/scheduler_crank_blm_regression.inc.h"
 #include "src/output_handlers.inc.h"
+#include "simulation/hal_interface.inc.h"
 #include "tests/scheduler_regression.inc.h"
 #include "tests/aldl160_diagnostic_regression.inc.h"
 #include "tests/aldl160_factory_regression.inc.h"

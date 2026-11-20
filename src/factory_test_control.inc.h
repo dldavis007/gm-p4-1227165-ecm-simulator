@@ -39,12 +39,6 @@ typedef struct BuaFactoryTrace117Tag {
 } BuaFactoryTrace117;
 
 static BuaFactoryTrace117 bua_factory_trace117;
-static bua_u8 sim_factory_battery_adc117=128u;
-static bua_u8 sim_factory_diagnostic_adc117=40u;
-static bua_u8 sim_factory_fmd_byte1_117=0u;
-static bua_u8 sim_factory_fmd_byte2_117=0u;
-static bua_u8 sim_factory_swi_reason117=FACTORY117_SWI_NONE;
-
 /* Defined by the following Step-118 implementation fragment. */
 static void bua_factory_execute_step118(void);
 
@@ -90,7 +84,7 @@ static void bua_factory_boot_step117(bua_u16 eprom_checksum,
 static bua_u8 bua_factory_diag_valid_step117(bua_u8 diagnostic_adc)
 {
     if(diagnostic_adc<40u || diagnostic_adc>=100u) {
-        sim_factory_swi_reason117=FACTORY117_SWI_DIAGNOSTIC;
+        bua_hal_factory_stop(FACTORY117_SWI_DIAGNOSTIC);
         bua_vector_note_swi_step119(0xFDB3u);
         ++bua_factory_trace117.diagnostic_swi_boundaries;
         return 0u;
@@ -103,14 +97,13 @@ static bua_u8 bua_factory_diag_valid_step117(bua_u8 diagnostic_adc)
  * emitted COP restart, the listing continues into custom-control and physical
  * output exercises; Step 117 records that boundary without inventing them.
  */
-static void bua_factory_irq_step117(void)
+static void bua_factory_service(bua_u8 battery, bua_u8 diagnostic, bua_u8 fmd1, bua_u8 fmd2)
 {
     bua_u8 timer;
     bua_u8 mode;
     bua_u8 counter;
-    bua_u8 battery;
 
-    if(sim_factory_swi_reason117!=FACTORY117_SWI_NONE)
+    if(bua_hal_factory_stopped())
         return;
     ++bua_factory_trace117.irq_routes;
     RAM8(0x018Cu)=mem.io4000[6];
@@ -127,15 +120,15 @@ static void bua_factory_irq_step117(void)
     }
     bua_factory_trace117.last_match=mem.io4000[6];
 
-    RAM8(0x64u)=sim_factory_diagnostic_adc117;
+    RAM8(0x64u)=diagnostic;
     mem.io4000[2] |= 0x08u; /* LF1C3 deselects the ADC after the read. */
-    if(bua_factory_diag_valid_step117(sim_factory_diagnostic_adc117)==0u)
+    if(bua_factory_diag_valid_step117(diagnostic)==0u)
         return;
 
     bua_factory_trace117.last_fmd_tx1=(bua_u8)(RAM8(0x0031u)|0x80u);
     bua_factory_trace117.last_fmd_tx2=(bua_u8)(RAM8(0x0031u)&0x7Fu);
-    RAM8(0x0049u)=sim_factory_fmd_byte1_117;
-    RAM8(0x004Au)=sim_factory_fmd_byte2_117;
+    RAM8(0x0049u)=fmd1;
+    RAM8(0x004Au)=fmd2;
     mem.io4000[2]=(bua_u8)(mem.io4000[2]&0xFBu);
     ++bua_factory_trace117.fmd_exchanges;
 
@@ -144,12 +137,11 @@ static void bua_factory_irq_step117(void)
         counter=0u;
     RAM8(0x0172u)=counter;
 
-    battery=sim_factory_battery_adc117;
     RAM8(0x64u)=battery;
     timer=RAM8(0x0032u);
     if(battery<=FACTORY117_LOW_BATTERY_LIMIT) {
         if(timer>=FACTORY117_IGN_OFF_LIMIT) {
-            sim_factory_swi_reason117=FACTORY117_SWI_POWERDOWN;
+            bua_hal_factory_stop(FACTORY117_SWI_POWERDOWN);
             bua_vector_note_swi_step119(0xFD03u);
             ++bua_factory_trace117.powerdown_swi_boundaries;
             return;

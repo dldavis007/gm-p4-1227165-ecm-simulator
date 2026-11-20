@@ -823,7 +823,7 @@ Exact-width assumptions are enforced with compile-time checks, and explicitly
 encoded byte/word operations preserve big-endian processor-visible behavior.
 The code fragments are not intended to compile independently.
 
-`src/hal_interface.inc.h` is the explicit raw seam. It supplies A/D, reference,
+`simulation/hal_interface.inc.h` is the explicit raw seam. It supplies A/D, reference,
 discrete, communications, power/startup, and factory stimuli and observes U9,
 parallel-I/O, injector, IAC, and common output state. Target-specific timers,
 vectors, A/D and capture peripherals, serial transceivers, output drivers,

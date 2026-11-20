@@ -258,71 +258,13 @@ static void spark_vss_12p5ms(void)
     bua_iac_shutdown_homing_even_step111();
 }
 /* ---------------------------------------------------------------------- */
-/* PC VSS signal generator                                                */
-/* ---------------------------------------------------------------------- */
-/*
- * BUA segment 2 reduces to approximately:
- *
- *      MPH ~= 117760 / VSS_period_ticks
- *
- * before filtering.  Therefore the simulator can generate a desired road
- * speed without making assumptions about the physical DG128 timer yet.
- */
-static void sim_set_vss_mph(unsigned int mph)
-{
-    bua_u32 p;
-    bua_u32 old_p;
-    bua_u32 remaining;
-    bua_u32 scaled_remaining;
-    if (mph == 0u) {
-        sim_vss_period_ticks = 0u;
-        sim_vss_next_edge = 0ul;
-        return;
-    }
-    p = (117760ul + ((bua_u32)mph / 2ul)) / (bua_u32)mph;
-    if (p < 1ul)
-        p = 1ul;
-    if (p > 65535ul)
-        p = 65535ul;
-    old_p = (bua_u32)sim_vss_period_ticks;
-    if (old_p == 0ul || sim_vss_next_edge <= sim_vss_abs_ticks) {
-        /* Starting from rest: first capture occurs one full period later. */
-        sim_vss_next_edge = sim_vss_abs_ticks + p;
-    } else {
-        /* Preserve fractional phase to the next capture while changing rate. */
-        remaining = sim_vss_next_edge - sim_vss_abs_ticks;
-        if (remaining > old_p)
-            remaining = old_p;
-        scaled_remaining = scale_ratio_u32(remaining, p, old_p);
-        if (scaled_remaining == 0ul)
-            scaled_remaining = 1ul;
-        sim_vss_next_edge = sim_vss_abs_ticks + scaled_remaining;
-    }
-    sim_vss_period_ticks = (bua_u16)p;
-}
-static void sim_advance_vss_6p25ms(void)
-{
-    /*
-     * 818 abstract timer ticks per 6.25 ms is consistent with the BUA VSS
-     * conversion constant closely enough for this deterministic PC test.
-     * The embedded DG128 hardware layer will use real timer captures.
-     */
-    sim_vss_abs_ticks += 818ul;
-    if (sim_vss_period_ticks == 0u)
-        return;
-    while (sim_vss_next_edge <= sim_vss_abs_ticks) {
-        sim_vss_capture_reg = (bua_u16)sim_vss_next_edge;
-        sim_vss_next_edge += (bua_u32)sim_vss_period_ticks;
-    }
-}
-/* ---------------------------------------------------------------------- */
 /* LDEA4 - called every 6.25 ms: check whether the VSS capture changed.    */
 /* ---------------------------------------------------------------------- */
 static void bua_vss_capture_check_6p25ms(void)
 {
     bua_u16 capture;
     bua_u8 b;
-    capture = sim_vss_capture_reg;
+    capture = bua_hal_vss_capture();
     if ((bua_u16)(capture - ram16be_get(VSS_TIME_NEW)) == 0u) {
         b = (bua_u8)(VSS_NO_EDGE_COUNT + 1u);
         if (b > 0x9Fu) {
@@ -436,85 +378,6 @@ static void seg4_log_ram_to_hu(void)
 #define SERIAL_T_FIRST         11u
 #define SERIAL_T_SECOND        143u
 #define SERIAL_T_CELL          205u
-typedef struct {
-    bua_u8 cell_number;
-    bua_u8 table_index_before;
-    bua_u8 bit_count_before;
-    bua_u8 xmit_before;
-    bua_u8 table_index_after;
-    bua_u8 bit_count_after;
-    bua_u8 xmit_after;
-    bua_u8 line_at_first;
-    bua_u8 shifted_data_valid;
-    bua_u8 shifted_data_bit;
-} BuaSerialCellTrace;
-/* ---------------------------------------------------------------------- */
-/* Independent PC receiver.                                               */
-/*                                                                        */
-/* It does not inspect ALCL_XMIT_BYTE, ALCL_TABLE_INDEX, or bit counters. */
-/* It receives only physical line transitions with P4 timer timestamps.   */
-/*                                                                        */
-/* The observed transmitter has one pulse-width-coded framing cell, then  */
-/* eight pulse-width-coded data cells.  A short low pulse is data 0 and   */
-/* a long low pulse is data 1.  The first pulse of each 9-pulse group is  */
-/* treated only as framing and is not assigned a semantic meaning.        */
-/* ---------------------------------------------------------------------- */
-#define RX_WIDTH_THRESHOLD ((SERIAL_T_FIRST + SERIAL_T_SECOND) / 2u)
-static void rx_reset(void)
-{
-    memset(&rx, 0, sizeof(rx));
-}
-static void rx_low_edge(bua_u32 time_count)
-{
-    if (rx_enabled == 0u)
-        return;
-    rx.have_low_start = 1u;
-    rx.low_start_time = time_count;
-}
-static void rx_high_edge(bua_u32 time_count)
-{
-    bua_u32 width;
-    bua_u8 bit;
-    if (rx_enabled == 0u || rx.have_low_start == 0u)
-        return;
-    width = time_count - rx.low_start_time;
-    rx.have_low_start = 0u;
-    ++stats.receiver_pulses;
-    if (!((width == SERIAL_T_FIRST) || (width == SERIAL_T_SECOND)))
-        ++stats.receiver_bad_widths;
-    if (rx.pulse_in_frame == 0u) {
-        if (rx.byte_count < (bua_u8)(sizeof(rx.frame_widths) / sizeof(rx.frame_widths[0])))
-            rx.frame_widths[rx.byte_count] = (bua_u16)width;
-        rx.assembling = 0u;
-        rx.pulse_in_frame = 1u;
-        ++stats.receiver_frames;
-        return;
-    }
-    bit = (width > (bua_u32)RX_WIDTH_THRESHOLD) ? 1u : 0u;
-    rx.assembling = (bua_u8)((rx.assembling << 1) | bit);
-    ++rx.pulse_in_frame;
-    if (rx.pulse_in_frame == 9u) {
-        if (rx.byte_count < (bua_u8)sizeof(rx.bytes))
-            rx.bytes[rx.byte_count] = rx.assembling;
-        ++rx.byte_count;
-        ++stats.receiver_bytes;
-        rx.pulse_in_frame = 0u;
-    }
-}
-static void serial_line_low_at(bua_u32 time_count)
-{
-    if (sim_serial_line_high != 0u) {
-        sim_serial_line_high = 0u;
-        rx_low_edge(time_count);
-    }
-}
-static void serial_line_high_at(bua_u32 time_count)
-{
-    if (sim_serial_line_high == 0u) {
-        sim_serial_line_high = 1u;
-        rx_high_edge(time_count);
-    }
-}
 /* LF8B6/LF8E6 normal and diagnostic byte sources (Steps 89/168). */
 static const bua_u16 bua_160_diagnostic_addresses[24]={
 0xC000u,0xC001u,0x002Cu,0x005Du,0x0065u,0x0112u,0x0057u,0x0081u,
@@ -617,218 +480,6 @@ static int bua_lf880_manager(bua_u32 t)
     if(ALCL_TABLE_INDEX!=0u) bua_160_first_high(t);
     return -1;
 }
-/* One complete 6.25-ms cell, corresponding to LCAA4 then LCA2C then LCA3B. */
-static void bua_160_cell_at(BuaSerialCellTrace *trace, bua_u32 cell_start)
-{
-    int bit;
-    if (trace != 0) {
-        trace->table_index_before = ALCL_TABLE_INDEX;
-        trace->bit_count_before = ALCL_BIT_COUNT;
-        trace->xmit_before = ALCL_XMIT_BYTE;
-        trace->shifted_data_valid = 0u;
-        trace->shifted_data_bit = 0u;
-    }
-    /* LCAA4: first match +11; b0+b1 set; serial line goes low now. */
-    SERIAL_MODE_WORD |= (SERIAL_FLAG_FIRST | SERIAL_FLAG_SECOND);
-    serial_line_low_at(cell_start);
-    /* LCA2C occurs at cell_start + 11 in this normalized trace. */
-    SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_FIRST;
-    bit = bua_lf880_manager(cell_start + (bua_u32)SERIAL_T_FIRST);
-    if (trace != 0) {
-        trace->line_at_first = sim_serial_line_high;
-        if (bit >= 0) {
-            trace->shifted_data_valid = 1u;
-            trace->shifted_data_bit = (bua_u8)bit;
-        }
-    }
-    /* LCA3B: later match; line high regardless of data. */
-    SERIAL_MODE_WORD &= (bua_u8)~SERIAL_FLAG_SECOND;
-    serial_line_high_at(cell_start + (bua_u32)SERIAL_T_SECOND);
-    ++stats.serial_cells;
-    if (trace != 0 && trace->line_at_first != 0u)
-        ++stats.serial_short_low_cells;
-    else
-        ++stats.serial_long_low_cells;
-    if (trace != 0) {
-        trace->table_index_after = ALCL_TABLE_INDEX;
-        trace->bit_count_after = ALCL_BIT_COUNT;
-        trace->xmit_after = ALCL_XMIT_BYTE;
-    }
-}
-/* Step 170: cell-level raw HAL boundary for the complete LF880 manager. */
-static void bua_hal_aldl160_init(void)
-{
-    ALCL_TABLE_INDEX=0u;
-    ALCL_BIT_COUNT=0u;
-    ALCL_XMIT_BYTE=0xFFu;
-    SERIAL_MODE_WORD&=(bua_u8)~(SERIAL_FLAG_FIRST|SERIAL_FLAG_SECOND);
-    sim_serial_line_high=1u;
-}
-static void bua_hal_aldl160_cell(BuaSerialCellTrace *trace,bua_u32 cell_start)
-{
-    bua_160_cell_at(trace,cell_start);
-}
-static bua_u8 bua_hal_aldl160_line_high(void)
-{
-    return sim_serial_line_high;
-}
-static bua_u8 bua_hal_aldl160_table_index(void)
-{
-    return ALCL_TABLE_INDEX;
-}
-static bua_u8 bua_hal_aldl160_bit_count(void)
-{
-    return ALCL_BIT_COUNT;
-}
-static bua_u8 bua_hal_aldl160_xmit_byte(void)
-{
-    return ALCL_XMIT_BYTE;
-}
-static void print_serial_trace(void)
-{
-    BuaSerialCellTrace tr;
-    bua_u8 original_index;
-    bua_u8 original_bits;
-    bua_u8 original_xmit;
-    bua_u8 original_serial_word;
-    bua_u8 original_line;
-    bua_u32 original_loaded;
-    bua_u32 original_cells;
-    bua_u32 original_short;
-    bua_u32 original_long;
-    bua_u32 original_calls;
-    bua_u8 original_rx_enabled;
-    unsigned int i;
-    /* Preserve scheduler state; create a clean normal-stream observation. */
-    original_index = ALCL_TABLE_INDEX;
-    original_bits = ALCL_BIT_COUNT;
-    original_xmit = ALCL_XMIT_BYTE;
-    original_serial_word = SERIAL_MODE_WORD;
-    original_line = sim_serial_line_high;
-    original_loaded = stats.display_bytes_loaded;
-    original_cells = stats.serial_cells;
-    original_short = stats.serial_short_low_cells;
-    original_long = stats.serial_long_low_cells;
-    original_calls = stats.serial_manager_calls;
-    original_rx_enabled = rx_enabled;
-    ALCL_TABLE_INDEX = 0u;
-    ALCL_BIT_COUNT = 0u;
-    ALCL_XMIT_BYTE = 0xFFu;
-    SERIAL_MODE_WORD &= (bua_u8)~0x03u;
-    sim_serial_line_high = 1u;
-    rx_enabled = 0u;
-    printf("160-baud normal-path waveform trace (P4 timer counts):\n");
-    printf("  Each cell: line LOW at +0, LF880 at +%u, forced HIGH at +%u, next cell +%u\n",
-           (unsigned int)SERIAL_T_FIRST,
-           (unsigned int)SERIAL_T_SECOND,
-           (unsigned int)SERIAL_T_CELL);
-    printf("  A data 0 raises the line at +11; a data 1 stays low until +143.\n\n");
-    printf(" cell  idx/bits before  xmit  action        low-until  idx/bits after xmit\n");
-    /* Five loaded bytes use 45 cells.  LF8CF then creates an $FF byte
-     * with bit-count=8; trace its eight shifted bits and the following
-     * load cell as well: 45 + 1 + 8 + 1 = 55 cells. */
-    for (i = 0u; i < 55u; ++i) {
-        memset(&tr, 0, sizeof(tr));
-        tr.cell_number = (bua_u8)i;
-        bua_160_cell_at(&tr, (bua_u32)i * (bua_u32)SERIAL_T_CELL);
-        printf(" %3u    %u/%u           %02X    ",
-               i,
-               (unsigned int)tr.table_index_before,
-               (unsigned int)tr.bit_count_before,
-               (unsigned int)tr.xmit_before);
-        if (tr.shifted_data_valid != 0u)
-            printf("data bit %u     +%3u      ",
-                   (unsigned int)tr.shifted_data_bit,
-                   (unsigned int)(tr.shifted_data_bit ? SERIAL_T_SECOND : SERIAL_T_FIRST));
-        else if (tr.table_index_before > DISPLAY_TABLE_LENGTH && tr.bit_count_before == 0u)
-            printf("table reset    +%3u      ", (unsigned int)SERIAL_T_SECOND);
-        else
-            printf("load/framing   +%3u      ", (unsigned int)SERIAL_T_FIRST);
-        printf("%u/%u          %02X\n",
-               (unsigned int)tr.table_index_after,
-               (unsigned int)tr.bit_count_after,
-               (unsigned int)tr.xmit_after);
-    }
-    ALCL_TABLE_INDEX = original_index;
-    ALCL_BIT_COUNT = original_bits;
-    ALCL_XMIT_BYTE = original_xmit;
-    SERIAL_MODE_WORD = original_serial_word;
-    sim_serial_line_high = original_line;
-    stats.display_bytes_loaded = original_loaded;
-    stats.serial_cells = original_cells;
-    stats.serial_short_low_cells = original_short;
-    stats.serial_long_low_cells = original_long;
-    stats.serial_manager_calls = original_calls;
-    rx_enabled = original_rx_enabled;
-}
-static void print_receiver_round_trip(void)
-{
-    bua_u8 expected[6];
-    bua_u8 saved_index;
-    bua_u8 saved_bits;
-    bua_u8 saved_xmit;
-    bua_u8 saved_serial_word;
-    bua_u8 saved_line;
-    BuaStats saved_stats;
-    unsigned int i;
-    unsigned int pass_count;
-    expected[0] = MINOR_MODE_WORD2;
-    expected[1] = (bua_u8)CAL_NUM_CYL_CODE;
-    expected[2] = RAM8(0x011Au);
-    expected[3] = RAM8(0x011Eu);
-    expected[4] = (bua_u8)CAL_GPH_SCALE_FACTOR;
-    expected[5] = 0xFFu;
-    saved_index = ALCL_TABLE_INDEX;
-    saved_bits = ALCL_BIT_COUNT;
-    saved_xmit = ALCL_XMIT_BYTE;
-    saved_serial_word = SERIAL_MODE_WORD;
-    saved_line = sim_serial_line_high;
-    saved_stats = stats;
-    ALCL_TABLE_INDEX = 0u;
-    ALCL_BIT_COUNT = 0u;
-    ALCL_XMIT_BYTE = 0xFFu;
-    SERIAL_MODE_WORD &= (bua_u8)~0x03u;
-    sim_serial_line_high = 1u;
-    rx_reset();
-    rx_enabled = 1u;
-    /* Six complete 9-cell groups = five normal values plus literal $FF group. */
-    for (i = 0u; i < 54u; ++i)
-        bua_160_cell_at(0, (bua_u32)i * (bua_u32)SERIAL_T_CELL);
-    rx_enabled = 0u;
-    printf("Independent line receiver round-trip:\n");
-    printf("  Receiver input: serial transitions + P4 timer timestamps only\n");
-    printf("  Pulse threshold: <=%u => 0, >%u => 1; data assembled MSB-first\n",
-           (unsigned int)RX_WIDTH_THRESHOLD,
-           (unsigned int)RX_WIDTH_THRESHOLD);
-    printf("\n  group  frame-low  decoded  expected  result\n");
-    pass_count = 0u;
-    for (i = 0u; i < 6u; ++i) {
-        int pass;
-        pass = (i < (unsigned int)rx.byte_count && rx.bytes[i] == expected[i]);
-        if (pass)
-            ++pass_count;
-        printf("   %u      %3u       %02X       %02X     %s\n",
-               i,
-               (unsigned int)rx.frame_widths[i],
-               (unsigned int)((i < (unsigned int)rx.byte_count) ? rx.bytes[i] : 0u),
-               (unsigned int)expected[i],
-               pass ? "PASS" : "FAIL");
-    }
-    printf("\n  pulses=%lu frames=%lu bytes=%lu badWidths=%lu\n",
-           (unsigned long)(stats.receiver_pulses - saved_stats.receiver_pulses),
-           (unsigned long)(stats.receiver_frames - saved_stats.receiver_frames),
-           (unsigned long)(stats.receiver_bytes - saved_stats.receiver_bytes),
-           (unsigned long)(stats.receiver_bad_widths - saved_stats.receiver_bad_widths));
-    printf("  round-trip result: %s (%u/6 bytes match)\n",
-           (pass_count == 6u && rx.byte_count == 6u) ? "PASS" : "FAIL",
-           pass_count);
-    ALCL_TABLE_INDEX = saved_index;
-    ALCL_BIT_COUNT = saved_bits;
-    ALCL_XMIT_BYTE = saved_xmit;
-    SERIAL_MODE_WORD = saved_serial_word;
-    sim_serial_line_high = saved_line;
-    stats = saved_stats;
-}
 /* Named placeholders matching the remaining actual BUA major-loop table. */
 static void seg0_nop(void)                 { }
 static void seg1_output_bits(void);
@@ -867,53 +518,6 @@ static void major_segment(bua_u8 seg)
         case 0xEu: segE_tcc_adc();            break;
         default:   segF_fuel_air_major();      break;
     }
-}
-static void ecm_reset(void)
-{
-    memset(&mem, 0, sizeof(mem));
-    memset(&stats, 0, sizeof(stats));
-    bua_vector_reset_step119();
-    memset(&bua_factory_trace117, 0, sizeof(bua_factory_trace117));
-    sim_factory_battery_adc117 = 128u;
-    sim_factory_diagnostic_adc117 = 40u;
-    sim_factory_fmd_byte1_117 = 0u;
-    sim_factory_fmd_byte2_117 = 0u;
-    sim_factory_swi_reason117 = FACTORY117_SWI_NONE;
-    sim_soft_powerdown_latched = 0u;
-    sim_iac_motor_on = 1u;
-    sim_maf_adc = 128u;
-    sim_o2_adc = 128u;
-    sim_tps_adc = 35u;
-    sim_diag_adc = 200u;
-    bua_factory_reset_step118();
-    sim_vss_abs_ticks = 0ul;
-    sim_vss_next_edge = 0ul;
-    sim_vss_capture_reg = 0u;
-    sim_vss_period_ticks = 0u;
-    sim_serial_line_high = 1u;
-    sim_vehicle_time_us = 0ul;
-    memset(&sim_ecm_ref, 0, sizeof(sim_ecm_ref));
-    memset(&dash, 0, sizeof(dash));
-    memset(&sim_dash_vss, 0, sizeof(sim_dash_vss));
-    memset(&sim_dash_tach, 0, sizeof(sim_dash_tach));
-    rx_enabled = 0u;
-    rx_reset();
-    mem.io5000 = 0x08u;
-    MINOR_COUNT = 0x0Eu;
-    BLM = 128u;
-    /* Step 113: LF434 emits LDAA #$80, not 120. */
-    bua_blm_initialize_step113();
-    RAM8(0x00C6u) = 128u;
-    RAM8(0x00C9u) = 128u;
-    ALCL_TABLE_INDEX = 0x19u;
-    VSS_NO_EDGE_COUNT = 160u;
-    RAM8(0x002Cu) = 144u;
-    RAM8(0x010Cu) = 144u;
-    ram16be_set(0x00CEu, 445u);
-    RAM8(0x007Eu) = hw_adc(0x10u);
-    RAM8(0x0081u) = hw_adc(0x50u);
-    bua_startup_apply_normal_step112();
-    /* Cold reset leaves ENGINE RUNNING clear; LCD4B..LCD8F qualifies it. */
 }
 /* Finish the preceding cell's timer compares, then arm this minor loop. */
 static void bua_serial_timer_irq(bua_u32 tick)
@@ -975,7 +579,7 @@ static void bua_vats_reference_check(void)
 static void irq_6p25ms(void)
 {
     bua_u8 count;
-    if(sim_soft_powerdown_latched!=0u)
+    if(bua_hal_powerdown_latched()!=0u)
         return;
     if((RAM8(0x0047u)&FACTORY117_MODE_BIT)!=0u) {
         bua_factory_irq_step117();
@@ -983,11 +587,8 @@ static void irq_6p25ms(void)
     }
     bua_serial_timer_irq(stats.irq_ticks);
     ++stats.irq_ticks;
-    sim_advance_dash_signals_6p25ms();
-    sim_advance_ecm_reference_6p25ms();
-    RAM8(0xA0u) = sim_ecm_ref.injector_services_pending ? 0x40u : 0u;
-    if (sim_ecm_ref.pulse_since_irq) {
-        RAM8(0xA0u) |= 8u;
+    RAM8(0xA0u) = bua_hal_minor_irq_status();
+    if (RAM8(0xA0u) & 8u) {
         COLD_START_REF_COUNT = bua_cold_start_ref_count_step44(COLD_START_REF_COUNT,
             ram16be_get(ENGINE_RUN_TIME_ADDR), TPS_LOAD_AXIS);
         if ((SPARK_INPUT_MODE_WORD & EST_ENABLE_BIT) && !(RAM8(0x9Du) & 0x80u)) {
@@ -1007,7 +608,6 @@ static void irq_6p25ms(void)
         MINOR_MODE_WORD2 &= (bua_u8)~REF_SEEN_BIT;
     bua_vats_reference_check();
     ram16be_set(REF_PERIOD_ADDR, mpu16be_get(0x3FC0u)); /* LCB5A */
-    sim_advance_vss_6p25ms();
     bua_vss_capture_check_6p25ms();
     /* $CB5F..$CBB4 consumes the completed SCI mode before count dispatch. */
     bua_mode4_scheduler_step116();
@@ -1018,7 +618,7 @@ static void irq_6p25ms(void)
     }
     MINOR_COUNT = count;
 
-    if(sim_normal_fmd_enabled!=0u)
+    if(bua_hal_fmd_enabled()!=0u)
         bua_normal_fmd_refresh_step158();
     /* LCC21 calls LF4DF before the odd/even minor-loop dispatch. */
     bua_iac_motor_service_6p25ms();
@@ -1044,93 +644,9 @@ static void irq_6p25ms(void)
         air_fuel_12p5ms();
     else
         spark_vss_12p5ms();
-    if(sim_soft_powerdown_latched!=0u)
+    if(bua_hal_powerdown_latched()!=0u)
         return;
     major_segment((bua_u8)(count & 0x0Fu));
-}
-/* ---------------------------------------------------------------------- */
-/* Phase-continuous dynamic vehicle drive-cycle stimulus.          */
-/*                                                                        */
-/* The command profile is evaluated every 6.25 ms.  VSS and HEI waveform  */
-/* generators change frequency without resetting phase.  This avoids the  */
-/* Step-8 boundary artifact and better represents a physical rotating      */
-/* source whose pulse spacing continuously changes during acceleration.    */
-/*                                                                        */
-/* The profile itself remains a PC test stimulus, not a vehicle-dynamics   */
-/* model and not a claim about original cluster filtering.                 */
-/* ---------------------------------------------------------------------- */
-typedef struct {
-    unsigned int duration_ticks;  /* 6.25 ms ticks */
-    unsigned int start_speed_mph;
-    unsigned int end_speed_mph;
-    unsigned int start_rpm;
-    unsigned int end_rpm;
-    unsigned int start_tps_adc;
-    unsigned int end_tps_adc;
-    unsigned int start_maf_adc;
-    unsigned int end_maf_adc;
-    bua_u8 in_drive;
-    const char *name;
-} DriveProfileSegment;
-static const DriveProfileSegment drive_profile[] = {
-    {160u,  0u,  0u,  350u,  800u, 38u,35u, 50u, 60u,0u,"cranking / catch"},
-    {320u,  0u,  0u,  800u,  800u, 35u,35u, 55u, 55u,0u,"warm idle"},
-    {960u,  0u, 60u,  800u, 2600u, 75u,110u,55u,170u,1u,"acceleration"},
-    {640u, 60u, 60u, 2200u, 2200u, 60u,60u,110u,110u,1u,"60 MPH cruise"},
-    {320u, 60u, 45u, 2200u, 1800u, 35u,35u,  0u,  0u,1u,"throttle lift / DFCO"},
-    {640u, 45u,  0u, 1800u,  800u, 35u,35u,  0u, 55u,1u,"deceleration"},
-    {1920u, 0u,  0u,  800u,  800u, 35u,35u, 55u, 55u,0u,"returned idle"}
-};
-#define DRIVE_PROFILE_COUNT ((unsigned int)(sizeof(drive_profile) / sizeof(drive_profile[0])))
-static unsigned int interpolate_u16(unsigned int start_value,
-                                    unsigned int end_value,
-                                    unsigned int tick,
-                                    unsigned int duration_ticks)
-{
-    long delta;
-    long value;
-    long numerator;
-    if (duration_ticks <= 1u)
-        return end_value;
-    delta = (long)end_value - (long)start_value;
-    numerator = delta * (long)tick;
-    if (numerator >= 0l)
-        numerator += (long)(duration_ticks - 1u) / 2l;
-    else
-        numerator -= (long)(duration_ticks - 1u) / 2l;
-    value = (long)start_value + numerator / (long)(duration_ticks - 1u);
-    if (value < 0l)
-        value = 0l;
-    return (unsigned int)value;
-}
-static void dash_apply_no_pulse_timeout(void)
-{
-    /* PC receiver convenience only: after 1 second without a new edge,
-     * report zero speed/RPM.  This is NOT claimed to reproduce the 1986
-     * cluster firmware timeout. */
-    if (dash.vss_valid != 0u &&
-        (sim_vehicle_time_us - dash.vss_last_rise_us) >= 1000000ul)
-        dash.speed_mph = 0u;
-    if (dash.tach_valid != 0u &&
-        (sim_vehicle_time_us - dash.tach_last_rise_us) >= 1000000ul)
-        dash.rpm = 0u;
-}
-static void apply_dynamic_command(unsigned int speed_mph, unsigned int rpm,
-                                  unsigned int tps_adc,unsigned int maf_adc,
-                                  bua_u8 in_drive)
-{
-    /* All three generators receive the same vehicle command but retain
-     * independent timing state.  No decoder state is cleared here. */
-    sim_set_vss_mph(speed_mph);
-    sim_set_dash_vss_mph(speed_mph);
-    sim_set_dash_tach_rpm(rpm);
-    sim_set_ecm_reference_rpm(rpm);
-    sim_tps_adc=(bua_u8)tps_adc;
-    sim_maf_adc=(bua_u8)maf_adc;
-    if(in_drive!=0u)
-        RAM8(0x0037u)&=(bua_u8)~0x01u;
-    else
-        RAM8(0x0037u)|=0x01u;
 }
 /* ---------------------------------------------------------------------- */
 /* Step 26: differential-load AE application and ordinary fuel output.    */

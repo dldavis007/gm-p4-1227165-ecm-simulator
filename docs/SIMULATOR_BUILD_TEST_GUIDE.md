@@ -179,7 +179,7 @@ sensor noise, transmission hydraulics or engine torque response.
 
 ## Raw HAL inputs
 
-`src/hal_interface.inc.h` exposes raw processor-facing setters for:
+`simulation/hal_interface.inc.h` exposes raw processor-facing setters for:
 
 - U10 inputs: MAP2, VOLT, O2, MAP, CTS, TPS, PUMPVOLT, DIAG, MAT, ESC and MAF;
 - the processor-visible U9 knock counter;

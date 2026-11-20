@@ -39,17 +39,6 @@ static void bua_ignition_commit_blm_lf447_step111(void)
     RAM8(0x001Cu)=sam_a; /* LC5EA selects cell zero. */
 }
 
-/* The HAL owns physical keep-alive power. The PC records and latches the
-   exact point where $D6EA enters the software-interrupt loop. */
-static void bua_hal_request_soft_powerdown_step111(void)
-{
-    if(sim_soft_powerdown_latched==0u) {
-        sim_soft_powerdown_latched=1u;
-        ++stats.soft_powerdown_events;
-        bua_vector_note_swi_step119(0xD6EAu);
-    }
-}
-
 /* $D727..$D769, which executes after either ignition-on timer reset or the
    nonterminal key-off path and before the load/fuel producer. */
 static void bua_ignition_tail_ld727_step111(void)
