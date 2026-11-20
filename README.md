@@ -16,6 +16,7 @@ ROM-only idle-loop instructions beyond the IRQ comparison boundary.
 The audit describes which state each comparison checks.
 
 - [Live scheduler audit and ROM comparison](docs/LIVE_SCHEDULER_AUDIT.md)
+- [Unexecuted BUA ROM blocks and reachability](docs/UNEXECUTED_ROM_AUDIT.md)
 - [Current project status](docs/CURRENT_PROJECT_STATUS.md)
 - [Formal theory of operation](THEORY_OF_OPERATION.md)
   ([PDF publication](THEORY_OF_OPERATION.pdf))

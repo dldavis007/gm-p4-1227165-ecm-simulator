@@ -1,5 +1,7 @@
 # Live scheduler and ROM audit
 
+The [unexecuted block inventory](UNEXECUTED_ROM_AUDIT.md) accounts for every remaining ROM instruction and records the stock BUA exclusions and open verification gaps.
+
 The C model reaches the translated running spark chain through the normal
 6.25 ms IRQ's even dispatch. The ROM takes the stall-saver branch after RPM
 filtering and before dwell. Startup qualification and stopped operation branch

@@ -273,10 +273,14 @@ if __name__ == "__main__":
                         help="check ordered MPU writes and fuel/FMD/serial state")
     parser.add_argument("--trace-tick", type=int, help="show ROM stores to differing RAM bytes")
     parser.add_argument("--coverage", action="store_true", help="report unique executed instruction starts by listing region")
+    group.add_argument("--audit-unrun", action="store_true",
+                       help="run full coverage and check every block against the unexecuted ROM audit")
     group.add_argument("--faults", action="store_true", help="replay diagnostic qualification transitions")
     group.add_argument("--segments", action="store_true")
     group.add_argument("--reset-vector", action="store_true")
     args = parser.parse_args()
+    if args.audit_unrun:
+        args.all = args.coverage = True
     if args.coverage:
         BuaCPU.visited = set()
     if args.trace_tick is not None and not (
@@ -337,4 +341,5 @@ if __name__ == "__main__":
             if args.coverage:
                 print(f"{name}: +{len(BuaCPU.visited)-before} unique PCs, {len(BuaCPU.visited)} cumulative")
     if args.coverage:
-        report(ROM.with_suffix(".lst"), ROM.read_bytes(), BuaCPU.visited)
+        report(ROM.with_suffix(".lst"), ROM.read_bytes(), BuaCPU.visited,
+               ROOT / "docs/UNEXECUTED_ROM_AUDIT.md" if args.audit_unrun else None)

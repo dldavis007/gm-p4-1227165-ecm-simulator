@@ -20,8 +20,38 @@ BLOCKS = {
 }
 
 
-def report(listing, rom, visited):
+# Split at direct transfer targets and after transfers (including calls).
+TRANSFERS = set("""JMP JSR BSR RTS RTI SWI WAI STOP TEST BRA BRN
+    BHI BLS BCC BCS BNE BEQ BVC BVS BPL BMI BGE BLT BGT BLE BHS BLO
+    BRSET BRCLR""".split())
+
+
+def check_unrun_audit(audit, blocks):
+    expected = {(b[0], b[-1]): len(b) for b in blocks}
+    documented = {}
+    for line in audit.read_text().splitlines():
+        if not line.startswith("| `$"):
+            continue
+        row = re.fullmatch(r"\| `\$([0-9A-F]{4})(?:–\$([0-9A-F]{4}))?` \| (\d+) \| (.+) \|", line)
+        if not row:
+            raise ValueError(f"Malformed block row: {line}")
+        first, last, count, _ = row.groups()
+        key = (int(first, 16), int(last or first, 16))
+        if key in documented:
+            raise ValueError(f"Duplicate audit entry at ${first}")
+        documented[key] = int(count)
+    if documented != expected:
+        for first, last in sorted(documented.keys() | expected.keys()):
+            if documented.get((first, last)) != expected.get((first, last)):
+                print(f"${first:04X}–${last:04X}: listed={documented.get((first,last), 0)} "
+                      f"unexecuted={expected.get((first,last), 0)}")
+        raise ValueError("The unexecuted ROM inventory differs from this replay run")
+    print(f"Audit matched {len(blocks)} blocks and {sum(expected.values())} unexecuted instructions")
+
+
+def report(listing, rom, visited, audit=None):
     instructions, starts = set(), set(BLOCKS)
+    lengths, heads = {}, set()
     for line in listing.read_text(encoding="latin1").splitlines():
         match = re.match(r"^\s*\d+ ([0-9a-f]{4}) ((?:[0-9a-f]{2} )+)\s*(?:\w+:\s*)?(\w+)\s*([^;]*)", line)
         if not match:
@@ -35,6 +65,13 @@ def report(listing, rom, visited):
         if rom[offset:offset+len(data)] != data:
             raise ValueError(f"Listing differs from ROM at ${address:04X}")
         instructions.add(address)
+        if audit:
+            lengths[address] = len(data)
+            if mnemonic.upper() in TRANSFERS:
+                heads.add(address + len(data))
+                dest = re.search(r"[L$]([0-9a-fA-F]{4})$", operand.strip())
+                if dest:
+                    heads.add(int(dest[1], 16))
         target = re.fullmatch(r"[L$]([0-9a-fA-F]{4})", operand.strip())
         if mnemonic.upper() in {"JSR", "BSR"} and target:
             starts.add(int(target[1], 16))
@@ -54,3 +91,12 @@ def report(listing, rom, visited):
     other = sorted(visited - instructions)
     if other:
         print("Executed PCs outside listing instruction starts:", " ".join(f"${x:04X}" for x in other))
+    if audit:
+        heads.update(starts)
+        blocks = []
+        for address in sorted(instructions - visited):
+            if (not blocks or address in heads or
+                    address != blocks[-1][-1] + lengths[blocks[-1][-1]]):
+                blocks.append([])
+            blocks[-1].append(address)
+        check_unrun_audit(audit, blocks)
