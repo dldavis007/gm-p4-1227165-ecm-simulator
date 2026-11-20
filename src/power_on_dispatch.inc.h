@@ -120,9 +120,8 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
            in.diagnostic_adc<100u) {
             bua_factory_boot_step117(in.whole_rom_checksum,
                                      in.initial_fmd_byte1);
-            sim_factory_battery_adc117=in.battery_adc;
-            sim_factory_diagnostic_adc117=in.diagnostic_adc;
-            sim_factory_fmd_byte1_117=in.initial_fmd_byte1;
+            bua_hal_seed_factory_inputs(in.battery_adc, in.diagnostic_adc,
+                                        in.initial_fmd_byte1);
             ++bua_power_on_trace120.factory_handoffs;
             bua_power_on_trace120.outcome=POWER120_OUTCOME_FACTORY;
             return bua_power_on_trace120.outcome;
@@ -155,7 +154,7 @@ static bua_u8 bua_power_on_step120(BuaPowerOnInput120 in)
         }
     }
 
-    sim_startup_fmd_status=in.initial_fmd_byte1;
+    bua_hal_set_startup_fmd(in.initial_fmd_byte1);
     bua_startup_normal_step114();
     ++bua_power_on_trace120.normal_handoffs;
     bua_power_on_trace120.outcome=POWER120_OUTCOME_NORMAL;

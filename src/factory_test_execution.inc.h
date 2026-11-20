@@ -24,14 +24,10 @@ typedef struct BuaFactoryTrace118Tag {
 } BuaFactoryTrace118;
 
 static BuaFactoryTrace118 bua_factory_trace118;
-static bua_u8 sim_factory_adc118[12];
-
 static void bua_factory_reset_step118(void)
 {
-    bua_u8 i;
     memset(&bua_factory_trace118,0,sizeof(bua_factory_trace118));
-    for(i=0u;i<12u;++i)
-        sim_factory_adc118[i]=hw_adc((bua_u8)(i<<4));
+    bua_hal_refresh_factory_adc(12u);
 }
 
 /* LF32E over the only Step-118 range, X=$0000 and D=$002E. */
@@ -99,9 +95,9 @@ static void bua_factory_adc_step118(void)
     bua_u8 counter;
     bua_u8 coolant;
     for(i=0u;i<12u;++i)
-        RAM8((bua_u16)(0x017Bu+i))=sim_factory_adc118[i];
+        RAM8((bua_u16)(0x017Bu+i))=bua_hal_factory_adc(i);
     /* LF1CE leaves the final selector ($B0) sample in the SPI scratch byte. */
-    RAM8(0x64u)=sim_factory_adc118[11];
+    RAM8(0x64u)=bua_hal_factory_adc(11u);
     ++bua_factory_trace118.adc_sweeps;
 
     counter=RAM8(0x0172u);

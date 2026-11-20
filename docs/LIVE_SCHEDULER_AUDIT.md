@@ -16,15 +16,14 @@ scheduler path receive live-translation credit.
 
 | Classification of definitions in src/ | Count |
 |---|---:|
-| Observed on the IRQ path | 164 |
-| Static IRQ path, unobserved in this scenario | 38 |
-| Outside the IRQ call graph | 104 |
+| Observed on the IRQ path | 160 |
+| Static IRQ path, unobserved in this scenario | 36 |
+| Outside the IRQ call graph | 37 |
 
 The observed set includes both spark lookups, advance sum, knock attack and
 major-segment recovery, Mode-4 blend, LD1F6 output, EST finish, stall-saver
 and LD306. Outside the IRQ graph are the independent SCI message handlers,
-the standalone C42D base-fuel lookup, reset entries and host-facing HAL
-setters. Some have legitimate separate entry points. These counts describe C
+the standalone C42D base-fuel lookup and reset entries. Some have legitimate separate entry points. These counts describe C
 functions. They cannot establish what fraction of ROM instructions executes
 or whether every branch of an observed function is correct.
 

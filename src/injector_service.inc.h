@@ -85,9 +85,8 @@ static void bua_common_injector_service_6p25ms(void)
     BuaInjectorEventResult e;
 
     RAM8(0x00A0u)&=(bua_u8)~0x40u;
-    if(sim_ecm_ref.injector_services_pending==0u)
+    if(bua_hal_take_injector_event()==0u)
         return;
-    --sim_ecm_ref.injector_services_pending;
     RAM8(0x00A0u)|=0x40u;
     ++stats.common_injector_bookkeeping;
 

@@ -75,10 +75,8 @@ static void bua_lifecycle_irq_from_hal_step164(void)
  * factory boundary and is deliberately preserved. */
 static void bua_lifecycle_irq_from_hal_step165(void)
 {
-    bua_u8 i;
     if((RAM8(0x0047u)&FACTORY117_MODE_BIT)!=0u) {
-        for(i=0u;i<11u;++i)
-            sim_factory_adc118[i]=hw_adc((bua_u8)(i<<4));
+        bua_hal_refresh_factory_adc(11u);
     }
     bua_lifecycle_irq_from_hal_step164();
 }

@@ -13,11 +13,13 @@ The governing rule is the same one used throughout the reference set: preserve e
 The current organization is:
 
 - `src/` — translated ECM behavior, RAM/MPU model, scheduler and hardware-facing support;
-- `simulation/` — PC-only engine/vehicle/cluster plants and scenario support;
+- `simulation/` — PC peripherals, signal generators, reset fixture, and drive scenarios;
 - `tests/` — regression models and regression entry points;
 - `main.c` — include map, demonstration harness and regression entry point.
 
 This organization is deliberate. Splitting fragments into independent object files is a possible future refactor, but it is not required for behavioral fidelity and must not silently change file-local state, declaration visibility, initialization order or integer behavior.
+
+The scheduler reads peripheral state through the declarations in `src/peripheral_io.inc.h`. The PC implementations and stimulus setters live in `simulation/`.
 
 ## 2. C89 portability contract
 
@@ -75,7 +77,7 @@ Embedded migration should preserve F0 and F1, replace PC F2 mechanisms with targ
 
 ## 6. Explicit HAL seam
 
-Step 128 established `src/hal_interface.inc.h` as the explicit raw processor-facing seam. Steps 155-157 expanded that seam to all known U10 AN0-AN10 channels while leaving selector `$B0` unresolved. Step 158 adds the two raw normal-operation FMD/SPI reply bytes consumed by the listing-backed `$002E/$002F -> $0037` refresh. The seam also retains the VSS and reference-RPM pulse-source helpers. A bounded low-RAM setter exists for tests where the processor-visible byte is established but the external transfer remains unresolved.
+Step 128 established `simulation/hal_interface.inc.h` as the explicit raw processor-facing seam. Steps 155-157 expanded that seam to all known U10 AN0-AN10 channels while leaving selector `$B0` unresolved. Step 158 adds the two raw normal-operation FMD/SPI reply bytes consumed by the listing-backed `$002E/$002F -> $0037` refresh. The seam also retains the VSS and reference-RPM pulse-source helpers. A bounded low-RAM setter exists for tests where the processor-visible byte is established but the external transfer remains unresolved.
 
 Step 163 adds a power-on composition entry that replaces only the duplicate startup VOLT, PUMPVOLT, DIAG and FMD-byte-1 fields with those named raw HAL values. Reset-vector choice, ROM/checksum results, entry Error-51 state and the absent-HUD boundary remain explicit non-ADC inputs.
 
@@ -180,7 +182,7 @@ Those are separate hardware-selection or evidence tasks. They should remain expl
 - `docs/STEP104_MODULAR_REFACTOR_AUDIT.txt` — historical modularization boundary.
 - `docs/STEP127_HARDWARE_HAL_FIDELITY_AUDIT.txt` — F0-F4 fidelity classification.
 - `docs/STEP128_EXPLICIT_HAL_INTERFACE_AUDIT.txt` — explicit HAL seam.
-- `src/hal_interface.inc.h` — current raw input/output accessors.
+- `simulation/hal_interface.inc.h` — current raw input/output accessors.
 - `docs/reference/INTERRUPT_SCHEDULER_ARCHITECTURE.md` — scheduler/event timing.
 - `docs/reference/PROCESSOR_MEMORY_CUSTOM_PERIPHERAL_ARCHITECTURE.md` — address/custom-device boundaries.
 - `docs/reference/STARTUP_SHUTDOWN_EXCEPTIONAL_MODES.md` — startup/reset/retained-power boundary.

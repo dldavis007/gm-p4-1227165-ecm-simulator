@@ -190,7 +190,7 @@ Every source fragment is well below the previously observed approximately
 | --- | --- |
 | `main.c` | Readable include map and program entry point |
 | `src/` | Translated ECM algorithms, scheduler, RAM/MPU model, and feature wiring |
-| `simulation/` | Original scripted drive plus the PC-only transmission-aware plant |
+| `simulation/` | Host peripherals, signal generators, serial receiver, reset fixture and drive simulations |
 | `tests/` | Regression models and regression functions |
 | `docs/` | Frozen evidence and numbered step audits |
 | `docs/reference/` | Living evidence register, hardware/firmware cross-reference, MEMCAL model, and theory-of-operation index |

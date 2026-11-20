@@ -122,7 +122,7 @@ For example, injector sense/limit connections support an F1 current-control/limi
 
 ## Explicit HAL contract
 
-Step 128 introduced `src/hal_interface.inc.h` as the explicit processor-visible seam. The output-side API currently provides:
+Step 128 introduced `simulation/hal_interface.inc.h` as the explicit processor-visible seam. The output-side API currently provides:
 
 - generic raw MPU-byte observation over `$3FC0-$3FFF`;
 - generic big-endian MPU-word observation;
@@ -140,7 +140,7 @@ The output-facing implementation is distributed across the subsystem producers a
 
 - `src/major_loop.inc.h` — one-of-sixteen major dispatch including Segment 1;
 - `src/output_handlers.inc.h` — subsystem output producers and inclusion of the explicit HAL seam;
-- `src/hal_interface.inc.h` — raw processor-visible input/output interface;
+- `simulation/hal_interface.inc.h` — raw processor-visible input/output interface;
 - `src/injector_service.inc.h` and `src/ecm_core.inc.h` — injector, spark, IAC, TCC, diagnostic and other translated state;
 - `tests/output_stage_regression.inc.h` — listing-exact Segment-1 raw-output checks and frozen integrated signature;
 - `tests/hal_interface_regression.inc.h` — raw HAL observer/setter coverage.
@@ -187,7 +187,7 @@ These are not omissions to fill by guesswork. They are explicit F3/F4 boundaries
 - `docs/reference/EMISSIONS_ACCESSORY_CONTROL_THEORY.md`
 - `docs/reference/TRANSMISSION_TCC_THEORY.md`
 - `docs/reference/DIAGNOSTICS_ALDL_COMMUNICATION_THEORY.md`
-- `src/hal_interface.inc.h`
+- `simulation/hal_interface.inc.h`
 - `tests/output_stage_regression.inc.h`
 
 This closes theory-of-operation Chapter 13 at the processor/electrical boundary while deliberately leaving unsupported driver and load behavior outside the firmware-exact layer.

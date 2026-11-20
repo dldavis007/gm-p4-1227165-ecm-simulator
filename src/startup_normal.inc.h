@@ -15,9 +15,6 @@ typedef struct BuaStartupTrace114Tag {
     bua_u8 scheduler_handoff;
 } BuaStartupTrace114;
 static BuaStartupTrace114 bua_startup_trace114;
-/* PC/HAL stimulus for LF1E0. Bit 5 is the only bit consumed at $C986. */
-static bua_u8 sim_startup_fmd_status=0x20u;
-
 static void bua_startup_sci_direct_init_step114(void)
 {
     RAM8(0x012Du)=0u;
@@ -79,7 +76,7 @@ static void bua_startup_normal_step114(void)
     if(restart_coolant<STEP114_ERR32_COOL_LIMIT &&
        ram16be_get(0x001Au)==0u) {
         bua_startup_trace114.fmd_read_boundary=1u;
-        if((sim_startup_fmd_status&0x20u)==0u)
+        if((bua_hal_startup_fmd()&0x20u)==0u)
             DIAG_MODE_WORD3=(bua_u8)(DIAG_MODE_WORD3|0x20u);
     }
 
